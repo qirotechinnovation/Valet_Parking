@@ -13,16 +13,31 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const { data, error } = await supabase.auth.getUser(token);
+    const { data: authData, error: authError } =
+      await supabase.auth.getUser(token);
 
-    if (error || !data.user) {
+    if (authError || !authData.user) {
       return res.status(401).json({
         success: false,
         message: "Invalid or expired token."
       });
     }
 
-    req.authUser = data.user;
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("auth_user_id", authData.user.id)
+      .single();
+
+    if (userError || !user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found."
+      });
+    }
+
+    req.user = user;
+    req.authUser = authData.user;
 
     next();
 
