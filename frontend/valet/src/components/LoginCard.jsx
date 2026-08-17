@@ -2,6 +2,59 @@ import { useState } from "react";
 
 function LoginCard() {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    setError("");
+
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || "Login failed.");
+        return;
+      }
+
+      // Save token for authenticated API requests
+      localStorage.setItem("access_token", data.session.access_token);
+
+      // Save logged-in user's information
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log("Login successful:", data.user);
+
+      alert(`Welcome ${data.user.name}!`);
+
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("Unable to connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login-wrapper">
@@ -23,58 +76,77 @@ function LoginCard() {
           <p>Login to your account to continue</p>
         </div>
 
-        {/* Email */}
-        <div className="input-group">
-          <label>Email or Phone Number</label>
+        <form onSubmit={handleLogin}>
 
-          <div className="input-wrapper">
-            <span className="input-icon">♙</span>
+          {/* Email */}
+          <div className="input-group">
+            <label>Email or Phone Number</label>
 
-            <input
-              type="text"
-              placeholder="Enter your email or phone number"
-            />
+            <div className="input-wrapper">
+              <span className="input-icon">✉</span>
+
+              <input
+                type="text"
+                placeholder="Enter your email or phone number"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Password */}
-        <div className="input-group">
-          <label>Password</label>
+          {/* Password */}
+          <div className="input-group">
+            <label>Password</label>
 
-          <div className="input-wrapper">
-            <span className="input-icon">♙</span>
+            <div className="input-wrapper">
+              <span className="input-icon">🔒</span>
 
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
-            />
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
 
-            <button
-              type="button"
-              className="password-toggle"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? "◉" : "◌"}
-            </button>
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? "◉" : "◌"}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Options */}
-        <div className="password-options">
+          {/* Options */}
+          <div className="password-options">
 
-          <label className="remember">
-            <input type="checkbox" />
-            <span>Remember me</span>
-          </label>
+            <label className="remember">
+              <input type="checkbox" />
+              <span>Remember me</span>
+            </label>
 
-          <a href="#forgot">Forgot Password?</a>
+            <a href="#forgot">Forgot Password?</a>
 
-        </div>
+          </div>
 
-        {/* Login */}
-        <button className="login-button">
-          Login
-        </button>
+          {/* Error */}
+          {error && (
+            <p style={{ color: "red", marginBottom: "10px" }}>
+              {error}
+            </p>
+          )}
+
+          {/* Login */}
+          <button
+            type="submit"
+            className="login-button"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+
+        </form>
 
         {/* Divider */}
         <div className="divider">
@@ -88,13 +160,12 @@ function LoginCard() {
           Are you a customer?
         </div>
 
-        {/* Google */}
+        {/* Customer Site */}
         <button className="customer-button">
           <span>Customer Site</span>
         </button>
 
       </div>
-      
 
     </div>
   );
