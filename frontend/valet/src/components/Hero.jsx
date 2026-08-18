@@ -17,44 +17,29 @@ function Hero() {
         y: -20,
         duration: 0.7,
       })
-
-        // Main heading
+        // Main heading text reveal
         .from(
           ".hero-word",
           {
             opacity: 0,
-            y: 45,
+            y: 35,
             filter: "blur(8px)",
             duration: 0.7,
-            stagger: 0.09,
+            stagger: 0.08,
           },
           "-=0.25"
         )
-
-        // Description
+        // Description reveal
         .from(
           ".hero-description",
           {
             opacity: 0,
-            y: 25,
+            y: 20,
             duration: 0.7,
           },
           "-=0.35"
         )
-
-        // Feature cards
-        .from(
-          ".feature",
-          {
-            opacity: 0,
-            y: 25,
-            duration: 0.55,
-            stagger: 0.12,
-          },
-          "-=0.25"
-        )
-
-        // Copyright
+        // Copyright text reveal
         .from(
           ".copyright",
           {
@@ -70,20 +55,24 @@ function Hero() {
 
   return (
     <div className="hero" ref={heroRef}>
-
-      {/* Brand */}
+      {/* Brand Header */}
       <div className="brand">
-        <div className="brand-logo">A</div>
+        <div className="brand-logo-wrapper">
+          <img
+            src="/aura-logo.svg"
+            alt="Aura Valet Parking"
+            className="brand-logo"
+          />
+        </div>
 
-        <div>
+        <div className="brand-text">
           <h2>AURA</h2>
           <span>VALET PARKING</span>
         </div>
       </div>
 
-      {/* Hero Content */}
+      {/* Main Hero Content */}
       <div className="hero-content">
-
         <h1>
           <span className="hero-line">
             <span className="hero-word">Elevate</span>{" "}
@@ -102,19 +91,16 @@ function Hero() {
         </h1>
 
         <p className="hero-description">
-          A seamless and sophisticated valet experience
-          <br />
-          from check-in to checkout.
+          A seamless and sophisticated valet experience from check-in to checkout.
           <br />
           Your vehicle is safe in our hands.
         </p>
-        
       </div>
 
+      {/* Footer / Copyright */}
       <div className="copyright">
         © 2026 Aura Valet Parking. All rights reserved.
       </div>
-
     </div>
   );
 }

@@ -66,7 +66,7 @@ function Topbar() {
           >
 
             <span className="notification-icon">
-              ♧
+             <Bell />
             </span>
 
             <span className="notification-dot"></span>

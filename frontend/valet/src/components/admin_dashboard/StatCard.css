@@ -1,201 +1,214 @@
+/* =========================
+   STAT CARD BASE
+========================= */
+
 .stat-card {
   position: relative;
-
   min-height: 170px;
-
   padding: 21px 22px;
-
   background: #ffffff;
-
   border: 1px solid #e9e7ee;
-
-  border-radius: 15px;
-
-  box-shadow:
-    0 3px 10px rgba(35, 27, 50, 0.025);
-
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
-
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(35, 27, 50, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
-
+/* Background Decorative Accent Circle */
 .stat-card::after {
   content: "";
-
   position: absolute;
-
-  width: 100px;
-  height: 100px;
-
-  right: -40px;
-  bottom: -45px;
-
+  width: 110px;
+  height: 110px;
+  right: -35px;
+  bottom: -40px;
   border-radius: 50%;
-
-  background: #f8f3fa;
-
+  background: #f4eef8;
+  opacity: 0.6;
   pointer-events: none;
+  transition: opacity 0.25s ease;
 }
 
+.stat-card:hover::after {
+  opacity: 1;
+}
 
+/* Hover Elevation & Border Accent */
 .stat-card:hover {
-  transform: translateY(-3px);
-
-  border-color: #ded3e4;
-
-  box-shadow:
-    0 10px 25px rgba(50, 35, 65, 0.07);
+  transform: translateY(-4px);
+  border-color: #dcd2e6;
+  box-shadow: 0 12px 28px rgba(94, 53, 115, 0.08);
 }
-
 
 /* =========================
-   TOP
+   CARD HEADER & ICON
 ========================= */
 
 .stat-card-top {
   display: flex;
-
   align-items: center;
-
   justify-content: space-between;
 }
 
-
 .stat-icon {
-  width: 42px;
-  height: 42px;
-
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  border-radius: 11px;
-
-  font-size: 17px;
-
+  border-radius: 12px;
+  font-size: 18px;
   font-weight: 700;
-
   background: #f1e9f5;
-
-  color: #71488a;
+  color: #5e3573;
+  transition: transform 0.2s ease;
 }
 
-
-.stat-icon.active {
-  background: #edf7f2;
-
-  color: #3a9270;
+.stat-card:hover .stat-icon {
+  transform: scale(1.05);
 }
-
-.stat-icon.customers {
-  background: #edf3fa;
-
-  color: #4b7095;
-}
-
-.stat-icon.parking {
-  background: #f2eff9;
-
-  color: #735a9a;
-}
-
-.stat-icon.incident {
-  background: #fff1f0;
-
-  color: #c05a59;
-}
-
-.stat-icon.revenue {
-  background: #f3ecf7;
-
-  color: #76488d;
-}
-
 
 /* =========================
-   MENU
+   COLOR VARIANT THEMES
+========================= */
+
+/* 1. Total Staff (Purple) */
+.stat-card.staff,
+.stat-card:has(.stat-icon.staff) {
+  border-color: #ebdff2;
+}
+.stat-icon.staff {
+  background: #f3e8f8;
+  color: #7c3aed;
+}
+
+/* 2. Active Staff (Emerald Green) */
+.stat-card.active,
+.stat-card:has(.stat-icon.active) {
+  border-color: #d1fae5;
+}
+.stat-card.active::after,
+.stat-card:has(.stat-icon.active)::after {
+  background: #e6f7f0;
+}
+.stat-icon.active {
+  background: #d1fae5;
+  color: #10b981;
+}
+
+/* 3. Total Customers (Sky Blue) */
+.stat-card.customers,
+.stat-card:has(.stat-icon.customers) {
+  border-color: #e0f2fe;
+}
+.stat-card.customers::after,
+.stat-card:has(.stat-icon.customers)::after {
+  background: #f0f9ff;
+}
+.stat-icon.customers {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+/* 4. Active Sessions (Amber / Gold) */
+.stat-card.parking,
+.stat-card:has(.stat-icon.parking) {
+  border-color: #fef3c7;
+}
+.stat-card.parking::after,
+.stat-card:has(.stat-icon.parking)::after {
+  background: #fffbeb;
+}
+.stat-icon.parking {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* 5. Open Incidents (Rose / Crimson) */
+.stat-card.incident,
+.stat-card.warning,
+.stat-card:has(.stat-icon.incident) {
+  border-color: #fee2e2;
+}
+.stat-card.incident::after,
+.stat-card.warning::after,
+.stat-card:has(.stat-icon.incident)::after {
+  background: #fff1f2;
+}
+.stat-icon.incident,
+.stat-card.warning .stat-icon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* 6. Today's Revenue (Violet) */
+.stat-card.revenue,
+.stat-card:has(.stat-icon.revenue) {
+  border-color: #ede9fe;
+}
+.stat-card.revenue::after,
+.stat-card:has(.stat-icon.revenue)::after {
+  background: #f5f3ff;
+}
+.stat-icon.revenue {
+  background: #ede9fe;
+  color: #8b5cf6;
+}
+
+/* =========================
+   MENU & CONTROLS
 ========================= */
 
 .stat-menu {
   border: none;
-
   background: transparent;
-
-  color: #aaa6b1;
-
-  font-size: 12px;
-
+  color: #a39cae;
+  font-size: 14px;
   letter-spacing: 2px;
-
   cursor: pointer;
-
-  padding: 5px;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
+.stat-menu:hover {
+  background: #f4eff8;
+  color: #5e3573;
+}
 
 /* =========================
-   CONTENT
+   CARD CONTENT
 ========================= */
 
 .stat-card-body {
   margin-top: 18px;
 }
 
-
 .stat-title {
   display: block;
-
-  font-size: 12px;
-
-  font-weight: 500;
-
-  color: #777382;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b6377;
 }
-
 
 .stat-card-body strong {
   display: block;
-
-  margin-top: 5px;
-
+  margin-top: 6px;
   font-size: 28px;
-
+  font-weight: 800;
   line-height: 1.1;
-
   letter-spacing: -0.7px;
-
-  color: #211d35;
+  color: #1a1024;
 }
-
 
 .stat-card-body strong.revenue-value {
-  font-size: 25px;
+  font-size: 26px;
+  color: #5e3573;
 }
-
 
 .stat-card-body p {
-  margin-top: 9px;
-
-  font-size: 10px;
-
-  color: #a09ca8;
-}
-
-
-/* =========================
-   WARNING
-========================= */
-
-.stat-card.warning {
-  border-color: #eee4e4;
-}
-
-.stat-card.warning .stat-icon {
-  background: #fff1f0;
-
-  color: #bd5a59;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8c8398;
 }
