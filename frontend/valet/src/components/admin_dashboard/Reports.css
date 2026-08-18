@@ -1,0 +1,716 @@
+.reports-page {
+  width: 100%;
+  max-width: 1400px;
+
+  margin: 0 auto;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.reports-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: flex-end;
+
+  margin-bottom: 25px;
+}
+
+.reports-eyebrow {
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 1.4px;
+
+  color: #8e8495;
+}
+
+.reports-header h2 {
+  margin-top: 5px;
+
+  font-size: 25px;
+
+  letter-spacing: -0.7px;
+
+  color: #332d3c;
+}
+
+.reports-description {
+  margin-top: 6px;
+
+  font-size: 10px;
+
+  color: #96909d;
+}
+
+
+/* =========================
+   DATE RANGE
+========================= */
+
+.date-range {
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0 11px;
+
+  border: 1px solid #e2dde5;
+
+  border-radius: 8px;
+
+  background: white;
+}
+
+.range-icon {
+  font-size: 14px;
+
+  color: #766d7c;
+}
+
+.date-range select {
+  border: none;
+
+  outline: none;
+
+  background: transparent;
+
+  font-family: inherit;
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  color: #625b68;
+
+  cursor: pointer;
+}
+
+
+/* =========================
+   KPI
+========================= */
+
+.report-kpi-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 14px;
+
+  margin-bottom: 15px;
+}
+
+.report-kpi-card {
+  padding: 17px;
+
+  background: #ffffff;
+
+  border: 1px solid #ebe7ed;
+
+  border-radius: 11px;
+
+  box-shadow:
+    0 4px 16px rgba(40, 30, 50, 0.025);
+}
+
+.report-kpi-top {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+.report-kpi-icon {
+  width: 31px;
+  height: 31px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  font-size: 11px;
+
+  font-weight: 700;
+}
+
+.report-kpi-icon.revenue {
+  background: #eee7f3;
+  color: #75488c;
+}
+
+.report-kpi-icon.parking {
+  background: #e8f2ef;
+  color: #43836e;
+}
+
+.report-kpi-icon.customers {
+  background: #e9eef6;
+  color: #587092;
+}
+
+.report-kpi-icon.incidents {
+  background: #f8eceb;
+  color: #a26160;
+}
+
+.kpi-trend {
+  font-size: 8px;
+
+  font-weight: 700;
+}
+
+.kpi-trend.positive {
+  color: #499273;
+}
+
+.kpi-trend.neutral {
+  color: #99929d;
+}
+
+.report-kpi-card p {
+  margin-top: 15px;
+
+  font-size: 9px;
+
+  color: #8f8995;
+}
+
+.report-kpi-card h3 {
+  margin-top: 5px;
+
+  font-size: 20px;
+
+  letter-spacing: -0.4px;
+
+  color: #393342;
+}
+
+.report-kpi-card > span:last-child {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 8px;
+
+  color: #aaa4ae;
+}
+
+
+/* =========================
+   PANELS
+========================= */
+
+.reports-main-grid {
+  display: grid;
+
+  grid-template-columns:
+    1.65fr 1fr;
+
+  gap: 15px;
+
+  margin-bottom: 15px;
+}
+
+.report-panel {
+  min-width: 0;
+
+  padding: 19px;
+
+  background: #ffffff;
+
+  border: 1px solid #ebe7ed;
+
+  border-radius: 11px;
+}
+
+.report-panel-header {
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+}
+
+.report-panel-header h3 {
+  font-size: 12px;
+
+  font-weight: 650;
+
+  color: #413a49;
+}
+
+.report-panel-header p {
+  margin-top: 4px;
+
+  font-size: 8px;
+
+  color: #aaa4af;
+}
+
+.panel-menu {
+  border: none;
+
+  background: transparent;
+
+  color: #8e8794;
+
+  font-size: 17px;
+
+  cursor: pointer;
+}
+
+
+/* =========================
+   REVENUE
+========================= */
+
+.revenue-summary {
+  margin-top: 18px;
+
+  display: flex;
+
+  align-items: baseline;
+
+  gap: 8px;
+}
+
+.revenue-summary strong {
+  font-size: 21px;
+
+  color: #403848;
+}
+
+.revenue-summary span {
+  font-size: 8px;
+
+  color: #a09aa5;
+}
+
+.revenue-chart {
+  height: 220px;
+
+  margin-top: 13px;
+
+  display: flex;
+}
+
+.chart-y-axis {
+  width: 42px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  padding: 4px 0 22px;
+
+  font-size: 7px;
+
+  color: #aaa4ae;
+}
+
+.chart-area {
+  position: relative;
+
+  flex: 1;
+
+  height: 100%;
+
+  overflow: hidden;
+}
+
+.chart-grid-lines {
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: space-between;
+
+  padding-bottom: 22px;
+}
+
+.chart-grid-lines span {
+  width: 100%;
+
+  border-top: 1px dashed #eeeaf0;
+}
+
+.revenue-line {
+  position: absolute;
+
+  left: 0;
+  top: 5px;
+
+  width: 100%;
+
+  height: calc(100% - 28px);
+
+  color: #75488c;
+}
+
+.chart-points {
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  bottom: 0;
+
+  height: 25px;
+}
+
+.chart-point {
+  position: absolute;
+
+  transform: translateX(-50%);
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 5px;
+}
+
+.chart-point span {
+  display: block;
+
+  width: 5px;
+  height: 5px;
+
+  border-radius: 50%;
+
+  background: #75488c;
+}
+
+.chart-point label {
+  font-size: 7px;
+
+  color: #99929f;
+}
+
+
+/* =========================
+   PARKING ACTIVITY
+========================= */
+
+.parking-activity-panel {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.parking-circle {
+  width: 145px;
+  height: 145px;
+
+  margin: 20px auto 15px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    conic-gradient(
+      #75488c 0 74%,
+      #65a487 74% 91%,
+      #d9d1dc 91% 100%
+    );
+}
+
+.circle-inner {
+  width: 108px;
+  height: 108px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #ffffff;
+}
+
+.circle-inner strong {
+  font-size: 22px;
+
+  color: #403848;
+}
+
+.circle-inner span {
+  margin-top: 3px;
+
+  font-size: 8px;
+
+  color: #aaa4ae;
+}
+
+.parking-legend {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 10px;
+}
+
+.parking-legend > div {
+  display: grid;
+
+  grid-template-columns: 8px 1fr auto;
+
+  align-items: center;
+
+  gap: 7px;
+
+  font-size: 8px;
+
+  color: #827b88;
+}
+
+.parking-legend strong {
+  font-size: 9px;
+
+  color: #514a58;
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+}
+
+.legend-dot.completed {
+  background: #75488c;
+}
+
+.legend-dot.active {
+  background: #65a487;
+}
+
+.legend-dot.cancelled {
+  background: #d9d1dc;
+}
+
+
+/* =========================
+   BOTTOM
+========================= */
+
+.reports-bottom-grid {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 15px;
+}
+
+
+/* STAFF */
+
+.staff-activity {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 10px;
+
+  margin-top: 20px;
+}
+
+.activity-stat {
+  padding: 13px;
+
+  border-radius: 8px;
+
+  background: #faf9fb;
+
+  border: 1px solid #eeeaf0;
+}
+
+.activity-stat span {
+  display: block;
+
+  font-size: 8px;
+
+  color: #99929e;
+}
+
+.activity-stat strong {
+  display: block;
+
+  margin-top: 6px;
+
+  font-size: 18px;
+
+  color: #4b4453;
+}
+
+.green-text {
+  color: #499273 !important;
+}
+
+
+/* =========================
+   INCIDENTS
+========================= */
+
+.incident-count {
+  padding: 5px 8px;
+
+  border-radius: 5px;
+
+  background: #f9eded;
+
+  color: #a76161;
+
+  font-size: 8px;
+
+  font-weight: 600;
+}
+
+.incident-list {
+  margin-top: 12px;
+}
+
+.incident-item {
+  min-height: 47px;
+
+  display: grid;
+
+  grid-template-columns:
+    7px 1fr auto;
+
+  align-items: center;
+
+  gap: 9px;
+
+  border-bottom: 1px solid #f0edf2;
+}
+
+.incident-item:last-child {
+  border-bottom: none;
+}
+
+.incident-item > div {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.incident-item strong {
+  font-size: 9px;
+
+  font-weight: 600;
+
+  color: #514a58;
+}
+
+.incident-item span {
+  font-size: 7px;
+
+  color: #a29ba6;
+}
+
+.incident-item small {
+  font-size: 7px;
+
+  font-weight: 600;
+}
+
+.incident-dot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+}
+
+.incident-dot.high {
+  background: #b45f60;
+}
+
+.incident-dot.medium {
+  background: #c39150;
+}
+
+.incident-dot.low {
+  background: #699680;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1050px) {
+
+  .report-kpi-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .reports-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 700px) {
+
+  .reports-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 15px;
+  }
+
+  .reports-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 500px) {
+
+  .report-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-activity {
+    grid-template-columns: 1fr;
+  }
+
+  .report-panel {
+    padding: 15px;
+  }
+
+}

@@ -1,0 +1,201 @@
+.stat-card {
+  position: relative;
+
+  min-height: 170px;
+
+  padding: 21px 22px;
+
+  background: #ffffff;
+
+  border: 1px solid #e9e7ee;
+
+  border-radius: 15px;
+
+  box-shadow:
+    0 3px 10px rgba(35, 27, 50, 0.025);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+
+  overflow: hidden;
+}
+
+
+.stat-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 100px;
+  height: 100px;
+
+  right: -40px;
+  bottom: -45px;
+
+  border-radius: 50%;
+
+  background: #f8f3fa;
+
+  pointer-events: none;
+}
+
+
+.stat-card:hover {
+  transform: translateY(-3px);
+
+  border-color: #ded3e4;
+
+  box-shadow:
+    0 10px 25px rgba(50, 35, 65, 0.07);
+}
+
+
+/* =========================
+   TOP
+========================= */
+
+.stat-card-top {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+}
+
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  font-size: 17px;
+
+  font-weight: 700;
+
+  background: #f1e9f5;
+
+  color: #71488a;
+}
+
+
+.stat-icon.active {
+  background: #edf7f2;
+
+  color: #3a9270;
+}
+
+.stat-icon.customers {
+  background: #edf3fa;
+
+  color: #4b7095;
+}
+
+.stat-icon.parking {
+  background: #f2eff9;
+
+  color: #735a9a;
+}
+
+.stat-icon.incident {
+  background: #fff1f0;
+
+  color: #c05a59;
+}
+
+.stat-icon.revenue {
+  background: #f3ecf7;
+
+  color: #76488d;
+}
+
+
+/* =========================
+   MENU
+========================= */
+
+.stat-menu {
+  border: none;
+
+  background: transparent;
+
+  color: #aaa6b1;
+
+  font-size: 12px;
+
+  letter-spacing: 2px;
+
+  cursor: pointer;
+
+  padding: 5px;
+}
+
+
+/* =========================
+   CONTENT
+========================= */
+
+.stat-card-body {
+  margin-top: 18px;
+}
+
+
+.stat-title {
+  display: block;
+
+  font-size: 12px;
+
+  font-weight: 500;
+
+  color: #777382;
+}
+
+
+.stat-card-body strong {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 28px;
+
+  line-height: 1.1;
+
+  letter-spacing: -0.7px;
+
+  color: #211d35;
+}
+
+
+.stat-card-body strong.revenue-value {
+  font-size: 25px;
+}
+
+
+.stat-card-body p {
+  margin-top: 9px;
+
+  font-size: 10px;
+
+  color: #a09ca8;
+}
+
+
+/* =========================
+   WARNING
+========================= */
+
+.stat-card.warning {
+  border-color: #eee4e4;
+}
+
+.stat-card.warning .stat-icon {
+  background: #fff1f0;
+
+  color: #bd5a59;
+}

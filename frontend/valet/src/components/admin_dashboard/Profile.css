@@ -1,0 +1,474 @@
+/* =========================
+   PROFILE PAGE
+========================= */
+
+.profile-page {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.profile-page-header {
+  margin-bottom: 22px;
+}
+
+.profile-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  color: #8e8495;
+}
+
+.profile-page-header h2 {
+  margin-top: 5px;
+
+  font-size: 25px;
+  letter-spacing: -0.7px;
+
+  color: #332d3c;
+}
+
+.profile-page-header p:last-child {
+  margin-top: 6px;
+
+  font-size: 10px;
+
+  color: #96909d;
+}
+
+
+/* =========================
+   PROFILE OVERVIEW
+========================= */
+
+.profile-overview {
+  min-height: 105px;
+
+  padding: 20px 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: #ffffff;
+
+  border: 1px solid #ebe7ed;
+
+  border-radius: 11px;
+
+  box-shadow:
+    0 4px 16px rgba(40, 30, 50, 0.025);
+
+  margin-bottom: 15px;
+}
+
+.profile-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-large-avatar {
+  width: 62px;
+  height: 62px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 15px;
+
+  background: #eee6f2;
+
+  color: #704688;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.profile-main-info h3 {
+  font-size: 16px;
+  color: #403946;
+}
+
+.profile-main-info > p {
+  margin-top: 4px;
+
+  font-size: 9px;
+
+  color: #9b949f;
+}
+
+.profile-status {
+  margin-top: 8px;
+
+  display: flex;
+  align-items: center;
+  gap: 5px;
+
+  font-size: 8px;
+
+  color: #4c8d70;
+}
+
+.profile-status span,
+.active-field span {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #5e9a7c;
+}
+
+.profile-role {
+  display: flex;
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 6px;
+}
+
+.profile-role span {
+  font-size: 7px;
+
+  letter-spacing: 1px;
+
+  color: #aaa3ae;
+}
+
+.profile-role strong {
+  padding: 6px 10px;
+
+  border-radius: 6px;
+
+  background: #f0e8f4;
+
+  color: #75488c;
+
+  font-size: 8px;
+}
+
+
+/* =========================
+   MAIN GRID
+========================= */
+
+.profile-grid {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 15px;
+
+  margin-bottom: 15px;
+}
+
+
+/* =========================
+   PANEL
+========================= */
+
+.profile-panel {
+  padding: 19px;
+
+  background: #ffffff;
+
+  border: 1px solid #ebe7ed;
+
+  border-radius: 11px;
+}
+
+.profile-panel-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.profile-panel-header h3 {
+  font-size: 12px;
+
+  font-weight: 650;
+
+  color: #413a49;
+}
+
+.profile-panel-header p {
+  margin-top: 4px;
+
+  font-size: 8px;
+
+  color: #aaa4af;
+}
+
+
+/* =========================
+   EDIT BUTTON
+========================= */
+
+.profile-edit-button {
+  padding: 6px 11px;
+
+  border: 1px solid #e3dce7;
+
+  border-radius: 6px;
+
+  background: #faf8fb;
+
+  color: #75488c;
+
+  font-family: inherit;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.profile-edit-button:hover {
+  background: #f2eaf5;
+}
+
+
+/* =========================
+   FIELDS
+========================= */
+
+.profile-fields {
+  margin-top: 18px;
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  column-gap: 30px;
+}
+
+.profile-field {
+  min-height: 63px;
+
+  padding: 12px 0;
+
+  border-bottom: 1px solid #f0edf2;
+}
+
+.profile-field span {
+  display: block;
+
+  font-size: 7px;
+
+  letter-spacing: 0.7px;
+
+  color: #aaa3ae;
+}
+
+.profile-field > strong {
+  display: block;
+
+  margin-top: 7px;
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  color: #544c59;
+}
+
+.active-field {
+  display: flex !important;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  color: #4c8d70 !important;
+}
+
+
+/* =========================
+   SECURITY
+========================= */
+
+.profile-security {
+  padding: 19px;
+
+  background: #ffffff;
+
+  border: 1px solid #ebe7ed;
+
+  border-radius: 11px;
+}
+
+.security-options {
+  margin-top: 15px;
+
+  display: flex;
+
+  flex-direction: column;
+}
+
+.security-option {
+  min-height: 62px;
+
+  padding: 10px 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 11px;
+
+  border-bottom: 1px solid #f0edf2;
+}
+
+.security-option:last-child {
+  border-bottom: none;
+}
+
+.security-icon {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 8px;
+
+  background: #f1ebf4;
+
+  color: #75488c;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.security-option > div:nth-child(2) {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  flex: 1;
+}
+
+.security-option strong {
+  font-size: 9px;
+
+  font-weight: 600;
+
+  color: #514a58;
+}
+
+.security-option span {
+  font-size: 7px;
+
+  color: #aaa3ae;
+}
+
+.security-option button {
+  padding: 7px 11px;
+
+  border: 1px solid #e2dce5;
+
+  border-radius: 6px;
+
+  background: white;
+
+  color: #665a6d;
+
+  font-family: inherit;
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.security-option button:hover {
+  background: #f8f5f9;
+}
+
+.security-active {
+  padding: 5px 8px;
+
+  border-radius: 5px;
+
+  background: #eaf4ee;
+
+  color: #4d8b70 !important;
+
+  font-weight: 600;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 800px) {
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 550px) {
+
+  .profile-overview {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 15px;
+  }
+
+  .profile-role {
+    align-items: flex-start;
+  }
+
+  .profile-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .security-option {
+    align-items: flex-start;
+  }
+
+  .security-option button,
+  .security-active {
+    margin-left: auto;
+  }
+
+}
+
+
+@media (max-width: 450px) {
+
+  .security-option {
+    flex-wrap: wrap;
+  }
+
+  .security-option button,
+  .security-active {
+    margin-left: 43px;
+  }
+
+}
