@@ -1,5 +1,10 @@
 import { Bell,
   ChevronDown,
+  Settings,
+  Search,
+  LogOut,
+  ChevronUp
+  
 } from 'lucide-react';
 
 import { useState } from "react";
@@ -38,17 +43,13 @@ function Topbar() {
         <div className="topbar-search">
 
           <span className="search-icon">
-            ⌕
+            <Search/>
           </span>
 
           <input
             type="text"
             placeholder="Search..."
           />
-
-          <span className="search-shortcut">
-            ⌘ K
-          </span>
 
         </div>
 
@@ -205,15 +206,15 @@ function Topbar() {
               <span>
                 Administrator
               </span>
-
+             
             </div>
-
+             <ChevronDown />
             <span
               className={`profile-chevron ${
                 showProfile ? "open" : ""
               }`}
             >
-              ▾
+              <></>
             </span>
 
           </button>
@@ -239,6 +240,7 @@ function Topbar() {
                     admin@valetparking.com
                   </span>
 
+                  
                 </div>
 
               </div>
@@ -264,7 +266,7 @@ function Topbar() {
               <button className="profile-menu-item">
 
                 <span className="menu-item-icon">
-                  ⚙
+                  <Settings/>
                 </span>
 
                 <div>
@@ -281,7 +283,7 @@ function Topbar() {
               <button className="profile-menu-item logout-menu">
 
                 <span className="menu-item-icon">
-                  ↪
+                  <LogOut />
                 </span>
 
                 <div>
