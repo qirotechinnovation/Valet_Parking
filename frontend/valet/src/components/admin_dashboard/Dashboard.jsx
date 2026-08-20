@@ -4,7 +4,9 @@ import Topbar from "./Topbar";
 import StatCard from "./StatCard";
 import StaffManagement from "./StaffManagement";
 import Reports from "./Reports";
-import Profile from "./Profile";
+import Profile from "./Profile"
+
+
 
 import "./Dashboard.css";
 const date_obj = new Date();

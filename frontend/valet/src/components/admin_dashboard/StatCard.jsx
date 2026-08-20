@@ -1,4 +1,12 @@
 import "./StatCard.css";
+import { TriangleAlert,
+  FileUser,
+  UsersRound,
+  CircleCheck,
+  Car,
+  IndianRupee
+
+} from 'lucide-react';
 
 function StatCard({
   icon,
@@ -10,12 +18,12 @@ function StatCard({
 }) {
 
   const icons = {
-    staff: "♙",
-    active: "●",
-    customers: "♧",
-    parking: "⌖",
-    incident: "!",
-    revenue: "₹"
+    staff: <FileUser />,
+    active: <CircleCheck />,
+    customers: <UsersRound />,
+    parking: <Car />,
+    incident: <TriangleAlert />,
+    revenue: <IndianRupee />
   };
 
   return (
