@@ -87,18 +87,39 @@ const getParkingAdminDashboard = async (req, res) => {
       (total, payment) => total + Number(payment.total_amount || 0),
       0
     );
+    const { count: todayCheckIns, error: todayCheckInsError } = await supabase
+  .from("parking_sessions")
+  .select("*", { count: "exact", head: true })
+  .gte("checked_in_at", startOfDay.toISOString());
+
+if (todayCheckInsError) {
+  throw todayCheckInsError;
+}
+
+const { count: todayCompletedReturns, error: todayCompletedReturnsError } =
+  await supabase
+    .from("parking_sessions")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "returned_completed")
+    .gte("completed_at", startOfDay.toISOString());
+
+if (todayCompletedReturnsError) {
+  throw todayCompletedReturnsError;
+}
 
     return res.status(200).json({
       success: true,
       stats: {
-        totalSlots: totalSlots || 0,
-        availableSlots: availableSlots || 0,
-        occupiedSlots: occupiedSlots || 0,
-        maintenanceSlots: maintenanceSlots || 0,
-        activeSessions: activeSessions || 0,
-        pendingRetrievals: pendingRetrievals || 0,
-        todayRevenue
-      }
+  totalSlots: totalSlots || 0,
+  availableSlots: availableSlots || 0,
+  occupiedSlots: occupiedSlots || 0,
+  maintenanceSlots: maintenanceSlots || 0,
+  activeSessions: activeSessions || 0,
+  pendingRetrievals: pendingRetrievals || 0,
+  todayCheckIns: todayCheckIns || 0,
+  todayCompletedReturns: todayCompletedReturns || 0,
+  todayRevenue
+}
     });
   } catch (error) {
     console.error("Parking Admin dashboard error:", error);
@@ -110,6 +131,159 @@ const getParkingAdminDashboard = async (req, res) => {
   }
 };
 
+const getParkingStaff = async (req, res) => {
+  try {
+    const { data: staff, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, is_active, created_at")
+      .in("role", ["valet", "reception_security", "cashier"])
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Get parking staff error:", error);
+
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: staff.length,
+      staff
+    });
+
+  } catch (error) {
+    console.error("Get parking staff error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch parking staff."
+    });
+  }
+};
+const getParkingReports = async (req, res) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const { count: dailyCheckIns, error: checkInError } =
+      await supabase
+        .from("parking_sessions")
+        .select("*", { count: "exact", head: true })
+        .gte("checked_in_at", startOfDay.toISOString())
+        .lte("checked_in_at", endOfDay.toISOString());
+
+    if (checkInError) throw checkInError;
+
+    const { count: dailyCheckOuts, error: checkOutError } =
+      await supabase
+        .from("parking_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "returned_completed")
+        .gte("completed_at", startOfDay.toISOString())
+        .lte("completed_at", endOfDay.toISOString());
+
+    if (checkOutError) throw checkOutError;
+
+    const { count: totalSlots, error: totalSlotsError } =
+      await supabase
+        .from("parking_slots")
+        .select("*", { count: "exact", head: true });
+
+    if (totalSlotsError) throw totalSlotsError;
+
+    const { count: occupiedSlots, error: occupiedSlotsError } =
+      await supabase
+        .from("parking_slots")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "occupied");
+
+    if (occupiedSlotsError) throw occupiedSlotsError;
+
+    const { count: retrievalRequests, error: retrievalError } =
+      await supabase
+        .from("parking_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "retrieval_requested");
+
+    if (retrievalError) throw retrievalError;
+
+    const { count: activeRetrievals, error: activeRetrievalError } =
+      await supabase
+        .from("parking_sessions")
+        .select("*", { count: "exact", head: true })
+        .in("status", ["retrieving", "ready_for_pickup"]);
+
+    if (activeRetrievalError) throw activeRetrievalError;
+
+    const occupancyRate =
+      totalSlots > 0
+        ? Math.round((occupiedSlots / totalSlots) * 100)
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      reports: {
+        dailyCheckIns: dailyCheckIns || 0,
+        dailyCheckOuts: dailyCheckOuts || 0,
+        totalSlots: totalSlots || 0,
+        occupiedSlots: occupiedSlots || 0,
+        occupancyRate,
+        retrievalRequests: retrievalRequests || 0,
+        activeRetrievals: activeRetrievals || 0
+      }
+    });
+
+  } catch (error) {
+    console.error("Parking reports error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch parking reports."
+    });
+  }
+};
+const getParkingAdminProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, is_active, created_at, auth_user_id")
+      .eq("id", userId)
+.eq("role", "parking_admin")
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
+        success: false,
+        message: "Parking Admin profile not found."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    console.error("Get Parking Admin profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch profile."
+    });
+  }
+};
+
 module.exports = {
-  getParkingAdminDashboard
+  getParkingAdminDashboard,
+  getParkingStaff,
+  getParkingReports,
+  getParkingAdminProfile
 };

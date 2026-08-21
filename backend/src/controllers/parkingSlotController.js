@@ -49,25 +49,92 @@ const createParkingSlot = async (req, res) => {
 
 const getParkingSlots = async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { search, status, parking_type } = req.query;
+
+    let slotQuery = supabase
       .from("parking_slots")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Get parking slots error:", error);
+    if (status) {
+      slotQuery = slotQuery.eq("status", status);
+    }
+
+    if (parking_type) {
+      slotQuery = slotQuery.eq("parking_type", parking_type);
+    }
+
+    const { data: slots, error: slotError } = await slotQuery;
+
+    if (slotError) {
+      console.error("Get parking slots error:", slotError);
 
       return res.status(500).json({
         success: false,
-        message: error.message
+        message: slotError.message
       });
+    }
+
+    const { data: sessions, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select(`
+        parking_slot,
+        status,
+        vehicle:vehicles (
+          license_plate,
+          customer:customers (
+            name,
+            phone
+          )
+        )
+      `)
+      .in("status", [
+        "checked_in",
+        "parked",
+        "retrieval_requested",
+        "retrieving",
+        "ready_for_pickup"
+      ]);
+
+    if (sessionError) {
+      console.error("Get active parking sessions error:", sessionError);
+
+      return res.status(500).json({
+        success: false,
+        message: sessionError.message
+      });
+    }
+
+    let result = slots.map((slot) => {
+      const session = sessions.find(
+        (item) => item.parking_slot === slot.slot_number
+      );
+
+      return {
+        ...slot,
+        assigned_vehicle: session?.vehicle?.license_plate || null,
+        customer_name: session?.vehicle?.customer?.name || null,
+        customer_phone: session?.vehicle?.customer?.phone || null,
+        session_status: session?.status || null
+      };
+    });
+
+    if (search) {
+      const searchTerm = search.toLowerCase();
+
+      result = result.filter((slot) =>
+        slot.slot_number?.toLowerCase().includes(searchTerm) ||
+        slot.assigned_vehicle?.toLowerCase().includes(searchTerm) ||
+        slot.customer_name?.toLowerCase().includes(searchTerm)
+      );
     }
 
     return res.status(200).json({
       success: true,
-      count: data.length,
-      slots: data
+      count: result.length,
+      slots: result
     });
+
   } catch (error) {
     console.error("Get parking slots error:", error);
 

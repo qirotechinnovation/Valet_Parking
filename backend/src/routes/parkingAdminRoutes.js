@@ -1,16 +1,24 @@
 const express = require("express");
 
 const {
-  getParkingAdminDashboard
+  getParkingAdminDashboard,
+  getParkingStaff,
+  getParkingReports,
+  getParkingAdminProfile
 } = require("../controllers/parkingAdminController");
 
 const {
   getParkingSessions,
-    createParkingSession,
-      assignParkingSlot,
-       assignValet
+  getRetrievalRequests,
+  getParkingHistory,
+  createParkingSession,
+  assignParkingSlot,
+  assignValet,
+  requestRetrieval,
+  startRetrieval,
+  markReadyForPickup,
+  completeReturn
 } = require("../controllers/parkingSessionController");
-
 const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
@@ -51,4 +59,67 @@ router.patch(
   assignValet
 );
 
+
+router.patch(
+  "/sessions/:id/request-retrieval",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  requestRetrieval
+);
+
+
+router.patch(
+  "/sessions/:id/start-retrieval",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  startRetrieval
+);
+
+
+router.patch(
+  "/sessions/:id/ready",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  markReadyForPickup
+);
+
+
+router.patch(
+  "/sessions/:id/complete",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  completeReturn
+);
+router.get(
+  "/retrieval-requests",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getRetrievalRequests
+);
+router.get(
+  "/history",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getParkingHistory
+);
+
+router.get(
+  "/staff",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getParkingStaff
+);
+
+router.get(
+  "/reports",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getParkingReports
+);
+router.get(
+  "/profile",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getParkingAdminProfile
+);
 module.exports = router;
