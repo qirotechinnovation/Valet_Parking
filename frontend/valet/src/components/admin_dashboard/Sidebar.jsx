@@ -1,4 +1,5 @@
 import "./Sidebar.css";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   UserRoundPen,
@@ -10,6 +11,16 @@ import {
 
 
 function Sidebar({ activePage, setActivePage }) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Remove authentication data
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+
+    // Redirect to login page
+    navigate("/", { replace: true });
+  };
   return (
     <aside className="dashboard-sidebar">
 
@@ -98,9 +109,9 @@ function Sidebar({ activePage, setActivePage }) {
       {/* Bottom */}
       <div className="sidebar-bottom">
 
-        <button className="nav-item logout">
+        <button className="nav-item logout" onClick={handleLogout}>
           <span className="nav-icon">
-            <LogOut/>
+            <LogOut />
           </span>
           <span>Logout</span>
         </button>

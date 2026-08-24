@@ -4,10 +4,19 @@ const createParkingSlot = async (req, res) => {
   try {
     const { slot_number, parking_type } = req.body;
 
+    const allowedParkingTypes = ["car", "bike", "truck"];
+
     if (!slot_number || !parking_type) {
       return res.status(400).json({
         success: false,
         message: "slot_number and parking_type are required."
+      });
+    }
+
+    if (!allowedParkingTypes.includes(parking_type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid parking type. Use car, bike, or truck."
       });
     }
 
@@ -282,5 +291,5 @@ module.exports = {
   getParkingSlots,
   getParkingSlotById,
   updateParkingSlot,
-   updateParkingSlotStatus
+  updateParkingSlotStatus
 };

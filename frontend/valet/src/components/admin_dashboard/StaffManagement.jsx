@@ -1,90 +1,768 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  createStaff,
+  getAllStaff,
+  updateStaff,
+  updateStaffStatus,
+} from "../../api/staffApi";
+
 import "./StaffManagement.css";
 
-const previewStaff = [
-  {
-    id: 1,
-    name: "Aarav Mehta",
-    email: "aarav@example.com",
-    role: "Parking Admin",
-    status: "Active",
-    created: "17 Aug 2026",
-  },
-];
+
+// ============================================================
+// ROLE HELPERS
+// ============================================================
+
+const ROLE_LABELS = {
+  parking_admin: "Parking Admin",
+  reception_security: "Security / Reception",
+  valet: "Valet",
+  cashier: "Cashier",
+  super_admin: "Super Admin",
+};
+
+const getRoleLabel = (role) => {
+  return ROLE_LABELS[role] || role || "Unknown";
+};
+
+const getRoleClass = (role) => {
+  return `role-${String(role || "")
+    .toLowerCase()
+    .replaceAll(" ", "-")
+    .replaceAll("/", "-")}`;
+};
+
+const getInitials = (name) => {
+  if (!name) return "NA";
+
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+};
+
+const formatDate = (date) => {
+  if (!date) return "--";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "--";
+  }
+
+  return parsedDate.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+
+// ============================================================
+// COMPONENT
+// ============================================================
 
 function StaffManagement() {
+
+  // ----------------------------------------------------------
+  // MODALS
+  // ----------------------------------------------------------
+
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
   const [openAction, setOpenAction] = useState(null);
+
   const [selectedStaff, setSelectedStaff] = useState(null);
+
   const [editingStaff, setEditingStaff] = useState(null);
+
   const [statusStaff, setStatusStaff] = useState(null);
 
 
+  // ----------------------------------------------------------
+  // STAFF DATA
+  // ----------------------------------------------------------
+
+  const [staff, setStaff] = useState([]);
+
+  const [loading, setLoading] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+
+  const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+
+  // ----------------------------------------------------------
+  // SEARCH / FILTER
+  // ----------------------------------------------------------
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [roleFilter, setRoleFilter] = useState("all");
+
+  const [statusFilter, setStatusFilter] = useState("all");
+
+
+  // ----------------------------------------------------------
+  // MESSAGES
+  // ----------------------------------------------------------
+
+  const [error, setError] = useState("");
+
+  const [successMessage, setSuccessMessage] = useState("");
+
+
+  // ----------------------------------------------------------
+  // ADD STAFF FORM
+  // ----------------------------------------------------------
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "",
+  });
+
+
+  // ----------------------------------------------------------
+  // EDIT STAFF FORM
+  // ----------------------------------------------------------
+
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    role: "",
+  });
+
+
+  // ==========================================================
+  // LOAD STAFF
+  // ==========================================================
+
+  useEffect(() => {
+    loadStaff();
+  }, []);
+
+
+  const loadStaff = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await getAllStaff();
+
+      setStaff(response?.users || []);
+
+    } catch (error) {
+
+      console.error("Failed to load staff:", error);
+
+      setError(
+        error?.message || "Failed to load staff members."
+      );
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // ==========================================================
+  // AUTO HIDE SUCCESS MESSAGE
+  // ==========================================================
+
+  useEffect(() => {
+
+    if (!successMessage) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMessage("");
+    }, 4000);
+
+    return () => clearTimeout(timer);
+
+  }, [successMessage]);
+
+
+  // ==========================================================
+  // FORM INPUT
+  // ==========================================================
+
+  const handleInputChange = (e) => {
+
+    const { name, value } = e.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+
+  // ==========================================================
+  // EDIT FORM INPUT
+  // ==========================================================
+
+  const handleEditInputChange = (e) => {
+
+    const { name, value } = e.target;
+
+    setEditFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+
+  // ==========================================================
+  // OPEN ADD STAFF MODAL
+  // ==========================================================
+
+  const openAddStaffModal = () => {
+
+    setError("");
+
+    setSuccessMessage("");
+
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "",
+    });
+
+    setShowPassword(false);
+
+    setShowAddStaff(true);
+  };
+
+
+  // ==========================================================
+  // CLOSE ADD STAFF MODAL
+  // ==========================================================
+
+  const closeAddStaffModal = () => {
+
+    if (submitting) return;
+
+    setShowAddStaff(false);
+
+    setShowPassword(false);
+
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "",
+    });
+  };
+
+
+  // ==========================================================
+  // CREATE STAFF
+  // ==========================================================
+
+  const handleCreateStaff = async (e) => {
+  e.preventDefault();
+
+  console.log("CREATE STAFF BUTTON CLICKED");
+
+  setError("");
+  setSuccessMessage("");
+
+  console.log("FORM DATA:", formData);
+
+  // Validation
+  if (
+    !formData.name ||
+    !formData.email ||
+    !formData.password ||
+    !formData.role
+  ) {
+    console.log("VALIDATION FAILED");
+    console.log({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password ? "PASSWORD ENTERED" : "PASSWORD EMPTY",
+      role: formData.role,
+    });
+
+    setError("Please fill in all required fields.");
+    return;
+  }
+
+  console.log("VALIDATION PASSED");
+
+  if (formData.password.length < 8) {
+    console.log("PASSWORD VALIDATION FAILED");
+
+    setError("Password must be at least 8 characters.");
+    return;
+  }
+
+  console.log("PASSWORD VALIDATION PASSED");
+
+  try {
+    setSubmitting(true);
+
+    console.log("CALLING createStaff()");
+
+    const response = await createStaff(formData);
+
+    console.log("CREATE STAFF RESPONSE:", response);
+
+    if (!response?.success) {
+      throw new Error(
+        response?.message || "Failed to create staff."
+      );
+    }
+
+    console.log("STAFF CREATED SUCCESSFULLY");
+
+    setSuccessMessage(
+      response.message || "Staff member created successfully."
+    );
+
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "",
+    });
+
+    setShowAddStaff(false);
+
+    await loadStaff();
+
+  } catch (error) {
+    console.error("CREATE STAFF API ERROR:", error);
+
+    setError(
+      error.message || "Failed to create staff member."
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  // ==========================================================
+  // FILTERED STAFF
+  // ==========================================================
+
+  const filteredStaff = useMemo(() => {
+
+    return staff.filter((staffMember) => {
+
+      const search = searchTerm
+        .toLowerCase()
+        .trim();
+
+
+      const matchesSearch =
+        !search ||
+        staffMember.name
+          ?.toLowerCase()
+          .includes(search) ||
+        staffMember.email
+          ?.toLowerCase()
+          .includes(search);
+
+
+      const matchesRole =
+        roleFilter === "all" ||
+        staffMember.role === roleFilter;
+
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" &&
+          staffMember.is_active === true) ||
+        (statusFilter === "inactive" &&
+          staffMember.is_active === false);
+
+
+      return (
+        matchesSearch &&
+        matchesRole &&
+        matchesStatus
+      );
+    });
+
+  }, [
+    staff,
+    searchTerm,
+    roleFilter,
+    statusFilter,
+  ]);
+
+
+  // ==========================================================
+  // SUMMARY COUNTS
+  // ==========================================================
+
+  const totalStaff = staff.length;
+
+  const activeStaff = staff.filter(
+    (member) => member.is_active === true
+  ).length;
+
+  const inactiveStaff = staff.filter(
+    (member) => member.is_active === false
+  ).length;
+
+
+  // ==========================================================
+  // OPEN VIEW MODAL
+  // ==========================================================
+
+  const handleViewStaff = (staffMember) => {
+
+    setSelectedStaff(staffMember);
+
+    setOpenAction(null);
+
+    setError("");
+  };
+
+
+  // ==========================================================
+  // OPEN EDIT MODAL
+  // ==========================================================
+
+  const handleOpenEdit = (staffMember) => {
+
+    setEditingStaff(staffMember);
+
+    setEditFormData({
+      name: staffMember.name || "",
+      role: staffMember.role || "",
+    });
+
+    setSelectedStaff(null);
+
+    setOpenAction(null);
+
+    setError("");
+  };
+
+
+  // ==========================================================
+  // UPDATE STAFF
+  // ==========================================================
+
+  const handleUpdateStaff = async (e) => {
+
+    e.preventDefault();
+
+    if (!editingStaff) return;
+
+
+    setError("");
+
+    setSuccessMessage("");
+
+
+    if (!editFormData.name.trim()) {
+
+      setError("Staff name is required.");
+
+      return;
+    }
+
+
+    if (!editFormData.role) {
+
+      setError("Please select a staff role.");
+
+      return;
+    }
+
+
+    try {
+
+      setEditSubmitting(true);
+
+
+      const response = await updateStaff(
+        editingStaff.id,
+        {
+          name: editFormData.name.trim(),
+          role: editFormData.role,
+        }
+      );
+
+
+      setSuccessMessage(
+        response?.message ||
+        "Staff updated successfully."
+      );
+
+
+      setEditingStaff(null);
+
+
+      await loadStaff();
+
+    } catch (error) {
+
+      console.error(
+        "Update staff error:",
+        error
+      );
+
+      setError(
+        error?.message ||
+        "Failed to update staff."
+      );
+
+    } finally {
+
+      setEditSubmitting(false);
+    }
+  };
+
+
+  // ==========================================================
+  // OPEN STATUS CONFIRMATION
+  // ==========================================================
+
+  const handleOpenStatusModal = (staffMember) => {
+
+    setStatusStaff(staffMember);
+
+    setOpenAction(null);
+
+    setError("");
+  };
+
+
+  // ==========================================================
+  // ACTIVATE / DEACTIVATE STAFF
+  // ==========================================================
+
+  const handleConfirmStatusChange = async () => {
+
+    if (!statusStaff) return;
+
+
+    try {
+
+      setStatusUpdating(true);
+
+      setError("");
+
+
+      const newStatus =
+        !statusStaff.is_active;
+
+
+      const response =
+        await updateStaffStatus(
+          statusStaff.id,
+          newStatus
+        );
+
+
+      setSuccessMessage(
+        response?.message ||
+        `Staff ${
+          newStatus
+            ? "activated"
+            : "deactivated"
+        } successfully.`
+      );
+
+
+      setStatusStaff(null);
+
+
+      await loadStaff();
+
+    } catch (error) {
+
+      console.error(
+        "Update staff status error:",
+        error
+      );
+
+      setError(
+        error?.message ||
+        "Failed to update staff status."
+      );
+
+    } finally {
+
+      setStatusUpdating(false);
+    }
+  };
+
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
+
     <div className="staff-page">
 
-      {/* =========================
+
+      {/* ======================================================
+          SUCCESS MESSAGE
+      ====================================================== */}
+
+      {successMessage && (
+
+        <div className="staff-success-message">
+
+          <span>✓</span>
+
+          <span>
+            {successMessage}
+          </span>
+
+          <button
+            onClick={() =>
+              setSuccessMessage("")
+            }
+          >
+            ×
+          </button>
+
+        </div>
+
+      )}
+
+
+      {/* ======================================================
+          ERROR MESSAGE
+      ====================================================== */}
+
+      {error && (
+
+        <div className="staff-error-message">
+
+          <span>!</span>
+
+          <span>
+            {error}
+          </span>
+
+          <button
+            onClick={() =>
+              setError("")
+            }
+          >
+            ×
+          </button>
+
+        </div>
+
+      )}
+
+
+      {/* ======================================================
           PAGE HEADER
-      ========================= */}
+      ====================================================== */}
 
       <div className="staff-page-header">
 
         <div>
+
           <p className="staff-eyebrow">
             MANAGEMENT
           </p>
 
-          <h1>Staff Management</h1>
+          <h1>
+            Staff Management
+          </h1>
 
           <p>
             Manage system staff, roles and account access.
           </p>
+
         </div>
 
-        <button className="add-staff-btn" onClick={() => setShowAddStaff(true)}>
+
+        <button
+          className="add-staff-btn"
+          onClick={openAddStaffModal}
+        >
 
           <span>+</span>
+
           Add Staff
+
         </button>
 
       </div>
 
 
-      {/* =========================
+      {/* ======================================================
           STAFF SUMMARY
-      ========================= */}
+      ====================================================== */}
 
       <div className="staff-summary">
 
         <div className="staff-summary-item">
-          <span>Total Staff</span>
-          <strong>--</strong>
+
+          <span>
+            Total Staff
+          </span>
+
+          <strong>
+            {loading ? "--" : totalStaff}
+          </strong>
+
         </div>
 
-        <div className="staff-summary-item">
-          <span>Active</span>
-          <strong className="active-count">--</strong>
-        </div>
 
         <div className="staff-summary-item">
-          <span>Inactive</span>
-          <strong className="inactive-count">--</strong>
+
+          <span>
+            Active
+          </span>
+
+          <strong className="active-count">
+            {loading ? "--" : activeStaff}
+          </strong>
+
+        </div>
+
+
+        <div className="staff-summary-item">
+
+          <span>
+            Inactive
+          </span>
+
+          <strong className="inactive-count">
+            {loading ? "--" : inactiveStaff}
+          </strong>
+
         </div>
 
       </div>
 
 
-      {/* =========================
-          STAFF TABLE CARD
-      ========================= */}
+      {/* ======================================================
+          TABLE CARD
+      ====================================================== */}
 
       <section className="staff-table-card">
 
-        {/* Toolbar */}
+
+        {/* ====================================================
+            TOOLBAR
+        ==================================================== */}
 
         <div className="staff-toolbar">
+
 
           <div className="staff-search">
 
@@ -95,6 +773,10 @@ function StaffManagement() {
             <input
               type="text"
               placeholder="Search staff by name or email..."
+              value={searchTerm}
+              onChange={(e) =>
+                setSearchTerm(e.target.value)
+              }
             />
 
           </div>
@@ -102,260 +784,410 @@ function StaffManagement() {
 
           <div className="staff-filters">
 
-            <button className="filter-button">
-              All Roles
-              <span>⌄</span>
-            </button>
 
-            <button className="filter-button">
-              All Status
-              <span>⌄</span>
-            </button>
+            {/* ROLE FILTER */}
+
+            <select
+              className="filter-button"
+              value={roleFilter}
+              onChange={(e) =>
+                setRoleFilter(e.target.value)
+              }
+            >
+
+              <option value="all">
+                All Roles
+              </option>
+
+              <option value="parking_admin">
+                Parking Admin
+              </option>
+
+              <option value="reception_security">
+                Security / Reception
+              </option>
+
+              <option value="valet">
+                Valet
+              </option>
+
+              <option value="cashier">
+                Cashier
+              </option>
+
+            </select>
+
+
+            {/* STATUS FILTER */}
+
+            <select
+              className="filter-button"
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value)
+              }
+            >
+
+              <option value="all">
+                All Status
+              </option>
+
+              <option value="active">
+                Active
+              </option>
+
+              <option value="inactive">
+                Inactive
+              </option>
+
+            </select>
 
           </div>
 
         </div>
 
 
-        {/* Table */}
+        {/* ====================================================
+            TABLE
+        ==================================================== */}
 
         <div className="staff-table-wrapper">
 
           <table className="staff-table">
 
             <thead>
+
               <tr>
-                <th>STAFF MEMBER</th>
-                <th>ROLE</th>
-                <th>STATUS</th>
-                <th>CREATED</th>
-                <th className="actions-column">ACTIONS</th>
+
+                <th>
+                  STAFF MEMBER
+                </th>
+
+                <th>
+                  ROLE
+                </th>
+
+                <th>
+                  STATUS
+                </th>
+
+                <th>
+                  CREATED
+                </th>
+
+                <th className="actions-column">
+                  ACTIONS
+                </th>
+
               </tr>
+
             </thead>
 
-            {/* <tbody> */}
-
-            {/* Empty state for now
-
-              <tr className="staff-empty-row">
-
-                <td colSpan="5">
-
-                  <div className="staff-empty">
-
-                    <div className="staff-empty-icon">
-                      ♙
-                    </div>
-
-                    <h3>No staff members yet</h3>
-
-                    <p>
-                      Staff accounts created by the Super Admin
-                      will appear here.
-                    </p>
-
-                    <button className="empty-add-btn" onClick={() => setShowAddStaff(true)}>
-                      + Add Staff
-                    </button>
-
-                  </div>
-
-                </td>
-
-              </tr> */}
 
             <tbody>
 
-              {previewStaff.map((staff) => (
 
-                <tr key={staff.id}>
+              {/* LOADING */}
 
-                  {/* STAFF */}
+              {loading && (
 
-                  <td>
+                <tr>
 
-                    <div className="staff-member">
+                  <td
+                    colSpan="5"
+                    className="table-loading"
+                  >
 
-                      <div className="staff-avatar">
-                        {staff.name
-                          .split(" ")
-                          .map((word) => word[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </div>
+                    <div className="loading-spinner"></div>
 
-                      <div className="staff-member-info">
-
-                        <strong>
-                          {staff.name}
-                        </strong>
-
-                        <span>
-                          {staff.email}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                  </td>
-
-
-                  {/* ROLE */}
-
-                  <td>
-
-                    <span
-                      className={`role-badge role-${staff.role
-                        .toLowerCase()
-                        .replaceAll(" ", "-")
-                        .replace("/", "-")}`}
-                    >
-                      {staff.role}
+                    <span>
+                      Loading staff...
                     </span>
-
-                  </td>
-
-
-                  {/* STATUS */}
-
-                  <td>
-
-                    <span
-                      className={`status-badge ${staff.status === "Active"
-                        ? "status-active"
-                        : "status-inactive"
-                        }`}
-                    >
-
-                      <span className="status-dot"></span>
-
-                      {staff.status}
-
-                    </span>
-
-                  </td>
-
-
-                  {/* CREATED */}
-
-                  <td>
-                    <span className="created-date">
-                      {staff.created}
-                    </span>
-                  </td>
-
-
-                  {/* ACTIONS */}
-
-                  <td>
-
-                    <div className="staff-actions">
-
-                      <button
-                        className="table-action view"
-                        onClick={() => {
-                          setSelectedStaff(staff);
-                          setOpenAction(null);
-                        }}
-                      >
-                        View
-                      </button>
-
-                      <button
-                        className="table-action edit"
-                        onClick={() => {
-                          setEditingStaff(staff);
-                          setSelectedStaff(null);
-                          setOpenAction(null);
-                        }}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        className="more-action"
-                        onClick={() =>
-                          setOpenAction(
-                            openAction === staff.id
-                              ? null
-                              : staff.id
-                          )
-                        }
-                      >
-                        ⋮
-                      </button>
-
-
-                      {openAction === staff.id && (
-
-                        <div className="action-menu">
-
-                          <button
-                            onClick={() => {
-                              setSelectedStaff(staff);
-                              setOpenAction(null);
-                            }}
-                          >
-                            View Details
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setEditingStaff(staff);
-                              setOpenAction(null);
-                            }}
-                          >
-                            Edit Staff
-                          </button>
-
-                          <div className="action-divider"></div>
-
-                          <button
-                            className={
-                              staff.status === "Active"
-                                ? "danger-action"
-                                : "activate-action"
-                            }
-                            onClick={() => {
-                              setStatusStaff(staff);
-                              setOpenAction(null);
-                            }}
-                          >
-                            {staff.status === "Active"
-                              ? "Deactivate"
-                              : "Activate"}
-                          </button>
-
-                        </div>
-
-                      )}
-
-                    </div>
 
                   </td>
 
                 </tr>
 
-              ))}
+              )}
+
+
+              {/* EMPTY */}
+
+              {!loading &&
+                filteredStaff.length === 0 && (
+
+                  <tr>
+
+                    <td
+                      colSpan="5"
+                      className="table-empty"
+                    >
+
+                      <div className="empty-staff-state">
+
+                        <div className="empty-staff-icon">
+                          👥
+                        </div>
+
+                        <strong>
+                          No staff members found
+                        </strong>
+
+                        <span>
+                          {searchTerm ||
+                          roleFilter !== "all" ||
+                          statusFilter !== "all"
+                            ? "Try changing your search or filters."
+                            : "Add your first staff member to get started."}
+                        </span>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                )}
+
+
+              {/* STAFF ROWS */}
+
+              {!loading &&
+                filteredStaff.map(
+                  (staffMember) => (
+
+                    <tr
+                      key={staffMember.id}
+                    >
+
+
+                      {/* STAFF */}
+
+                      <td>
+
+                        <div className="staff-member">
+
+                          <div className="staff-avatar">
+
+                            {getInitials(
+                              staffMember.name
+                            )}
+
+                          </div>
+
+
+                          <div className="staff-member-info">
+
+                            <strong>
+                              {staffMember.name}
+                            </strong>
+
+                            <span>
+                              {staffMember.email}
+                            </span>
+
+                          </div>
+
+                        </div>
+
+                      </td>
+
+
+                      {/* ROLE */}
+
+                      <td>
+
+                        <span
+                          className={`role-badge ${getRoleClass(
+                            staffMember.role
+                          )}`}
+                        >
+                          {getRoleLabel(
+                            staffMember.role
+                          )}
+                        </span>
+
+                      </td>
+
+
+                      {/* STATUS */}
+
+                      <td>
+
+                        <span
+                          className={`status-badge ${
+                            staffMember.is_active
+                              ? "status-active"
+                              : "status-inactive"
+                          }`}
+                        >
+
+                          <span className="status-dot"></span>
+
+                          {staffMember.is_active
+                            ? "Active"
+                            : "Inactive"}
+
+                        </span>
+
+                      </td>
+
+
+                      {/* CREATED */}
+
+                      <td>
+
+                        <span className="created-date">
+
+                          {formatDate(
+                            staffMember.created_at
+                          )}
+
+                        </span>
+
+                      </td>
+
+
+                      {/* ACTIONS */}
+
+                      <td>
+
+                        <div className="staff-actions">
+
+
+                          <button
+                            className="table-action view"
+                            onClick={() =>
+                              handleViewStaff(
+                                staffMember
+                              )
+                            }
+                          >
+                            View
+                          </button>
+
+
+                          <button
+                            className="table-action edit"
+                            onClick={() =>
+                              handleOpenEdit(
+                                staffMember
+                              )
+                            }
+                          >
+                            Edit
+                          </button>
+
+
+                          <button
+                            className="more-action"
+                            onClick={() =>
+                              setOpenAction(
+                                openAction ===
+                                  staffMember.id
+                                  ? null
+                                  : staffMember.id
+                              )
+                            }
+                          >
+                            ⋮
+                          </button>
+
+
+                          {openAction ===
+                            staffMember.id && (
+
+                            <div className="action-menu">
+
+
+                              <button
+                                onClick={() =>
+                                  handleViewStaff(
+                                    staffMember
+                                  )
+                                }
+                              >
+                                View Details
+                              </button>
+
+
+                              <button
+                                onClick={() =>
+                                  handleOpenEdit(
+                                    staffMember
+                                  )
+                                }
+                              >
+                                Edit Staff
+                              </button>
+
+
+                              <div className="action-divider"></div>
+
+
+                              <button
+                                className={
+                                  staffMember.is_active
+                                    ? "danger-action"
+                                    : "activate-action"
+                                }
+                                onClick={() =>
+                                  handleOpenStatusModal(
+                                    staffMember
+                                  )
+                                }
+                              >
+
+                                {staffMember.is_active
+                                  ? "Deactivate"
+                                  : "Activate"}
+
+                              </button>
+
+                            </div>
+
+                          )}
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  )
+                )}
 
             </tbody>
-
-            {/* </tbody> */}
 
           </table>
 
         </div>
 
 
-        {/* Table Footer */}
+        {/* ====================================================
+            TABLE FOOTER
+        ==================================================== */}
 
         <div className="staff-table-footer">
 
           <span>
-            Showing <strong>0</strong> staff members
+
+            Showing{" "}
+
+            <strong>
+              {filteredStaff.length}
+            </strong>{" "}
+
+            of{" "}
+
+            <strong>
+              {staff.length}
+            </strong>{" "}
+
+            staff members
+
           </span>
+
 
           <div className="pagination">
 
@@ -377,28 +1209,51 @@ function StaffManagement() {
 
       </section>
 
-      {showAddStaff && (
-        <div className="modal-overlay">
 
-          <div className="add-staff-modal">
+      {/* ======================================================
+          ADD STAFF MODAL
+      ====================================================== */}
+
+      {showAddStaff && (
+
+        <div
+          className="modal-overlay"
+          onClick={closeAddStaffModal}
+        >
+
+          <div
+            className="add-staff-modal"
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+
+
+            {/* HEADER */}
 
             <div className="modal-header">
 
               <div>
+
                 <p className="modal-eyebrow">
                   STAFF MANAGEMENT
                 </p>
 
-                <h2>Add New Staff</h2>
+                <h2>
+                  Add New Staff
+                </h2>
 
                 <p>
                   Create an account and assign a system role.
                 </p>
+
               </div>
+
 
               <button
                 className="modal-close"
-                onClick={() => setShowAddStaff(false)}
+                onClick={closeAddStaffModal}
+                disabled={submitting}
               >
                 ×
               </button>
@@ -406,37 +1261,55 @@ function StaffManagement() {
             </div>
 
 
-            <form className="staff-form">
+            {/* FORM */}
 
-              {/* Name */}
+            <form
+              className="staff-form"
+              onSubmit={handleCreateStaff}
+            >
+
+
+              {/* NAME */}
 
               <div className="form-group">
+
                 <label>
                   Full Name
                 </label>
 
                 <input
                   type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
                   placeholder="Enter staff name"
+                  disabled={submitting}
                 />
+
               </div>
 
 
-              {/* Email */}
+              {/* EMAIL */}
 
               <div className="form-group">
+
                 <label>
                   Email Address
                 </label>
 
                 <input
                   type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
                   placeholder="staff@example.com"
+                  disabled={submitting}
                 />
+
               </div>
 
 
-              {/* Password */}
+              {/* PASSWORD */}
 
               <div className="form-group">
 
@@ -444,21 +1317,39 @@ function StaffManagement() {
                   Password
                 </label>
 
+
                 <div className="password-input">
 
                   <input
-                    type={showPassword ? "text" : "password"}
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
                     placeholder="Create a secure password"
+                    disabled={submitting}
                   />
+
 
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
+                    disabled={submitting}
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {showPassword
+                      ? "Hide"
+                      : "Show"}
                   </button>
 
                 </div>
+
 
                 <span className="field-hint">
                   Use at least 8 characters.
@@ -467,7 +1358,7 @@ function StaffManagement() {
               </div>
 
 
-              {/* Role */}
+              {/* ROLE */}
 
               <div className="form-group">
 
@@ -475,26 +1366,36 @@ function StaffManagement() {
                   Staff Role
                 </label>
 
-                <select defaultValue="">
-                  <option value="" disabled>
+
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleInputChange}
+                  disabled={submitting}
+                >
+
+                  <option
+                    value=""
+                    disabled
+                  >
                     Select a role
                   </option>
 
-                  <option value="super_admin">
-                    Super Admin
-                  </option>
 
                   <option value="parking_admin">
                     Parking Admin
                   </option>
 
+
+                  <option value="reception_security">
+                    Security / Reception
+                  </option>
+
+
                   <option value="valet">
                     Valet
                   </option>
 
-                  <option value="security_reception">
-                    Security / Reception
-                  </option>
 
                   <option value="cashier">
                     Cashier
@@ -505,7 +1406,7 @@ function StaffManagement() {
               </div>
 
 
-              {/* Info */}
+              {/* INFO */}
 
               <div className="role-info">
 
@@ -513,31 +1414,40 @@ function StaffManagement() {
                   i
                 </div>
 
+
                 <p>
-                  Parking Admin accounts will have access to
-                  the separate Parking Admin Dashboard.
+                  Parking Admin accounts will have
+                  access to the separate Parking Admin
+                  Dashboard.
                 </p>
 
               </div>
 
 
-              {/* Actions */}
+              {/* ACTIONS */}
 
               <div className="modal-actions">
 
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() => setShowAddStaff(false)}
+                  onClick={closeAddStaffModal}
+                  disabled={submitting}
                 >
                   Cancel
                 </button>
 
+
                 <button
                   type="submit"
                   className="create-staff-btn"
+                  disabled={submitting}
                 >
-                  Create Staff
+
+                  {submitting
+                    ? "Creating..."
+                    : "Create Staff"}
+
                 </button>
 
               </div>
@@ -547,40 +1457,57 @@ function StaffManagement() {
           </div>
 
         </div>
+
       )}
 
+
+      {/* ======================================================
+          VIEW STAFF DETAILS MODAL
+      ====================================================== */}
+
       {selectedStaff && (
+
         <div
           className="modal-overlay"
-          onClick={() => setSelectedStaff(null)}
+          onClick={() =>
+            setSelectedStaff(null)
+          }
         >
 
           <div
             className="staff-details-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
 
-            {/* =========================
-          HEADER
-      ========================= */}
+
+            {/* HEADER */}
 
             <div className="details-header">
 
               <div>
+
                 <p className="modal-eyebrow">
                   STAFF PROFILE
                 </p>
 
-                <h2>Staff Details</h2>
+                <h2>
+                  Staff Details
+                </h2>
 
                 <p>
                   View account and role information.
                 </p>
+
               </div>
+
 
               <button
                 className="modal-close"
-                onClick={() => setSelectedStaff(null)}
+                onClick={() =>
+                  setSelectedStaff(null)
+                }
               >
                 ×
               </button>
@@ -588,20 +1515,16 @@ function StaffManagement() {
             </div>
 
 
-            {/* =========================
-          PROFILE
-      ========================= */}
+            {/* PROFILE */}
 
             <div className="staff-profile">
 
               <div className="large-staff-avatar">
-                {selectedStaff.name
-                  .split(" ")
-                  .map((word) => word[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
+                {getInitials(
+                  selectedStaff.name
+                )}
               </div>
+
 
               <div className="staff-profile-info">
 
@@ -613,15 +1536,21 @@ function StaffManagement() {
                   {selectedStaff.email}
                 </p>
 
+
                 <span
-                  className={`status-badge ${selectedStaff.status === "Active"
-                    ? "status-active"
-                    : "status-inactive"
-                    }`}
+                  className={`status-badge ${
+                    selectedStaff.is_active
+                      ? "status-active"
+                      : "status-inactive"
+                  }`}
                 >
+
                   <span className="status-dot"></span>
 
-                  {selectedStaff.status}
+                  {selectedStaff.is_active
+                    ? "Active"
+                    : "Inactive"}
+
                 </span>
 
               </div>
@@ -629,9 +1558,7 @@ function StaffManagement() {
             </div>
 
 
-            {/* =========================
-          INFORMATION
-      ========================= */}
+            {/* ACCOUNT INFORMATION */}
 
             <div className="details-section">
 
@@ -641,6 +1568,7 @@ function StaffManagement() {
 
 
               <div className="details-grid">
+
 
                 <div className="detail-item">
 
@@ -675,12 +1603,13 @@ function StaffManagement() {
                   </span>
 
                   <span
-                    className={`role-badge role-${selectedStaff.role
-                      .toLowerCase()
-                      .replaceAll(" ", "-")
-                      .replace("/", "-")}`}
+                    className={`role-badge ${getRoleClass(
+                      selectedStaff.role
+                    )}`}
                   >
-                    {selectedStaff.role}
+                    {getRoleLabel(
+                      selectedStaff.role
+                    )}
                   </span>
 
                 </div>
@@ -692,15 +1621,21 @@ function StaffManagement() {
                     Account Status
                   </span>
 
+
                   <span
-                    className={`status-badge ${selectedStaff.status === "Active"
-                      ? "status-active"
-                      : "status-inactive"
-                      }`}
+                    className={`status-badge ${
+                      selectedStaff.is_active
+                        ? "status-active"
+                        : "status-inactive"
+                    }`}
                   >
+
                     <span className="status-dot"></span>
 
-                    {selectedStaff.status}
+                    {selectedStaff.is_active
+                      ? "Active"
+                      : "Inactive"}
+
                   </span>
 
                 </div>
@@ -713,7 +1648,9 @@ function StaffManagement() {
                   </span>
 
                   <strong>
-                    {selectedStaff.created}
+                    {formatDate(
+                      selectedStaff.created_at
+                    )}
                   </strong>
 
                 </div>
@@ -726,7 +1663,9 @@ function StaffManagement() {
                   </span>
 
                   <strong className="staff-id">
-                    #{String(selectedStaff.id).padStart(5, "0")}
+                    #{String(
+                      selectedStaff.id
+                    ).padStart(5, "0")}
                   </strong>
 
                 </div>
@@ -736,9 +1675,7 @@ function StaffManagement() {
             </div>
 
 
-            {/* =========================
-          ROLE DESCRIPTION
-      ========================= */}
+            {/* ROLE DESCRIPTION */}
 
             <div className="role-description">
 
@@ -746,17 +1683,25 @@ function StaffManagement() {
                 ✓
               </div>
 
+
               <div>
 
                 <strong>
-                  {selectedStaff.role}
+                  {getRoleLabel(
+                    selectedStaff.role
+                  )}
                 </strong>
+
 
                 <p>
                   This account is assigned the{" "}
-                  <b>{selectedStaff.role}</b> role
-                  within the Valet Parking Management
-                  System.
+                  <b>
+                    {getRoleLabel(
+                      selectedStaff.role
+                    )}
+                  </b>{" "}
+                  role within the Valet Parking
+                  Management System.
                 </p>
 
               </div>
@@ -764,65 +1709,89 @@ function StaffManagement() {
             </div>
 
 
-            {/* =========================
-          FOOTER
-      ========================= */}
+            {/* FOOTER */}
 
             <div className="details-footer">
 
               <button
                 className="details-secondary-btn"
-                onClick={() => setSelectedStaff(null)}
+                onClick={() =>
+                  setSelectedStaff(null)
+                }
               >
                 Close
               </button>
 
+
               <button
                 className="details-edit-btn"
-                onClick={() => {
-                  setEditingStaff(selectedStaff);
-                  setSelectedStaff(null);
-                }}
+                onClick={() =>
+                  handleOpenEdit(
+                    selectedStaff
+                  )
+                }
               >
                 Edit Staff
               </button>
+
             </div>
 
           </div>
 
         </div>
+
       )}
 
+
+      {/* ======================================================
+          EDIT STAFF MODAL
+      ====================================================== */}
+
       {editingStaff && (
+
         <div
           className="modal-overlay"
-          onClick={() => setEditingStaff(null)}
+          onClick={() =>
+            !editSubmitting &&
+            setEditingStaff(null)
+          }
         >
 
           <div
             className="edit-staff-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
 
-            {/* Header */}
+
+            {/* HEADER */}
 
             <div className="modal-header">
 
               <div>
+
                 <p className="modal-eyebrow">
                   STAFF MANAGEMENT
                 </p>
 
-                <h2>Edit Staff</h2>
+                <h2>
+                  Edit Staff
+                </h2>
 
                 <p>
-                  Update staff account and role information.
+                  Update staff name and role information.
                 </p>
+
               </div>
+
 
               <button
                 className="modal-close"
-                onClick={() => setEditingStaff(null)}
+                onClick={() =>
+                  setEditingStaff(null)
+                }
+                disabled={editSubmitting}
               >
                 ×
               </button>
@@ -830,11 +1799,15 @@ function StaffManagement() {
             </div>
 
 
-            {/* Form */}
+            {/* FORM */}
 
-            <form className="staff-form">
+            <form
+              className="staff-form"
+              onSubmit={handleUpdateStaff}
+            >
 
-              {/* Name */}
+
+              {/* NAME */}
 
               <div className="form-group">
 
@@ -844,14 +1817,19 @@ function StaffManagement() {
 
                 <input
                   type="text"
-                  defaultValue={editingStaff.name}
+                  name="name"
+                  value={editFormData.name}
+                  onChange={
+                    handleEditInputChange
+                  }
                   placeholder="Enter staff name"
+                  disabled={editSubmitting}
                 />
 
               </div>
 
 
-              {/* Email */}
+              {/* EMAIL - READ ONLY */}
 
               <div className="form-group">
 
@@ -861,14 +1839,22 @@ function StaffManagement() {
 
                 <input
                   type="email"
-                  defaultValue={editingStaff.email}
-                  placeholder="staff@example.com"
+                  value={
+                    editingStaff.email || ""
+                  }
+                  readOnly
+                  disabled
                 />
+
+                <span className="field-hint">
+                  Email cannot be changed using the current
+                  staff update API.
+                </span>
 
               </div>
 
 
-              {/* Role */}
+              {/* ROLE */}
 
               <div className="form-group">
 
@@ -876,27 +1862,32 @@ function StaffManagement() {
                   Staff Role
                 </label>
 
+
                 <select
-                  defaultValue={editingStaff.role}
+                  name="role"
+                  value={editFormData.role}
+                  onChange={
+                    handleEditInputChange
+                  }
+                  disabled={editSubmitting}
                 >
 
-                  <option value="Super Admin">
-                    Super Admin
-                  </option>
-
-                  <option value="Parking Admin">
+                  <option value="parking_admin">
                     Parking Admin
                   </option>
 
-                  <option value="Valet">
-                    Valet
-                  </option>
 
-                  <option value="Security / Reception">
+                  <option value="reception_security">
                     Security / Reception
                   </option>
 
-                  <option value="Cashier">
+
+                  <option value="valet">
+                    Valet
+                  </option>
+
+
+                  <option value="cashier">
                     Cashier
                   </option>
 
@@ -905,7 +1896,7 @@ function StaffManagement() {
               </div>
 
 
-              {/* Status */}
+              {/* STATUS - READ ONLY */}
 
               <div className="form-group">
 
@@ -913,60 +1904,28 @@ function StaffManagement() {
                   Account Status
                 </label>
 
-                <select
-                  defaultValue={editingStaff.status}
-                >
 
-                  <option value="Active">
-                    Active
-                  </option>
+                <input
+                  type="text"
+                  value={
+                    editingStaff.is_active
+                      ? "Active"
+                      : "Inactive"
+                  }
+                  readOnly
+                  disabled
+                />
 
-                  <option value="Inactive">
-                    Inactive
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              {/* Password */}
-
-              <div className="form-group">
-
-                <label>
-                  New Password
-                  <span className="optional-label">
-                    Optional
-                  </span>
-                </label>
-
-                <div className="password-input">
-
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Leave blank to keep current password"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword(!showPassword)
-                    }
-                  >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
-
-                </div>
 
                 <span className="field-hint">
-                  Only enter a password if you want to change it.
+                  Use the Activate / Deactivate action
+                  to change account status.
                 </span>
 
               </div>
 
 
-              {/* Warning */}
+              {/* INFO */}
 
               <div className="edit-role-warning">
 
@@ -974,32 +1933,42 @@ function StaffManagement() {
                   !
                 </div>
 
+
                 <p>
-                  Changing the staff role may change the
-                  dashboards and permissions available to this
-                  account.
+                  Changing the staff role may change
+                  the dashboards and permissions
+                  available to this account.
                 </p>
 
               </div>
 
 
-              {/* Footer */}
+              {/* FOOTER */}
 
               <div className="modal-actions">
 
                 <button
                   type="button"
                   className="cancel-btn"
-                  onClick={() => setEditingStaff(null)}
+                  onClick={() =>
+                    setEditingStaff(null)
+                  }
+                  disabled={editSubmitting}
                 >
                   Cancel
                 </button>
 
+
                 <button
                   type="submit"
                   className="create-staff-btn"
+                  disabled={editSubmitting}
                 >
-                  Save Changes
+
+                  {editSubmitting
+                    ? "Saving..."
+                    : "Save Changes"}
+
                 </button>
 
               </div>
@@ -1009,64 +1978,87 @@ function StaffManagement() {
           </div>
 
         </div>
+
       )}
 
+
+      {/* ======================================================
+          ACTIVATE / DEACTIVATE CONFIRMATION
+      ====================================================== */}
+
       {statusStaff && (
+
         <div
           className="modal-overlay"
-          onClick={() => setStatusStaff(null)}
+          onClick={() =>
+            !statusUpdating &&
+            setStatusStaff(null)
+          }
         >
 
           <div
             className="status-confirm-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
 
-            {/* Icon */}
+
+            {/* ICON */}
 
             <div
-              className={`status-confirm-icon ${statusStaff.status === "Active"
+              className={`status-confirm-icon ${
+                statusStaff.is_active
                   ? "deactivate-icon"
                   : "activate-icon"
-                }`}
+              }`}
             >
-              {statusStaff.status === "Active" ? "!" : "✓"}
+
+              {statusStaff.is_active
+                ? "!"
+                : "✓"}
+
             </div>
 
 
-            {/* Content */}
+            {/* CONTENT */}
 
             <div className="status-confirm-content">
 
               <h2>
-                {statusStaff.status === "Active"
+
+                {statusStaff.is_active
                   ? "Deactivate Staff?"
                   : "Activate Staff?"}
+
               </h2>
 
+
               <p>
-                {statusStaff.status === "Active"
+
+                {statusStaff.is_active
+
                   ? `Are you sure you want to deactivate ${statusStaff.name}? They will no longer be able to access their account until it is activated again.`
+
                   : `Are you sure you want to activate ${statusStaff.name}? They will regain access to their account.`}
+
               </p>
 
             </div>
 
 
-            {/* Staff Preview */}
+            {/* STAFF PREVIEW */}
 
             <div className="status-staff-preview">
 
               <div className="status-preview-avatar">
 
-                {statusStaff.name
-                  .split(" ")
-                  .map((word) => word[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase()}
+                {getInitials(
+                  statusStaff.name
+                )}
 
               </div>
+
 
               <div>
 
@@ -1083,31 +2075,41 @@ function StaffManagement() {
             </div>
 
 
-            {/* Actions */}
+            {/* ACTIONS */}
 
             <div className="status-confirm-actions">
 
               <button
                 className="status-cancel-btn"
-                onClick={() => setStatusStaff(null)}
+                onClick={() =>
+                  setStatusStaff(null)
+                }
+                disabled={statusUpdating}
               >
                 Cancel
               </button>
 
+
               <button
                 className={
-                  statusStaff.status === "Active"
+                  statusStaff.is_active
                     ? "status-deactivate-btn"
                     : "status-activate-btn"
                 }
-                onClick={() => {
-                  // Backend PATCH will be connected later
-                  setStatusStaff(null);
-                }}
+                onClick={
+                  handleConfirmStatusChange
+                }
+                disabled={statusUpdating}
               >
-                {statusStaff.status === "Active"
-                  ? "Deactivate Staff"
-                  : "Activate Staff"}
+
+                {statusUpdating
+
+                  ? "Updating..."
+
+                  : statusStaff.is_active
+                    ? "Deactivate Staff"
+                    : "Activate Staff"}
+
               </button>
 
             </div>
@@ -1115,7 +2117,9 @@ function StaffManagement() {
           </div>
 
         </div>
+
       )}
+
     </div>
   );
 }

@@ -35,9 +35,7 @@ function StatCard({
           {icons[icon]}
         </div>
 
-        <button className="stat-menu">
-          •••
-        </button>
+        
 
       </div>
 

@@ -1,0 +1,676 @@
+.parking-staff-page {
+  width: 100%;
+  animation: parkingStaffFadeIn 0.3s ease;
+}
+
+@keyframes parkingStaffFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.parking-staff-header {
+  margin-bottom: 28px;
+}
+
+.parking-staff-eyebrow {
+  margin: 0 0 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #71809d;
+}
+
+.parking-staff-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #17213d;
+}
+
+.parking-staff-header p:not(.parking-staff-eyebrow) {
+  margin: 8px 0 0;
+  color: #7b879e;
+  font-size: 14px;
+}
+
+
+/* ============================================================
+   SUMMARY
+============================================================ */
+
+.parking-staff-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.parking-staff-summary-card {
+  min-height: 92px;
+  padding: 18px;
+  border: 1px solid #e7ebf2;
+  border-radius: 14px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.staff-summary-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #f1f4f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #33415f;
+  font-size: 18px;
+}
+
+.parking-staff-summary-card div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.parking-staff-summary-card span {
+  font-size: 12px;
+  color: #7d899f;
+}
+
+.parking-staff-summary-card strong {
+  font-size: 21px;
+  color: #17213d;
+}
+
+
+/* ============================================================
+   TABLE CARD
+============================================================ */
+
+.parking-staff-card {
+  border: 1px solid #e5e9f0;
+  border-radius: 15px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+
+/* ============================================================
+   TOOLBAR
+============================================================ */
+
+.parking-staff-toolbar {
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #edf0f4;
+}
+
+.parking-staff-search {
+  width: min(430px, 100%);
+  height: 42px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.parking-staff-search span {
+  color: #8994a8;
+  font-size: 19px;
+}
+
+.parking-staff-search input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #26324d;
+  font-size: 13px;
+}
+
+.parking-staff-search input::placeholder {
+  color: #9aa4b5;
+}
+
+.parking-staff-filters {
+  display: flex;
+  gap: 10px;
+}
+
+.parking-staff-filters select {
+  height: 42px;
+  min-width: 155px;
+  padding: 0 13px;
+  border: 1px solid #dfe4ec;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #43506a;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.parking-staff-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.parking-staff-table {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+}
+
+.parking-staff-table thead {
+  background: #f8f9fb;
+}
+
+.parking-staff-table th {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #e9edf2;
+  color: #7d899f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+
+.parking-staff-table td {
+  padding: 15px 18px;
+  border-bottom: 1px solid #edf0f4;
+  color: #44516a;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.parking-staff-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.parking-staff-table tbody tr:hover {
+  background: #fafbfd;
+}
+
+
+/* ============================================================
+   STAFF MEMBER
+============================================================ */
+
+.parking-staff-member {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.parking-staff-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: #eef2f7;
+  color: #34415d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.parking-staff-member > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parking-staff-member strong {
+  color: #26324b;
+  font-size: 13px;
+}
+
+.parking-staff-member span {
+  color: #8a95a8;
+  font-size: 10px;
+}
+
+
+/* ============================================================
+   ROLE / CONTACT
+============================================================ */
+
+.parking-staff-role {
+  color: #44516b;
+  font-weight: 500;
+}
+
+.parking-staff-phone {
+  color: #68758d;
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   AVAILABILITY
+============================================================ */
+
+.availability-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.availability-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.availability-available {
+  background: #eef8f2;
+  color: #26754b;
+}
+
+.availability-available .availability-dot {
+  background: #3a9a63;
+}
+
+.availability-busy {
+  background: #fff6e8;
+  color: #9a661d;
+}
+
+.availability-busy .availability-dot {
+  background: #d99735;
+}
+
+.availability-offline {
+  background: #f1f2f4;
+  color: #727b8c;
+}
+
+.availability-offline .availability-dot {
+  background: #8991a0;
+}
+
+
+/* ============================================================
+   ASSIGNMENT
+============================================================ */
+
+.staff-assignment {
+  color: #34415b;
+  font-weight: 600;
+}
+
+.no-assignment {
+  color: #9aa3b3;
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.staff-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.staff-status-active {
+  color: #28774c;
+}
+
+.staff-status-inactive {
+  color: #858d9c;
+}
+
+
+/* ============================================================
+   ACTION
+============================================================ */
+
+.view-staff-btn {
+  padding: 6px 13px;
+  border: 1px solid #dce2ea;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #3d4a64;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.view-staff-btn:hover {
+  background: #f5f7fa;
+}
+
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+.parking-staff-empty {
+  height: 250px;
+  text-align: center !important;
+}
+
+.parking-staff-empty > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.parking-staff-empty span {
+  font-size: 27px;
+  color: #a0a9b9;
+}
+
+.parking-staff-empty strong {
+  color: #34415c;
+  font-size: 14px;
+}
+
+.parking-staff-empty p {
+  margin: 0;
+  color: #8994a8;
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   FOOTER
+============================================================ */
+
+.parking-staff-footer {
+  min-height: 62px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #7d899f;
+  font-size: 12px;
+}
+
+.parking-staff-footer strong {
+  color: #3b4760;
+}
+
+.staff-pagination {
+  display: flex;
+  gap: 5px;
+}
+
+.staff-pagination button,
+.staff-pagination span {
+  width: 31px;
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e0e5ec;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #778399;
+}
+
+.staff-pagination button:disabled {
+  opacity: 0.45;
+}
+
+
+/* ============================================================
+   MODAL
+============================================================ */
+
+.parking-staff-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(18, 27, 48, 0.42);
+}
+
+.parking-staff-details-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  padding: 25px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(20, 30, 50, 0.18);
+}
+
+
+/* ============================================================
+   MODAL HEADER
+============================================================ */
+
+.parking-staff-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.parking-staff-modal-header p {
+  margin: 0 0 6px;
+  color: #71809d;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+}
+
+.parking-staff-modal-header h2 {
+  margin: 0;
+  color: #17213d;
+  font-size: 23px;
+}
+
+.parking-staff-modal-header span {
+  display: block;
+  margin-top: 6px;
+  color: #7b879e;
+  font-size: 12px;
+}
+
+.parking-staff-modal-header button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: #f4f6f8;
+  color: #66728a;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+
+/* ============================================================
+   PROFILE
+============================================================ */
+
+.parking-staff-profile {
+  margin: 25px 0;
+  padding: 18px;
+  border: 1px solid #e9edf2;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.parking-staff-large-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 13px;
+  background: #eef2f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #34415d;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.parking-staff-profile h3 {
+  margin: 0;
+  color: #26324b;
+  font-size: 17px;
+}
+
+.parking-staff-profile p {
+  margin: 4px 0 8px;
+  color: #7c879a;
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   DETAILS
+============================================================ */
+
+.parking-staff-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.parking-staff-details-grid > div {
+  padding: 14px;
+  border: 1px solid #edf0f4;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.parking-staff-details-grid span {
+  color: #8490a4;
+  font-size: 11px;
+}
+
+.parking-staff-details-grid strong {
+  color: #35415b;
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   MODAL FOOTER
+============================================================ */
+
+.parking-staff-modal-footer {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f4;
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.parking-staff-modal-footer button {
+  padding: 9px 15px;
+  border: 1px solid #dce2ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #46526b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.parking-staff-modal-footer .assign-valet-btn {
+  border-color: #263858;
+  background: #263858;
+  color: #ffffff;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media (max-width: 1100px) {
+  .parking-staff-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 750px) {
+  .parking-staff-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .parking-staff-search {
+    width: 100%;
+  }
+
+  .parking-staff-filters {
+    display: flex;
+  }
+
+  .parking-staff-filters select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 550px) {
+  .parking-staff-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .parking-staff-footer {
+    padding: 15px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .parking-staff-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .parking-staff-modal-overlay {
+    padding: 15px;
+  }
+
+  .parking-staff-details-modal {
+    max-height: calc(100vh - 30px);
+  }
+}
