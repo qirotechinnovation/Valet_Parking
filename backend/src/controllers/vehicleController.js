@@ -1,9 +1,5 @@
 const supabase = require("../config/supabase");
 
-// ============================================================
-// CREATE VEHICLE
-// ============================================================
-
 const createVehicle = async (req, res) => {
   try {
     const {
@@ -21,7 +17,6 @@ const createVehicle = async (req, res) => {
       });
     }
 
-    // Check whether customer exists
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .select("id")
@@ -35,21 +30,17 @@ const createVehicle = async (req, res) => {
       });
     }
 
-    // Check duplicate vehicle
+    const normalizedPlate = license_plate.trim().toUpperCase();
+
     const { data: existingVehicle, error: existingVehicleError } =
       await supabase
         .from("vehicles")
-        .select("id")
-        .eq("license_plate", license_plate.trim().toUpperCase())
+        .select("id, license_plate")
+        .eq("license_plate", normalizedPlate)
         .maybeSingle();
 
     if (existingVehicleError) {
-      console.error(
-        "Check existing vehicle error:",
-        existingVehicleError
-      );
-
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message: existingVehicleError.message
       });
@@ -63,25 +54,22 @@ const createVehicle = async (req, res) => {
       });
     }
 
-    // Create vehicle
     const { data: vehicle, error } = await supabase
       .from("vehicles")
       .insert([
         {
           customer_id,
-          license_plate: license_plate.trim().toUpperCase(),
+          license_plate: normalizedPlate,
           make: make?.trim() || null,
           model: model?.trim() || null,
           color: color?.trim() || null
         }
       ])
-      .select()
+      .select("*")
       .single();
 
     if (error) {
-      console.error("Create vehicle error:", error);
-
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -89,24 +77,18 @@ const createVehicle = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Vehicle created successfully.",
+      message: "Vehicle registered successfully.",
       vehicle
     });
-
   } catch (error) {
-    console.error("Create vehicle error:", error);
+    console.error("CREATE VEHICLE ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to create vehicle."
+      message: "Internal server error."
     });
   }
 };
-
-
-// ============================================================
-// GET VEHICLES
-// ============================================================
 
 const getVehicles = async (req, res) => {
   try {
@@ -121,6 +103,7 @@ const getVehicles = async (req, res) => {
         make,
         model,
         color,
+        created_at,
         customer:customers (
           id,
           name,
@@ -133,9 +116,7 @@ const getVehicles = async (req, res) => {
     const { data: vehicles, error } = await query;
 
     if (error) {
-      console.error("Get vehicles error:", error);
-
-      return res.status(400).json({
+      return res.status(500).json({
         success: false,
         message: error.message
       });
@@ -147,20 +128,11 @@ const getVehicles = async (req, res) => {
       const searchTerm = search.toLowerCase();
 
       result = result.filter((vehicle) => {
-        const plate =
-          vehicle.license_plate?.toLowerCase() || "";
-
-        const make =
-          vehicle.make?.toLowerCase() || "";
-
-        const model =
-          vehicle.model?.toLowerCase() || "";
-
-        const customer =
-          vehicle.customer?.name?.toLowerCase() || "";
-
-        const phone =
-          vehicle.customer?.phone?.toLowerCase() || "";
+        const plate = vehicle.license_plate?.toLowerCase() || "";
+        const make = vehicle.make?.toLowerCase() || "";
+        const model = vehicle.model?.toLowerCase() || "";
+        const customer = vehicle.customer?.name?.toLowerCase() || "";
+        const phone = vehicle.customer?.phone?.toLowerCase() || "";
 
         return (
           plate.includes(searchTerm) ||
@@ -177,21 +149,17 @@ const getVehicles = async (req, res) => {
       count: result.length,
       vehicles: result
     });
-
   } catch (error) {
-    console.error("Get vehicles error:", error);
+    console.error("GET VEHICLES ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch vehicles."
+      message: "Internal server error."
     });
   }
 };
 
-
-// ============================================================
-// GET VEHICLE BY ID
-// ============================================================
+const getAllVehicles = getVehicles;
 
 const getVehicleById = async (req, res) => {
   try {
@@ -206,6 +174,7 @@ const getVehicleById = async (req, res) => {
         make,
         model,
         color,
+        created_at,
         customer:customers (
           id,
           name,
@@ -227,20 +196,19 @@ const getVehicleById = async (req, res) => {
       success: true,
       vehicle
     });
-
   } catch (error) {
-    console.error("Get vehicle error:", error);
+    console.error("GET VEHICLE ERROR:", error);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch vehicle."
+      message: "Internal server error."
     });
   }
 };
 
-
 module.exports = {
   createVehicle,
   getVehicles,
+  getAllVehicles,
   getVehicleById
 };

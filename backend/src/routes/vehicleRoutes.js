@@ -11,12 +11,6 @@ const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-
-// ============================================================
-// VEHICLES
-// ============================================================
-
-// POST /api/vehicles
 router.post(
   "/",
   authenticate,
@@ -24,8 +18,6 @@ router.post(
   createVehicle
 );
 
-
-// GET /api/vehicles
 router.get(
   "/",
   authenticate,
@@ -33,14 +25,11 @@ router.get(
   getVehicles
 );
 
-
-// GET /api/vehicles/:id
 router.get(
   "/:id",
   authenticate,
   authorizeRoles("parking_admin", "super_admin"),
   getVehicleById
 );
-
 
 module.exports = router;
