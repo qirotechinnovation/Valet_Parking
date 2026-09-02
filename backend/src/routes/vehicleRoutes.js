@@ -14,21 +14,21 @@ const router = express.Router();
 router.post(
   "/",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles("cashier", "parking_admin", "super_admin"),
   createVehicle
 );
 
 router.get(
   "/",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles("cashier", "parking_admin", "super_admin"),
   getVehicles
 );
 
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles("cashier", "parking_admin", "super_admin"),
   getVehicleById
 );
 
