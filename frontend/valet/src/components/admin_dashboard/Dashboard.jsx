@@ -180,7 +180,7 @@ function Dashboard() {
             TOPBAR
         ==================================================== */}
 
-        <Topbar />
+        <Topbar setActivePage={setActivePage} />
 
 
         {/* ====================================================

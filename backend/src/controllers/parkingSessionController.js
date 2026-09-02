@@ -28,10 +28,11 @@ const getParkingSessions = async (req, res) => {
             email
           )
         ),
-        valet:employees (
+        valet:users (
           id,
           name,
-          phone
+          email,
+          role
         )
       `)
       .order("checked_in_at", { ascending: false });
@@ -276,10 +277,10 @@ const assignValet = async (req, res) => {
       });
     }
 
-    // Check valet exists and is active
+    // Check valet exists and is active in users table
     const { data: valet, error: valetError } = await supabase
-      .from("employees")
-      .select("id, name, role, is_active")
+      .from("users")
+      .select("id, name, email, role, is_active")
       .eq("id", valet_id)
       .eq("role", "valet")
       .single();
@@ -612,10 +613,11 @@ const getRetrievalRequests = async (req, res) => {
             email
           )
         ),
-        valet:employees (
+        valet:users (
           id,
           name,
-          phone
+          email,
+          role
         )
       `)
       .in("status", allowedStatuses)
@@ -706,8 +708,10 @@ const getParkingHistory = async (req, res) => {
             phone
           )
         ),
-        valet:employees (
-          name
+        valet:users (
+          id,
+          name,
+          email
         )
       `)
       .eq("status", "returned_completed")

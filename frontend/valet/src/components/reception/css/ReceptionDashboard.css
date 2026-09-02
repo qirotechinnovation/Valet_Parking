@@ -1,0 +1,1075 @@
+/* ============================================================
+   AURA RECEPTION DASHBOARD
+   Theme:
+   Purple / Lavender / White / Amber
+   Consistent with Parking Admin
+   ============================================================ */
+
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+
+.reception-layout {
+  display: flex;
+  width: 100vw;
+  min-height: 100vh;
+  background: #f3f0f7;
+  overflow: hidden;
+}
+
+.reception-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f3f0f7;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-left: 250px;
+}
+
+.reception-body {
+  width: 100%;
+  min-height: calc(100vh - 72px);
+
+  padding: 24px 28px 32px;
+
+  box-sizing: border-box;
+}
+
+
+/* ============================================================
+   VIEW WRAPPER
+   ============================================================ */
+
+.reception-view-wrapper {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 28px 36px 40px;
+}
+
+
+/* ============================================================
+   VIEW HEADER
+   ============================================================ */
+
+.reception-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.reception-view-header > div:first-child {
+  min-width: 0;
+}
+
+.reception-eyebrow {
+  display: inline-block;
+  margin-bottom: 5px;
+  color: #7d6b93;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.reception-view-header h2 {
+  margin: 0;
+  color: #231633;
+  font-size: 27px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.reception-view-header p {
+  margin: 7px 0 0;
+  color: #8c7f9e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+   ACTION BUTTONS
+   ============================================================ */
+
+.reception-action-btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.reception-action-btn.primary {
+  border: 1px solid #e0d5e9;
+  background: #ffffff;
+  color: #5e3573;
+}
+
+.reception-action-btn.primary:hover:not(:disabled) {
+  background: #faf7fd;
+  border-color: #d5c7e0;
+  box-shadow: 0 4px 12px rgba(35, 22, 51, 0.07);
+  transform: translateY(-1px);
+}
+
+.reception-action-btn.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.reception-action-btn.amber {
+  border: 1px solid #f2d99d;
+  background: #fffaf0;
+  color: #a16207;
+}
+
+.reception-action-btn.amber:hover:not(:disabled) {
+  background: #fff4d6;
+  border-color: #e9c96e;
+  box-shadow: 0 4px 10px rgba(161, 98, 7, 0.08);
+}
+
+.reception-action-btn.small {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.reception-action-btn.danger {
+  border: 1px solid #efc4c4;
+  background: #fff6f6;
+  color: #b91c1c;
+}
+
+.reception-action-btn.danger:hover {
+  background: #feecec;
+  border-color: #e7aaaa;
+}
+
+
+/* ============================================================
+   QUICK ACTIONS
+   ============================================================ */
+
+.reception-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.quick-action-card {
+  min-width: 0;
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid #e9e4f0;
+  border-radius: 15px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(35, 22, 51, 0.025);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.quick-action-card:hover {
+  border-color: #ddd2e7;
+  box-shadow: 0 8px 22px rgba(35, 22, 51, 0.06);
+  transform: translateY(-2px);
+}
+
+.quick-action-card:active {
+  transform: translateY(0);
+}
+
+.quick-action-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 11px;
+}
+
+.quick-action-card > div:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quick-action-card strong {
+  overflow: hidden;
+  color: #231633;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-action-card span {
+  overflow: hidden;
+  color: #8c7f9e;
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   STAT CARDS GRID
+   ============================================================ */
+
+.reception-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+
+/* ============================================================
+   RECENT SESSIONS HEADER
+   ============================================================ */
+
+.reception-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+}
+
+.reception-recent-header h3 {
+  margin: 0;
+  color: #231633;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.reception-view-all-btn {
+  padding: 5px 0;
+  border: none;
+  background: transparent;
+  color: #6b3ba7;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.reception-view-all-btn:hover {
+  color: #4f277e;
+  transform: translateX(2px);
+}
+
+
+/* ============================================================
+   SEARCH BAR
+   ============================================================ */
+
+.reception-search-bar {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #e9e4f0;
+  color: #8c7f9e;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.reception-search-bar:hover {
+  background: #e5dfec;
+}
+
+.reception-search-bar:focus-within {
+  background: #ffffff;
+  border-color: #d7cde1;
+  box-shadow: 0 0 0 3px rgba(107, 59, 167, 0.06);
+}
+
+.reception-search-bar svg {
+  flex-shrink: 0;
+  color: #8c7f9e;
+}
+
+.reception-search-bar input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #231633;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.reception-search-bar input::placeholder {
+  color: #9b90a7;
+}
+
+
+/* ============================================================
+   TOOLBAR
+   ============================================================ */
+
+.reception-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.reception-toolbar .reception-search-bar {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.reception-filter-select {
+  width: 185px;
+  height: 40px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  border: 1px solid #e0d9e7;
+  border-radius: 10px;
+  outline: none;
+  background: #ffffff;
+  color: #5e3573;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.reception-filter-select:hover {
+  border-color: #d3c5dd;
+}
+
+.reception-filter-select:focus {
+  border-color: #cbb9d8;
+  box-shadow: 0 0 0 3px rgba(107, 59, 167, 0.06);
+}
+
+
+/* ============================================================
+   TABLE CARD
+   ============================================================ */
+
+.reception-table-card {
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid #e9e4f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(35, 22, 51, 0.025);
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.reception-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.reception-table thead {
+  background: #faf8fc;
+}
+
+.reception-table th {
+  padding: 13px 15px;
+  border-bottom: 1px solid #eee9f3;
+  color: #8c7f9e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  line-height: 1.3;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.reception-table td {
+  padding: 14px 15px;
+  border-bottom: 1px solid #f1edf4;
+  color: #5f566c;
+  font-size: 11.5px;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.reception-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.reception-table tbody tr:hover {
+  background: #fcfbfd;
+}
+
+.reception-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.reception-table td strong {
+  color: #231633;
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   TABLE EMPTY STATE
+   ============================================================ */
+
+.reception-table-empty {
+  height: 130px;
+  padding: 25px !important;
+  color: #9b90a7 !important;
+  font-size: 11.5px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.reception-table-loading {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #8c7f9e;
+  font-size: 11px;
+}
+
+.reception-table-loading svg {
+  color: #6b3ba7;
+}
+
+
+/* ============================================================
+   TABLE FOOTER
+   ============================================================ */
+
+.reception-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-height: 42px;
+  padding: 0 15px;
+  border-top: 1px solid #eee9f3;
+  background: #faf8fc;
+  color: #8c7f9e;
+  font-size: 10px;
+}
+
+.reception-table-footer strong {
+  color: #5e3573;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   SLOT BADGE
+   ============================================================ */
+
+.slot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: #f4eef8;
+  color: #6b3ba7;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   STATUS TAGS
+   ============================================================ */
+
+.reception-status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+
+/* Checked In */
+
+.status-checked-in {
+  background: #f1eafa;
+  color: #6b3ba7;
+}
+
+
+/* Parked */
+
+.status-parked {
+  background: #eafaf4;
+  color: #047857;
+}
+
+
+/* Retrieval Requested */
+
+.status-retrieval {
+  background: #fff3cd;
+  color: #a16207;
+}
+
+
+/* Retrieving */
+
+.status-retrieving {
+  background: #eef4ff;
+  color: #315bb5;
+}
+
+
+/* Ready */
+
+.status-ready {
+  background: #dcfce7;
+  color: #047857;
+}
+
+
+/* Returned */
+
+.status-returned {
+  background: #f0edf3;
+  color: #70677c;
+}
+
+
+/* ============================================================
+   PROFILE
+   ============================================================ */
+
+.reception-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 620px;
+  padding: 22px;
+  margin-bottom: 18px;
+  border: 1px solid #e9e4f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(35, 22, 51, 0.025);
+}
+
+.reception-profile-avatar {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 15px;
+  background: #231633;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 12px rgba(35, 22, 51, 0.12);
+}
+
+.reception-profile-card h3 {
+  margin: 0 0 4px;
+  color: #231633;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.reception-profile-card p {
+  margin: 0 0 8px;
+  color: #8c7f9e;
+  font-size: 11.5px;
+}
+
+.reception-profile-role {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #f4eef8;
+  color: #6b3ba7;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.reception-profile-actions {
+  display: flex;
+  align-items: center;
+}
+
+
+/* ============================================================
+   GLOBAL ERROR
+   ============================================================ */
+
+.reception-global-error {
+  width: calc(100% - 72px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 18px 36px 0;
+  padding: 10px 13px;
+  border: 1px solid #f4caca;
+  border-radius: 11px;
+  background: #fff6f6;
+  color: #991b1b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.reception-global-error button {
+  flex-shrink: 0;
+}
+
+
+/* ============================================================
+   GLOBAL SUCCESS
+   ============================================================ */
+
+.reception-global-success {
+  width: calc(100% - 72px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 18px 36px 0;
+  padding: 10px 13px;
+  border: 1px solid #bce8d3;
+  border-radius: 11px;
+  background: #effbf5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   REFRESH ANIMATION
+   ============================================================ */
+
+.refresh-spinning {
+  animation: reception-spin 0.9s linear infinite;
+}
+
+@keyframes reception-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+.reception-main::-webkit-scrollbar {
+  width: 7px;
+}
+
+.reception-main::-webkit-scrollbar-track {
+  background: #f3f0f7;
+}
+
+.reception-main::-webkit-scrollbar-thumb {
+  background: #d5ccdd;
+  border-radius: 10px;
+}
+
+.reception-main::-webkit-scrollbar-thumb:hover {
+  background: #bcb0c8;
+}
+
+
+/* ============================================================
+   RESPONSIVE — 1200px
+   ============================================================ */
+
+@media (max-width: 1200px) {
+
+  .reception-view-wrapper {
+    padding: 24px 28px 35px;
+  }
+
+  .reception-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reception-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reception-global-error,
+  .reception-global-success {
+    width: calc(100% - 56px);
+    margin-left: 28px;
+    margin-right: 28px;
+  }
+
+  .reception-table-card {
+    overflow-x: auto;
+  }
+
+  .reception-table {
+    min-width: 900px;
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE — 900px
+   ============================================================ */
+
+@media (max-width: 900px) {
+
+  .reception-view-header {
+    flex-direction: column;
+  }
+
+  .reception-view-header .reception-action-btn {
+    align-self: flex-start;
+  }
+
+  .reception-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reception-toolbar .reception-search-bar {
+    width: 100%;
+  }
+
+  .reception-filter-select {
+    width: 100%;
+  }
+
+  .reception-profile-card {
+    max-width: none;
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE — 650px
+   ============================================================ */
+
+@media (max-width: 650px) {
+
+  .reception-view-wrapper {
+    padding: 20px 16px 30px;
+  }
+
+  .reception-view-header h2 {
+    font-size: 23px;
+  }
+
+  .reception-view-header p {
+    font-size: 12px;
+  }
+
+  .reception-view-header .reception-action-btn {
+    width: 100%;
+  }
+
+  .reception-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .reception-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-action-card {
+    min-height: 78px;
+  }
+
+  .reception-table-card {
+    border-radius: 12px;
+  }
+
+  .reception-global-error,
+  .reception-global-success {
+    width: calc(100% - 32px);
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .reception-profile-card {
+    padding: 17px;
+  }
+
+  .reception-profile-avatar {
+    width: 55px;
+    height: 55px;
+    border-radius: 13px;
+    font-size: 15px;
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE — 450px
+   ============================================================ */
+
+@media (max-width: 450px) {
+
+  .reception-view-header {
+    gap: 15px;
+  }
+
+  .reception-recent-header {
+    align-items: flex-end;
+  }
+
+  .reception-recent-header h3 {
+    font-size: 14px;
+  }
+
+  .reception-search-bar {
+    height: 38px;
+  }
+
+  .reception-profile-card {
+    align-items: flex-start;
+  }
+
+  .reception-profile-card h3 {
+    font-size: 15px;
+  }
+
+  .reception-profile-card p {
+    font-size: 10.5px;
+    word-break: break-word;
+  }
+}
+
+
+/* ============================================================
+   RECEPTION STAT CARDS
+   ============================================================ */
+
+.reception-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.reception-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  min-height: 112px;
+  padding: 18px 18px;
+
+  background: #ffffff;
+  border: 1px solid #e9e4f0;
+  border-radius: 14px;
+
+  box-shadow: 0 3px 12px rgba(35, 22, 51, 0.045);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.reception-stat-card:hover {
+  transform: translateY(-2px);
+
+  border-color: #ddd2e8;
+
+  box-shadow: 0 7px 20px rgba(35, 22, 51, 0.08);
+}
+
+
+/* ------------------------------------------------------------
+   STAT ICON
+   ------------------------------------------------------------ */
+
+.reception-stat-icon {
+  width: 46px;
+  height: 46px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+}
+
+.reception-stat-icon svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2;
+}
+
+
+/* ------------------------------------------------------------
+   STAT CONTENT
+   ------------------------------------------------------------ */
+
+.reception-stat-body {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.reception-stat-label {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #8c7f9e;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.reception-stat-value {
+  display: block;
+
+  color: #231633;
+
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+
+  letter-spacing: -0.03em;
+}
+
+.reception-stat-sub {
+  display: block;
+
+  margin-top: 5px;
+
+  color: #a095ad;
+
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1200px) {
+  .reception-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .reception-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .reception-stat-card {
+    min-height: 100px;
+    padding: 16px;
+  }
+
+  .reception-stat-value {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 450px) {
+  .reception-stat-card {
+    gap: 12px;
+  }
+
+  .reception-stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .reception-stat-value {
+    font-size: 22px;
+  }
+}

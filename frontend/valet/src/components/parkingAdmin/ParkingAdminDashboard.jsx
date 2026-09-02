@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   AlertCircle,
@@ -32,7 +33,18 @@ import apiClient from "../../api/apiClient";
 import "./css/ParkingAdminDashboard.css";
 
 const ParkingAdminDashboard = ({ onLogout }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    if (onLogout) {
+      onLogout();
+    } else {
+      navigate("/", { replace: true });
+    }
+  };
 
   const [dashboardStats, setDashboardStats] = useState({
     totalSlots: 0,
@@ -663,7 +675,7 @@ const ParkingAdminDashboard = ({ onLogout }) => {
       case "profile":
         return (
           <ParkingAdminProfile
-            onLogout={onLogout}
+            onLogout={handleLogout}
           />
         );
 
@@ -672,7 +684,11 @@ const ParkingAdminDashboard = ({ onLogout }) => {
       // ========================================================
 
       case "security":
-        return null;
+        return (
+          <ParkingAdminProfile
+            onLogout={handleLogout}
+          />
+        );
 
       default:
         return null;
@@ -689,13 +705,15 @@ const ParkingAdminDashboard = ({ onLogout }) => {
       <ParkingAdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onLogout={onLogout}
+        onLogout={handleLogout}
       />
 
       <div className="parking-admin-main">
 
         <ParkingAdminTopbar
           activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onLogout={handleLogout}
         />
 
         <main className="parking-admin-body">

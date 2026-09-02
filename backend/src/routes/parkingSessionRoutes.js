@@ -39,10 +39,9 @@ router.post(
 );
 
 // ============================================================
-// SLOT ASSIGNMENT
+// SLOT ASSIGNMENT (supports both /assign-slot and /slot)
 // ============================================================
 
-// PATCH /api/parking-admin/sessions/:id/assign-slot
 router.patch(
   "/:id/assign-slot",
   authenticate,
@@ -50,13 +49,26 @@ router.patch(
   assignParkingSlot
 );
 
+router.patch(
+  "/:id/slot",
+  authenticate,
+  authorizeRoles("parking_admin", "super_admin"),
+  assignParkingSlot
+);
+
 // ============================================================
-// VALET ASSIGNMENT
+// VALET ASSIGNMENT (supports both /assign-valet and /valet)
 // ============================================================
 
-// PATCH /api/parking-admin/sessions/:id/assign-valet
 router.patch(
   "/:id/assign-valet",
+  authenticate,
+  authorizeRoles("parking_admin", "super_admin"),
+  assignValet
+);
+
+router.patch(
+  "/:id/valet",
   authenticate,
   authorizeRoles("parking_admin", "super_admin"),
   assignValet
@@ -66,7 +78,6 @@ router.patch(
 // RETRIEVAL WORKFLOW
 // ============================================================
 
-// PATCH /api/parking-admin/sessions/:id/request-retrieval
 router.patch(
   "/:id/request-retrieval",
   authenticate,
@@ -74,7 +85,6 @@ router.patch(
   requestRetrieval
 );
 
-// PATCH /api/parking-admin/sessions/:id/start-retrieval
 router.patch(
   "/:id/start-retrieval",
   authenticate,
@@ -82,7 +92,7 @@ router.patch(
   startRetrieval
 );
 
-// PATCH /api/parking-admin/sessions/:id/ready
+// Supports both /ready and /ready-for-pickup
 router.patch(
   "/:id/ready",
   authenticate,
@@ -90,7 +100,14 @@ router.patch(
   markReadyForPickup
 );
 
-// PATCH /api/parking-admin/sessions/:id/complete
+router.patch(
+  "/:id/ready-for-pickup",
+  authenticate,
+  authorizeRoles("parking_admin", "super_admin"),
+  markReadyForPickup
+);
+
+// Supports both /complete and /complete-return
 router.patch(
   "/:id/complete",
   authenticate,
@@ -98,13 +115,26 @@ router.patch(
   completeReturn
 );
 
+router.patch(
+  "/:id/complete-return",
+  authenticate,
+  authorizeRoles("parking_admin", "super_admin"),
+  completeReturn
+);
+
 // ============================================================
-// RETRIEVAL REQUESTS
+// RETRIEVAL REQUESTS (supports /retrievals & /retrieval-requests)
 // ============================================================
 
-// GET /api/parking-admin/sessions/retrievals
 router.get(
   "/retrievals",
+  authenticate,
+  authorizeRoles("parking_admin", "super_admin"),
+  getRetrievalRequests
+);
+
+router.get(
+  "/retrieval-requests",
   authenticate,
   authorizeRoles("parking_admin", "super_admin"),
   getRetrievalRequests
@@ -114,7 +144,6 @@ router.get(
 // PARKING HISTORY
 // ============================================================
 
-// GET /api/parking-admin/sessions/history
 router.get(
   "/history",
   authenticate,

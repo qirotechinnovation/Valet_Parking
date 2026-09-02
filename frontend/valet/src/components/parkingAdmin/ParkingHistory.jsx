@@ -1,408 +1,313 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw, Search, Clock, Calendar, CheckCircle2 } from "lucide-react";
+import { getParkingHistory } from "../../api/parkingApi";
 import "./css/ParkingHistory.css";
 
-const mockHistory = [
-  {
-    id: 1,
-    vehicleNumber: "MH12AB1234",
-    customer: "Rahul Sharma",
-    slot: "A-12",
-    checkIn: "20 Aug 2026, 09:15 AM",
-    checkOut: "20 Aug 2026, 12:45 PM",
-    duration: "3h 30m",
-    status: "Completed",
-  },
-  {
-    id: 2,
-    vehicleNumber: "MH14CD5678",
-    customer: "Priya Patil",
-    slot: "B-08",
-    checkIn: "20 Aug 2026, 10:20 AM",
-    checkOut: "20 Aug 2026, 01:10 PM",
-    duration: "2h 50m",
-    status: "Completed",
-  },
-  {
-    id: 3,
-    vehicleNumber: "MH12EF9012",
-    customer: "Amit Kulkarni",
-    slot: "A-05",
-    checkIn: "20 Aug 2026, 11:05 AM",
-    checkOut: "20 Aug 2026, 03:30 PM",
-    duration: "4h 25m",
-    status: "Completed",
-  },
-  {
-    id: 4,
-    vehicleNumber: "MH16GH3456",
-    customer: "Sneha Joshi",
-    slot: "C-14",
-    checkIn: "19 Aug 2026, 02:15 PM",
-    checkOut: "19 Aug 2026, 06:40 PM",
-    duration: "4h 25m",
-    status: "Completed",
-  },
-  {
-    id: 5,
-    vehicleNumber: "MH12JK7890",
-    customer: "Rohan Deshmukh",
-    slot: "B-03",
-    checkIn: "19 Aug 2026, 04:30 PM",
-    checkOut: "19 Aug 2026, 08:15 PM",
-    duration: "3h 45m",
-    status: "Completed",
-  },
-  {
-    id: 6,
-    vehicleNumber: "MH14LM2468",
-    customer: "Neha More",
-    slot: "A-19",
-    checkIn: "18 Aug 2026, 09:40 AM",
-    checkOut: "18 Aug 2026, 02:05 PM",
-    duration: "4h 25m",
-    status: "Completed",
-  },
-];
-
 function ParkingHistory() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
+  const loadHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const params = {};
+      if (typeFilter !== "all") {
+        params.parking_type = typeFilter;
+      }
+      if (searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+
+      const response = await getParkingHistory(params);
+      if (response && response.success) {
+        setHistory(response.history || []);
+      } else {
+        throw new Error(response?.message || "Failed to load parking history.");
+      }
+    } catch (err) {
+      console.error("Load history error:", err);
+      setError(err.message || "Failed to fetch parking history records.");
+    } finally {
+      setLoading(false);
+    }
+  }, [typeFilter, searchTerm]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
   const filteredHistory = useMemo(() => {
-    const search = searchTerm.toLowerCase().trim();
+    let result = history;
 
-    return mockHistory.filter((session) => {
-      const matchesSearch =
-        !search ||
-        session.vehicleNumber.toLowerCase().includes(search) ||
-        session.customer.toLowerCase().includes(search) ||
-        session.slot.toLowerCase().includes(search);
+    if (dateFilter !== "all") {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-      const matchesStatus =
-        statusFilter === "all" ||
-        session.status.toLowerCase() === statusFilter;
+      result = result.filter((item) => {
+        if (!item.completed_at) return false;
+        const itemTime = new Date(item.completed_at).getTime();
 
-      /*
-       * Date filtering is currently UI-ready.
-       * It can be connected to actual session dates
-       * once the backend API is available.
-       */
-      const matchesDate = dateFilter === "all";
+        if (dateFilter === "today") {
+          return itemTime >= startOfDay;
+        }
+        if (dateFilter === "last7days") {
+          return itemTime >= startOfDay - 7 * 24 * 60 * 60 * 1000;
+        }
+        if (dateFilter === "last30days") {
+          return itemTime >= startOfDay - 30 * 24 * 60 * 60 * 1000;
+        }
+        return true;
+      });
+    }
 
-      return matchesSearch && matchesStatus && matchesDate;
+    return result;
+  }, [history, dateFilter]);
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
     });
-  }, [searchTerm, statusFilter, dateFilter]);
+  };
+
+  const todayCompletedCount = useMemo(() => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    return history.filter((item) => {
+      if (!item.completed_at) return false;
+      return new Date(item.completed_at) >= startOfDay;
+    }).length;
+  }, [history]);
 
   return (
     <div className="parking-history-page">
-
       {/* HEADER */}
-
       <div className="parking-history-header">
         <div>
-          <p className="parking-history-eyebrow">
-            OPERATIONS
-          </p>
-
+          <p className="parking-history-eyebrow">OPERATIONS</p>
           <h1>Parking History</h1>
-
-          <p>
-            View completed and previous parking sessions.
-          </p>
+          <p>View completed and historical parking sessions.</p>
         </div>
 
-        <div className="history-summary">
-          <span>Total Sessions</span>
-          <strong>{mockHistory.length}</strong>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <div className="history-summary">
+            <span>Total Completed</span>
+            <strong>{loading ? "--" : history.length}</strong>
+          </div>
+
+          <button
+            className="act-btn primary"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "42px", padding: "0 16px", borderRadius: "10px" }}
+            onClick={loadHistory}
+            disabled={loading}
+          >
+            <RefreshCw size={14} className={loading ? "refresh-spinning" : ""} />
+            <span>{loading ? "Refreshing..." : "Refresh"}</span>
+          </button>
         </div>
       </div>
 
+      {error && (
+        <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px", fontWeight: "600", fontSize: "13px" }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* SUMMARY CARDS */}
-
       <div className="history-summary-grid">
-
         <div className="history-summary-card">
-          <span className="history-summary-icon">↗</span>
-
+          <span className="history-summary-icon">✓</span>
           <div>
-            <span>Today's Check-ins</span>
-            <strong>24</strong>
+            <span>Completed Sessions</span>
+            <strong>{loading ? "--" : history.length}</strong>
           </div>
         </div>
 
         <div className="history-summary-card">
           <span className="history-summary-icon">↙</span>
-
           <div>
-            <span>Today's Check-outs</span>
-            <strong>19</strong>
+            <span>Today's Returns</span>
+            <strong>{loading ? "--" : todayCompletedCount}</strong>
           </div>
         </div>
 
         <div className="history-summary-card">
-          <span className="history-summary-icon">◷</span>
-
+          <span className="history-summary-icon">🚗</span>
           <div>
-            <span>Average Duration</span>
-            <strong>3h 42m</strong>
+            <span>Valet Checkouts</span>
+            <strong>
+              {loading ? "--" : history.filter((h) => h.parking_type === "valet").length}
+            </strong>
           </div>
         </div>
 
         <div className="history-summary-card">
-          <span className="history-summary-icon">✓</span>
-
+          <span className="history-summary-icon">🅿</span>
           <div>
-            <span>Completed Sessions</span>
-            <strong>156</strong>
+            <span>Self-Park Checkouts</span>
+            <strong>
+              {loading ? "--" : history.filter((h) => h.parking_type === "self").length}
+            </strong>
           </div>
         </div>
-
       </div>
 
-
       {/* TABLE CARD */}
-
       <section className="parking-history-card">
-
         {/* TOOLBAR */}
-
         <div className="parking-history-toolbar">
-
           <div className="parking-history-search">
-
             <span>⌕</span>
-
             <input
               type="text"
-              placeholder="Search vehicle, customer or slot..."
+              placeholder="Search license plate, customer, slot, or ticket..."
               value={searchTerm}
-              onChange={(e) =>
-                setSearchTerm(e.target.value)
-              }
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-
           </div>
 
-
           <div className="parking-history-filters">
-
             <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value)
-              }
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
             >
-              <option value="all">
-                All Status
-              </option>
-
-              <option value="completed">
-                Completed
-              </option>
+              <option value="all">All Types</option>
+              <option value="valet">Valet</option>
+              <option value="self">Self</option>
             </select>
-
 
             <select
               value={dateFilter}
-              onChange={(e) =>
-                setDateFilter(e.target.value)
-              }
+              onChange={(e) => setDateFilter(e.target.value)}
             >
-              <option value="all">
-                All Dates
-              </option>
-
-              <option value="today">
-                Today
-              </option>
-
-              <option value="yesterday">
-                Yesterday
-              </option>
-
-              <option value="last7days">
-                Last 7 Days
-              </option>
-
-              <option value="last30days">
-                Last 30 Days
-              </option>
+              <option value="all">All Dates</option>
+              <option value="today">Today</option>
+              <option value="last7days">Last 7 Days</option>
+              <option value="last30days">Last 30 Days</option>
             </select>
-
           </div>
-
         </div>
-
 
         {/* TABLE */}
-
         <div className="parking-history-table-wrapper">
-
-          <table className="parking-history-table">
-
-            <thead>
-              <tr>
-                <th>VEHICLE</th>
-                <th>CUSTOMER</th>
-                <th>SLOT</th>
-                <th>CHECK-IN</th>
-                <th>CHECK-OUT</th>
-                <th>DURATION</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {filteredHistory.length === 0 ? (
-
+          {loading && filteredHistory.length === 0 ? (
+            <div style={{ padding: "50px", textAlign: "center", color: "#7b7389" }}>
+              <RefreshCw size={24} className="refresh-spinning" style={{ marginBottom: "12px" }} />
+              <div>Loading parking history...</div>
+            </div>
+          ) : (
+            <table className="parking-history-table">
+              <thead>
                 <tr>
-                  <td
-                    colSpan="7"
-                    className="history-empty"
-                  >
-                    <div>
-                      <span>◷</span>
-
-                      <strong>
-                        No parking history found
-                      </strong>
-
-                      <p>
-                        Try changing your search or filters.
-                      </p>
-                    </div>
-                  </td>
+                  <th>VEHICLE / TICKET</th>
+                  <th>CUSTOMER</th>
+                  <th>SLOT</th>
+                  <th>TYPE</th>
+                  <th>CHECK-IN</th>
+                  <th>CHECK-OUT</th>
+                  <th>DURATION</th>
+                  <th>VALET</th>
+                  <th>STATUS</th>
                 </tr>
+              </thead>
 
-              ) : (
-
-                filteredHistory.map((session) => (
-
-                  <tr key={session.id}>
-
-                    {/* VEHICLE */}
-
-                    <td>
-                      <div className="history-vehicle">
-
-                        <div className="history-vehicle-icon">
-                          🚗
-                        </div>
-
-                        <strong>
-                          {session.vehicleNumber}
-                        </strong>
-
+              <tbody>
+                {filteredHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="history-empty">
+                      <div>
+                        <span>◷</span>
+                        <strong>No parking history found</strong>
+                        <p>No completed parking records match your filter criteria.</p>
                       </div>
                     </td>
-
-
-                    {/* CUSTOMER */}
-
-                    <td>
-                      <span className="history-customer">
-                        {session.customer}
-                      </span>
-                    </td>
-
-
-                    {/* SLOT */}
-
-                    <td>
-                      <span className="history-slot">
-                        {session.slot}
-                      </span>
-                    </td>
-
-
-                    {/* CHECK-IN */}
-
-                    <td>
-                      <span className="history-time">
-                        {session.checkIn}
-                      </span>
-                    </td>
-
-
-                    {/* CHECK-OUT */}
-
-                    <td>
-                      <span className="history-time">
-                        {session.checkOut}
-                      </span>
-                    </td>
-
-
-                    {/* DURATION */}
-
-                    <td>
-                      <span className="history-duration">
-                        {session.duration}
-                      </span>
-                    </td>
-
-
-                    {/* STATUS */}
-
-                    <td>
-                      <span className="history-status">
-                        <span className="history-status-dot"></span>
-
-                        {session.status}
-                      </span>
-                    </td>
-
                   </tr>
+                ) : (
+                  filteredHistory.map((session) => (
+                    <tr key={session.id}>
+                      <td>
+                        <div className="history-vehicle">
+                          <div className="history-vehicle-icon">🚗</div>
+                          <div>
+                            <strong>{session.vehicle_number || session.vehicle?.license_plate || "N/A"}</strong>
+                            <div style={{ fontSize: "11px", color: "#7b879e" }}>
+                              Ticket #{session.ticket_code}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                ))
+                      <td>
+                        <span className="history-customer">
+                          {session.customer_name || session.vehicle?.customer?.name || "N/A"}
+                        </span>
+                        <div style={{ fontSize: "11px", color: "#7b879e" }}>
+                          {session.customer_phone || session.vehicle?.customer?.phone || ""}
+                        </div>
+                      </td>
 
-              )}
+                      <td>
+                        <span className="history-slot">{session.parking_slot || "N/A"}</span>
+                      </td>
 
-            </tbody>
+                      <td>
+                        <span style={{ textTransform: "capitalize", fontWeight: "600", color: "#43506a" }}>
+                          {session.parking_type || "Valet"}
+                        </span>
+                      </td>
 
-          </table>
+                      <td>
+                        <span className="history-time">{formatDateTime(session.checked_in_at)}</span>
+                      </td>
 
+                      <td>
+                        <span className="history-time">{formatDateTime(session.completed_at)}</span>
+                      </td>
+
+                      <td>
+                        <span className="history-duration">{session.parking_duration || "—"}</span>
+                      </td>
+
+                      <td>
+                        <span style={{ color: "#43506a", fontSize: "12px" }}>
+                          {session.valet_name || "—"}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span className="history-status">
+                          <span className="history-status-dot"></span>
+                          Completed
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
-
 
         {/* FOOTER */}
-
         <div className="parking-history-footer">
-
           <span>
-            Showing{" "}
-            <strong>
-              {filteredHistory.length}
-            </strong>{" "}
-            of{" "}
-            <strong>
-              {mockHistory.length}
-            </strong>{" "}
-            parking sessions
+            Showing <strong>{filteredHistory.length}</strong> of <strong>{history.length}</strong> completed sessions
           </span>
-
-
-          <div className="history-pagination">
-
-            <button disabled>
-              ‹
-            </button>
-
-            <span>1</span>
-
-            <button disabled>
-              ›
-            </button>
-
-          </div>
-
         </div>
-
       </section>
-
     </div>
   );
 }

@@ -1,8 +1,8 @@
 const express = require("express");
-
 const {
   createCustomer,
-  getCustomerById
+  getCustomers,
+  getCustomerById,
 } = require("../controllers/customerController");
 
 const authenticate = require("../middleware/authMiddleware");
@@ -13,14 +13,21 @@ const router = express.Router();
 router.post(
   "/",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
   createCustomer
+);
+
+router.get(
+  "/",
+  authenticate,
+  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
+  getCustomers
 );
 
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
   getCustomerById
 );
 

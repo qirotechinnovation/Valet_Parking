@@ -5,6 +5,7 @@ import LoginCard from "./components/LoginCard";
 
 import Dashboard from "./components/admin_dashboard/Dashboard";
 import ParkingAdminDashboard from "./components/parkingAdmin/ParkingAdminDashboard";
+import ReceptionDashboard from "./components/reception/ReceptionDashboard";
 
 import "./App.css";
 
@@ -48,6 +49,12 @@ function App() {
         <Route
           path="/parking-admin-dashboard"
           element={<ParkingAdminDashboard />}
+        />
+
+        {/* RECEPTION DASHBOARD */}
+        <Route
+          path="/reception-dashboard"
+          element={<ReceptionDashboard />}
         />
 
         {/* UNKNOWN ROUTE */}

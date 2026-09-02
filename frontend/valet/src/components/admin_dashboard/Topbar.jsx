@@ -3,16 +3,39 @@ import { Bell,
   Settings,
   Search,
   LogOut,
-  ChevronUp
-  
 } from 'lucide-react';
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Topbar.css";
 
-function Topbar() {
+function Topbar({ setActivePage }) {
+  const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  let user = { name: "Super Admin", email: "admin@valetparking.com" };
+  try {
+    const stored = localStorage.getItem("user");
+    if (stored) user = JSON.parse(stored);
+  } catch (e) {
+    // fallback
+  }
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "SA";
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    navigate("/", { replace: true });
+  };
 
   return (
     <header className="dashboard-topbar">
@@ -194,13 +217,13 @@ function Topbar() {
           >
 
             <div className="profile-avatar">
-              SA
+              {initials}
             </div>
 
             <div className="profile-info">
 
               <strong>
-                Super Admin
+                {user.name || "Super Admin"}
               </strong>
 
               <span>
@@ -227,17 +250,17 @@ function Topbar() {
               <div className="profile-dropdown-header">
 
                 <div className="profile-avatar large">
-                  SA
+                  {initials}
                 </div>
 
                 <div>
 
                   <strong>
-                    Super Admin
+                    {user.name || "Super Admin"}
                   </strong>
 
                   <span>
-                    admin@valetparking.com
+                    {user.email || "admin@valetparking.com"}
                   </span>
 
                   
@@ -249,7 +272,13 @@ function Topbar() {
               <div className="profile-menu-divider"></div>
 
 
-              <button className="profile-menu-item">
+              <button
+                className="profile-menu-item"
+                onClick={() => {
+                  setShowProfile(false);
+                  if (setActivePage) setActivePage("profile");
+                }}
+              >
 
                 <span className="menu-item-icon">
                   ◉
@@ -263,24 +292,13 @@ function Topbar() {
               </button>
 
 
-              <button className="profile-menu-item">
-
-                <span className="menu-item-icon">
-                  <Settings/>
-                </span>
-
-                <div>
-                  <strong>Settings</strong>
-                  <span>Manage preferences</span>
-                </div>
-
-              </button>
-
-
               <div className="profile-menu-divider"></div>
 
 
-              <button className="profile-menu-item logout-menu">
+              <button
+                className="profile-menu-item logout-menu"
+                onClick={handleLogout}
+              >
 
                 <span className="menu-item-icon">
                   <LogOut />

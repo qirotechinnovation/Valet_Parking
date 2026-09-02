@@ -1,82 +1,93 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Profile.css";
 
 function Profile() {
+  const navigate = useNavigate();
+
+  const [user] = useState(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      // fallback
+    }
+    return {
+      name: "Super Admin",
+      email: "admin@valetparking.com",
+      role: "super_admin",
+      id: "ADM-001",
+    };
+  });
+
+  const initials = user.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "SA";
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    navigate("/", { replace: true });
+  };
+
   return (
     <div className="profile-page">
-
       {/* Header */}
       <section className="profile-page-header">
         <div>
           <p className="profile-eyebrow">ACCOUNT</p>
-
           <h2>My Profile</h2>
-
-          <p>
-            Manage your personal information and account settings.
-          </p>
+          <p>Manage your administrative profile, credentials and access settings.</p>
         </div>
       </section>
 
-
       {/* Profile overview */}
       <section className="profile-overview">
-
         <div className="profile-main">
-
-          <div className="profile-large-avatar">
-            SA
-          </div>
+          <div className="profile-large-avatar">{initials}</div>
 
           <div className="profile-main-info">
-            <h3>Super Admin</h3>
-
-            <p>admin@valetparking.com</p>
+            <h3>{user.name || "Super Admin"}</h3>
+            <p>{user.email || "admin@valetparking.com"}</p>
 
             <div className="profile-status">
               <span></span>
               Active account
             </div>
           </div>
-
         </div>
 
         <div className="profile-role">
           <span>APPLICATION ROLE</span>
-          <strong>Super Admin</strong>
+          <strong>Super Administrator</strong>
         </div>
-
       </section>
-
 
       {/* Main grid */}
       <section className="profile-grid">
-
         {/* Personal Information */}
-
         <div className="profile-panel">
-
           <div className="profile-panel-header">
             <div>
               <h3>Personal Information</h3>
-              <p>Your basic account information</p>
+              <p>Your primary account details</p>
             </div>
-
-            <button className="profile-edit-button">
-              Edit
-            </button>
           </div>
 
-
           <div className="profile-fields">
-
             <div className="profile-field">
               <span>FULL NAME</span>
-              <strong>Super Admin</strong>
+              <strong>{user.name || "Super Admin"}</strong>
             </div>
 
             <div className="profile-field">
               <span>EMAIL ADDRESS</span>
-              <strong>admin@valetparking.com</strong>
+              <strong>{user.email || "admin@valetparking.com"}</strong>
             </div>
 
             <div className="profile-field">
@@ -86,123 +97,81 @@ function Profile() {
 
             <div className="profile-field">
               <span>ACCOUNT STATUS</span>
-
               <strong className="active-field">
                 <span></span>
                 Active
               </strong>
             </div>
-
           </div>
-
         </div>
 
-
         {/* Account Information */}
-
         <div className="profile-panel">
-
           <div className="profile-panel-header">
             <div>
               <h3>Account Information</h3>
-              <p>Details about your system account</p>
+              <p>System account permissions</p>
             </div>
           </div>
 
-
           <div className="profile-fields">
-
             <div className="profile-field">
               <span>ACCOUNT ID</span>
-              <strong>ADM-001</strong>
+              <strong>{user.id ? String(user.id).slice(0, 12) : "ADM-001"}</strong>
             </div>
 
             <div className="profile-field">
-              <span>CREATED DATE</span>
-              <strong>August 01, 2026</strong>
-            </div>
-
-            <div className="profile-field">
-              <span>LAST LOGIN</span>
-              <strong>Today, 09:42 AM</strong>
+              <span>SYSTEM ROLE</span>
+              <strong>System Owner / Super Admin</strong>
             </div>
 
             <div className="profile-field">
               <span>ACCESS LEVEL</span>
-              <strong>Full System Access</strong>
+              <strong>Full System Access & Staff Control</strong>
             </div>
 
+            <div className="profile-field">
+              <span>SECURITY STATUS</span>
+              <strong style={{ color: "#10b981" }}>Active JWT Session</strong>
+            </div>
           </div>
-
         </div>
-
       </section>
 
-
-      {/* Security */}
-
+      {/* Security & Actions */}
       <section className="profile-security">
-
         <div className="profile-panel-header">
-
           <div>
-            <h3>Security</h3>
-
-            <p>
-              Manage your password and account security.
-            </p>
+            <h3>Security & Session</h3>
+            <p>Session management and authentication state.</p>
           </div>
-
         </div>
-
 
         <div className="security-options">
+          <div className="security-option">
+            <div className="security-icon">✓</div>
+            <div>
+              <strong>Account Protection</strong>
+              <span>Protected via Supabase Auth & Role Guards</span>
+            </div>
+            <span className="security-active">Protected</span>
+          </div>
 
           <div className="security-option">
-
-            <div className="security-icon">
-              *
-            </div>
-
+            <div className="security-icon" style={{ background: "#fef2f2", color: "#b91c1c" }}>!</div>
             <div>
-              <strong>Password</strong>
-
-              <span>
-                Last changed more than 30 days ago
-              </span>
+              <strong>Sign Out of Session</strong>
+              <span>End your administrative session on this device</span>
             </div>
-
-            <button>
-              Change Password
+            <button
+              onClick={handleLogout}
+              style={{ background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca", cursor: "pointer", padding: "8px 16px", borderRadius: "8px", border: "1px solid #fecaca", fontWeight: "700", fontSize: "12px" }}
+            >
+              Sign Out
             </button>
-
           </div>
-
-
-          <div className="security-option">
-
-            <div className="security-icon">
-              ✓
-            </div>
-
-            <div>
-              <strong>Account Security</strong>
-
-              <span>
-                Your account is protected and active
-              </span>
-            </div>
-
-            <span className="security-active">
-              Protected
-            </span>
-
-          </div>
-
         </div>
-
       </section>
-
     </div>
   );
 }

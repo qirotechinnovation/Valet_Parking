@@ -22,8 +22,9 @@ function LoginCard() {
   try {
     setLoading(true);
 
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/auth/login`,
+      `${apiUrl}/api/auth/login`,
       {
         method: "POST",
         headers: {
@@ -69,7 +70,10 @@ function LoginCard() {
     } 
     else if (role === "parking_admin") {
       navigate("/parking-admin-dashboard");
-    } 
+    }
+    else if (role === "cashier" || role === "reception_security") {
+      navigate("/reception-dashboard");
+    }
     else {
       setError(
         "You do not have permission to access this application."

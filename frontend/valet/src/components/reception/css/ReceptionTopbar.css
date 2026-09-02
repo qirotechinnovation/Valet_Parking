@@ -1,0 +1,398 @@
+/* ============================================================
+   AURA RECEPTION TOPBAR
+   ============================================================ */
+
+.aura-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+
+  height: 72px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 28px;
+
+  background: #ffffff;
+
+  border-bottom: 1px solid #e9e4f0;
+
+  box-shadow: 0 2px 8px rgba(35, 22, 51, 0.025);
+}
+
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  color: #9a8ea6;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+.breadcrumb strong {
+  color: #231633;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.breadcrumb .capitalize {
+  text-transform: none;
+}
+
+
+/* ============================================================
+   TOPBAR RIGHT
+   ============================================================ */
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+
+.search-bar {
+  width: 245px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 12px;
+
+  background: #f6f3f8;
+
+  border: 1px solid #e9e4f0;
+  border-radius: 9px;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.search-bar:focus-within {
+  background: #ffffff;
+  border-color: #cdb9dd;
+
+  box-shadow: 0 0 0 3px rgba(107, 59, 167, 0.08);
+}
+
+.search-icon {
+  width: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  color: #91849e;
+}
+
+.search-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.search-bar input {
+  width: 100%;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+
+  color: #231633;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.search-bar input::placeholder {
+  color: #a49aaa;
+}
+
+
+/* ============================================================
+   NOTIFICATION
+   ============================================================ */
+
+.notification-bell {
+  position: relative;
+
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid #e9e4f0;
+  border-radius: 9px;
+
+  background: #ffffff;
+  color: #6f627b;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.notification-bell:hover {
+  background: #f4eef8;
+  color: #5e3573;
+  border-color: #d9cce3;
+}
+
+.notification-bell svg {
+  width: 18px;
+  height: 18px;
+}
+
+
+/* Notification indicator */
+
+.bell-badge {
+  position: absolute;
+
+  top: 8px;
+  right: 8px;
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #ef4444;
+
+  border: 1.5px solid #ffffff;
+}
+
+
+/* ============================================================
+   PROFILE CHIP
+   ============================================================ */
+
+.profile-chip {
+  min-width: 175px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 4px 8px 4px 5px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  background: transparent;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.profile-chip:hover {
+  background: #f7f4f9;
+  border-color: #e9e4f0;
+}
+
+
+/* ============================================================
+   PROFILE AVATAR
+   ============================================================ */
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  background: #6b3ba7;
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.02em;
+}
+
+
+/* ============================================================
+   PROFILE META
+   ============================================================ */
+
+.profile-meta {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+}
+
+.profile-meta strong {
+  max-width: 105px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #231633;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.profile-meta span {
+  margin-top: 2px;
+
+  color: #94889e;
+
+  font-size: 9px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   DROPDOWN ARROW
+   ============================================================ */
+
+.dropdown-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #978b9f;
+}
+
+.dropdown-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+
+/* ============================================================
+   RESPONSIVE TOPBAR
+   ============================================================ */
+
+@media (max-width: 1200px) {
+  .aura-topbar {
+    padding: 0 22px;
+  }
+
+  .search-bar {
+    width: 210px;
+  }
+
+  .profile-chip {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 900px) {
+  .aura-topbar {
+    padding: 0 18px;
+  }
+
+  .search-bar {
+    width: 180px;
+  }
+
+  .profile-meta {
+    display: none;
+  }
+
+  .profile-chip {
+    min-width: auto;
+    padding-right: 5px;
+  }
+
+  .dropdown-arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 650px) {
+  .aura-topbar {
+    height: 64px;
+
+    padding: 0 14px;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+  }
+
+  .breadcrumb strong {
+    font-size: 11px;
+  }
+
+  .search-bar {
+    display: none;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  .notification-bell {
+    width: 36px;
+    height: 36px;
+  }
+
+  .profile-chip {
+    height: 38px;
+  }
+
+  .profile-avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 450px) {
+  .aura-topbar {
+    padding: 0 11px;
+  }
+
+  .breadcrumb span {
+    display: none;
+  }
+
+  .breadcrumb::before {
+    content: "Reception";
+    color: #8c7f9e;
+    font-size: 11px;
+  }
+}
