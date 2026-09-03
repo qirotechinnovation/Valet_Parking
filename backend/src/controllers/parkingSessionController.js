@@ -1,4 +1,6 @@
 const supabase = require("../config/supabase");
+const QRCode = require("qrcode");
+const crypto = require("crypto");
 
 const getParkingSessions = async (req, res) => {
   try {
@@ -106,18 +108,15 @@ const getParkingSessions = async (req, res) => {
     });
   }
 };
+
 const createParkingSession = async (req, res) => {
   try {
-    const {
-      vehicle_id,
-      parking_type,
-      ticket_code
-    } = req.body;
+    const { vehicle_id, parking_type } = req.body;
 
-    if (!vehicle_id || !parking_type || !ticket_code) {
+    if (!vehicle_id || !parking_type) {
       return res.status(400).json({
         success: false,
-        message: "Vehicle ID, parking type and ticket code are required."
+        message: "Vehicle ID and parking type are required."
       });
     }
 
@@ -128,7 +127,6 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // Check whether vehicle exists
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
       .select("id")
@@ -142,14 +140,38 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // Create parking session
+    let ticketCode;
+    let ticketExists = true;
+
+    while (ticketExists) {
+      const randomCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+      ticketCode = `VP-${randomCode}`;
+
+      const { data: existingTicket, error: ticketCheckError } = await supabase
+        .from("parking_sessions")
+        .select("id")
+        .eq("ticket_code", ticketCode)
+        .maybeSingle();
+
+      if (ticketCheckError) {
+        return res.status(500).json({
+          success: false,
+          message: ticketCheckError.message
+        });
+      }
+
+      ticketExists = !!existingTicket;
+    }
+
+    const qrCode = await QRCode.toDataURL(ticketCode);
+
     const { data: session, error } = await supabase
       .from("parking_sessions")
       .insert([
         {
           vehicle_id,
           parking_type,
-          ticket_code,
+          ticket_code: ticketCode,
           status: "checked_in"
         }
       ])
@@ -168,7 +190,11 @@ const createParkingSession = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Parking session created successfully.",
-      session
+      session,
+      ticket: {
+        ticket_code: ticketCode,
+        qr_code: qrCode
+      }
     });
 
   } catch (error) {
@@ -193,7 +219,6 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
-    // Check if slot exists and is available
     const { data: slot, error: slotError } = await supabase
       .from("parking_slots")
       .select("id, slot_number, status")
@@ -214,7 +239,6 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
-    // Assign slot to session
     const { data: session, error: sessionError } = await supabase
       .from("parking_sessions")
       .update({
@@ -233,7 +257,6 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
-    // Mark slot as occupied
     const { error: updateSlotError } = await supabase
       .from("parking_slots")
       .update({ status: "occupied" })
@@ -264,7 +287,6 @@ const assignParkingSlot = async (req, res) => {
   }
 };
 
-
 const assignValet = async (req, res) => {
   try {
     const { id } = req.params;
@@ -277,7 +299,6 @@ const assignValet = async (req, res) => {
       });
     }
 
-    // Check valet exists and is active in users table
     const { data: valet, error: valetError } = await supabase
       .from("users")
       .select("id, name, email, role, is_active")
@@ -299,7 +320,6 @@ const assignValet = async (req, res) => {
       });
     }
 
-    // Assign valet to parking session
     const { data: session, error: sessionError } = await supabase
       .from("parking_sessions")
       .update({
@@ -331,6 +351,7 @@ const assignValet = async (req, res) => {
     });
   }
 };
+
 const requestRetrieval = async (req, res) => {
   try {
     const { id } = req.params;
@@ -386,7 +407,6 @@ const requestRetrieval = async (req, res) => {
     });
   }
 };
-
 
 const startRetrieval = async (req, res) => {
   try {
@@ -444,7 +464,6 @@ const startRetrieval = async (req, res) => {
   }
 };
 
-
 const markReadyForPickup = async (req, res) => {
   try {
     const { id } = req.params;
@@ -501,7 +520,6 @@ const markReadyForPickup = async (req, res) => {
   }
 };
 
-
 const completeReturn = async (req, res) => {
   try {
     const { id } = req.params;
@@ -526,7 +544,6 @@ const completeReturn = async (req, res) => {
       });
     }
 
-    // Complete parking session
     const { data: updatedSession, error: updateSessionError } =
       await supabase
         .from("parking_sessions")
@@ -545,7 +562,6 @@ const completeReturn = async (req, res) => {
       });
     }
 
-    // Free the parking slot
     if (session.parking_slot) {
       const { error: slotError } = await supabase
         .from("parking_slots")
@@ -790,15 +806,309 @@ const getParkingHistory = async (req, res) => {
   }
 };
 
+const getActiveParkingSessions = async (req, res) => {
+  try {
+    const activeStatuses = [
+      "checked_in",
+      "parked",
+      "retrieval_requested",
+      "retrieving",
+      "ready_for_pickup"
+    ];
+
+    const { data: sessions, error } = await supabase
+      .from("parking_sessions")
+      .select(`
+        id,
+        ticket_code,
+        parking_type,
+        status,
+        parking_slot,
+        checked_in_at,
+        parked_at,
+        vehicles (
+          id,
+          license_plate,
+          make,
+          model,
+          color,
+          customers (
+            id,
+            name,
+            phone,
+            email
+          )
+        ),
+        employees (
+          id,
+          name,
+          phone,
+          role
+        )
+      `)
+      .in("status", activeStatuses)
+      .order("checked_in_at", { ascending: false });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      sessions
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
+const getReceptionDashboard = async (req, res) => {
+  try {
+    const activeStatuses = [
+      "checked_in",
+      "parked",
+      "retrieval_requested",
+      "retrieving",
+      "ready_for_pickup"
+    ];
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const startOfDayISO = startOfDay.toISOString();
+
+    const { data: activeSessions, error: activeError } = await supabase
+      .from("parking_sessions")
+      .select("id, status")
+      .in("status", activeStatuses);
+
+    if (activeError) {
+      return res.status(500).json({
+        success: false,
+        message: activeError.message
+      });
+    }
+
+    const { data: todayCheckIns, error: checkInError } = await supabase
+      .from("parking_sessions")
+      .select("id")
+      .gte("checked_in_at", startOfDayISO);
+
+    if (checkInError) {
+      return res.status(500).json({
+        success: false,
+        message: checkInError.message
+      });
+    }
+
+    const awaitingRetrieval = (activeSessions || []).filter(
+      (session) => session.status === "retrieval_requested"
+    ).length;
+
+    const readyForPickup = (activeSessions || []).filter(
+      (session) => session.status === "ready_for_pickup"
+    ).length;
+
+    return res.status(200).json({
+      success: true,
+      dashboard: {
+        active_vehicles: activeSessions?.length || 0,
+        today_check_ins: todayCheckIns?.length || 0,
+        awaiting_retrieval: awaitingRetrieval,
+        ready_for_pickup: readyForPickup
+      }
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
+const verifyTicket = async (req, res) => {
+  try {
+    const { ticket_code } = req.params;
+
+    if (!ticket_code) {
+      return res.status(400).json({
+        success: false,
+        message: "Ticket code is required."
+      });
+    }
+
+    const { data: session, error } = await supabase
+      .from("parking_sessions")
+      .select(`
+        id,
+        ticket_code,
+        parking_type,
+        status,
+        parking_slot,
+        checked_in_at,
+        parked_at,
+        completed_at,
+        vehicle:vehicles (
+          id,
+          license_plate,
+          make,
+          model,
+          color,
+          customer:customers (
+            id,
+            name,
+            phone,
+            email
+          )
+        ),
+        valet:employees (
+          id,
+          name,
+          phone
+        )
+      `)
+      .eq("ticket_code", ticket_code)
+      .single();
+
+    if (error || !session) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid ticket code."
+      });
+    }
+
+    if (session.status === "returned_completed") {
+      return res.status(400).json({
+        success: false,
+        message: "This ticket has already been completed."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Ticket verified successfully.",
+      ticket: {
+        ticket_code: session.ticket_code,
+        status: session.status,
+        parking_type: session.parking_type
+      },
+      session
+    });
+
+  } catch (error) {
+    console.error("Verify ticket error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
+const completeSelfParking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: session, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_type, parking_slot")
+      .eq("id", id)
+      .single();
+
+    if (sessionError || !session) {
+      return res.status(404).json({
+        success: false,
+        message: "Parking session not found."
+      });
+    }
+
+    if (session.parking_type !== "self") {
+      return res.status(400).json({
+        success: false,
+        message: "This session is not a self-parking session."
+      });
+    }
+
+    if (session.status !== "parked") {
+      return res.status(400).json({
+        success: false,
+        message: "Self-parking vehicle must be parked before checkout."
+      });
+    }
+
+    const { data: updatedSession, error: updateSessionError } =
+      await supabase
+        .from("parking_sessions")
+        .update({
+          status: "returned_completed",
+          completed_at: new Date().toISOString()
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (updateSessionError) {
+      return res.status(400).json({
+        success: false,
+        message: updateSessionError.message
+      });
+    }
+
+    if (session.parking_slot) {
+      const { error: slotError } = await supabase
+        .from("parking_slots")
+        .update({
+          status: "available"
+        })
+        .eq("slot_number", session.parking_slot);
+
+      if (slotError) {
+        console.error("Free self-parking slot error:", slotError);
+
+        return res.status(400).json({
+          success: false,
+          message: slotError.message
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Self-parking checkout completed successfully and parking slot is now available.",
+      session: updatedSession
+    });
+
+  } catch (error) {
+    console.error("Complete self-parking error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
 module.exports = {
   getParkingSessions,
-  getRetrievalRequests,
+  getActiveParkingSessions,
+  getReceptionDashboard,
   createParkingSession,
+  verifyTicket,
   assignParkingSlot,
   assignValet,
   requestRetrieval,
   startRetrieval,
   markReadyForPickup,
   completeReturn,
-  getParkingHistory,
+  completeSelfParking,
+  getRetrievalRequests,
+  getParkingHistory
 };

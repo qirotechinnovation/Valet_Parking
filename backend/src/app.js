@@ -9,6 +9,9 @@ const parkingSessionRoutes = require("./routes/parkingSessionRoutes");
 const vehicleRoutes = require("./routes/vehicleRoutes");
 const receptionRoutes = require("./routes/receptionRoutes");
 const customerRoutes = require("./routes/customerRoutes");
+const vehicleInspectionRoutes = require("./routes/vehicleInspectionRoutes");
+const parkingBookingRoutes = require("./routes/parkingBookingRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 const app = express();
 
@@ -22,7 +25,9 @@ app.use("/api/parking-slots", parkingSlotRoutes);
 app.use("/api/parking-admin", parkingAdminRoutes);
 app.use("/api/reception", receptionRoutes);
 app.use("/api/customers", customerRoutes);
-
+app.use("/api/vehicle-inspections", vehicleInspectionRoutes);
+app.use("/api/parking-bookings", parkingBookingRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use(
   "/api/parking-admin/sessions",
   parkingSessionRoutes

@@ -12,6 +12,7 @@ const {
   getRetrievalRequests,
   getParkingHistory,
   createParkingSession,
+  completeSelfParking,
   assignParkingSlot,
   assignValet,
   requestRetrieval,
@@ -121,5 +122,12 @@ router.get(
   authenticate,
   authorizeRoles("parking_admin"),
   getParkingAdminProfile
+);
+
+router.patch(
+  "/sessions/:id/self-checkout",
+  authenticate,
+  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  completeSelfParking
 );
 module.exports = router;

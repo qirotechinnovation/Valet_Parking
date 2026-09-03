@@ -2,8 +2,11 @@ const express = require("express");
 
 const {
   getParkingSessions,
+  getActiveParkingSessions,
+  getReceptionDashboard,
   createParkingSession,
   requestRetrieval,
+  verifyTicket
 } = require("../controllers/parkingSessionController");
 
 const authenticate = require("../middleware/authMiddleware");
@@ -11,9 +14,20 @@ const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-const RECEPTION_ROLES = ["cashier", "reception_security", "parking_admin", "super_admin"];
+const RECEPTION_ROLES = [
+  "cashier",
+  "reception_security",
+  "parking_admin",
+  "super_admin"
+];
 
-// GET /api/reception/sessions
+router.get(
+  "/dashboard",
+  authenticate,
+  authorizeRoles("cashier"),
+  getReceptionDashboard
+);
+
 router.get(
   "/sessions",
   authenticate,
@@ -21,7 +35,13 @@ router.get(
   getParkingSessions
 );
 
-// POST /api/reception/sessions
+router.get(
+  "/active-sessions",
+  authenticate,
+  authorizeRoles("cashier"),
+  getActiveParkingSessions
+);
+
 router.post(
   "/sessions",
   authenticate,
@@ -29,12 +49,18 @@ router.post(
   createParkingSession
 );
 
-// PATCH /api/reception/sessions/:id/request-retrieval
 router.patch(
   "/sessions/:id/request-retrieval",
   authenticate,
   authorizeRoles(...RECEPTION_ROLES),
   requestRetrieval
+);
+
+router.get(
+  "/tickets/:ticket_code",
+  authenticate,
+  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  verifyTicket
 );
 
 module.exports = router;
