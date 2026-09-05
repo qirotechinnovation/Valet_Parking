@@ -293,8 +293,86 @@ const updateNotificationStatus = async (req, res) => {
   }
 };
 
+const getMyNotifications = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userRole = req.user.role;
+
+    if (!userEmail || !userRole) {
+      return res.status(400).json({
+        success: false,
+        message: "User information not available."
+      });
+    }
+
+    let recipientId;
+    let recipientType;
+
+    if (userRole === "customer") {
+      const { data: customer, error: customerError } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", userEmail)
+        .single();
+
+      if (customerError || !customer) {
+        return res.status(404).json({
+          success: false,
+          message: "Customer account not found."
+        });
+      }
+
+      recipientId = customer.id;
+      recipientType = "customer";
+    } else {
+      recipientId = req.user.id;
+      recipientType = userRole;
+    }
+
+    const { data: notifications, error } = await supabase
+      .from("notifications")
+      .select(`
+        id,
+        parking_session_id,
+        recipient_type,
+        recipient_id,
+        message,
+        channel,
+        status,
+        sent_at,
+        created_at
+      `)
+      .eq("recipient_id", recipientId)
+      .eq("recipient_type", recipientType)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Get my notifications error:", error);
+
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: notifications?.length || 0,
+      notifications: notifications || []
+    });
+  } catch (error) {
+    console.error("Get my notifications error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications."
+    });
+  }
+};
+
 module.exports = {
   createNotification,
   getNotifications,
-  updateNotificationStatus
+  updateNotificationStatus,
+  getMyNotifications
 };

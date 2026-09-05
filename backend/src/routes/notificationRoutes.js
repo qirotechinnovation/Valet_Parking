@@ -3,7 +3,8 @@ const express = require("express");
 const {
   createNotification,
   getNotifications,
-  updateNotificationStatus
+  updateNotificationStatus,
+  getMyNotifications
 } = require("../controllers/notificationController");
 
 const authenticate = require("../middleware/authMiddleware");
@@ -32,4 +33,10 @@ router.patch(
   updateNotificationStatus
 );
 
+router.get(
+  "/my",
+  authenticate,
+  authorizeRoles("customer"),
+  getMyNotifications
+);
 module.exports = router;

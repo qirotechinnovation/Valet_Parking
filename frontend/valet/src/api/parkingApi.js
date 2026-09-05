@@ -142,4 +142,57 @@ export const getVehicles = async (search = "") => {
   const query = search ? `?search=${encodeURIComponent(search)}` : "";
   return apiClient(`/api/vehicles${query}`);
 };
+export const getKeys = async () => {
+  return apiClient("/api/keys");
+};
 
+export const getKeyById = async (keyId) => {
+  return apiClient(`/api/keys/${keyId}`);
+};
+
+export const createKey = async (keyData) => {
+  return apiClient("/api/keys", {
+    method: "POST",
+    body: JSON.stringify(keyData),
+  });
+};
+
+export const updateKey = async (keyId, keyData) => {
+  return apiClient(`/api/keys/${keyId}`, {
+    method: "PUT",
+    body: JSON.stringify(keyData),
+  });
+};
+
+export const assignKey = async (keyId, assignedTo, parkingSessionId = null) => {
+  return apiClient(`/api/keys/${keyId}/assign`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      assigned_to: assignedTo,
+      parking_session_id: parkingSessionId,
+    }),
+  });
+};
+
+export const returnKey = async (keyId, keyLocation = null, notes = null) => {
+  return apiClient(`/api/keys/${keyId}/return`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      key_location: keyLocation,
+      notes,
+    }),
+  });
+};
+
+export const markKeyLost = async (keyId, notes = null) => {
+  return apiClient(`/api/keys/${keyId}/lost`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      notes,
+    }),
+  });
+};
+
+export const getKeyHistory = async (keyId) => {
+  return apiClient(`/api/keys/${keyId}/history`);
+};

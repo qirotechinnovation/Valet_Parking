@@ -12,7 +12,9 @@ const customerRoutes = require("./routes/customerRoutes");
 const vehicleInspectionRoutes = require("./routes/vehicleInspectionRoutes");
 const parkingBookingRoutes = require("./routes/parkingBookingRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-
+const keyRoutes = require("./routes/keyRoutes");
+const incidentRoutes = require("./routes/incidentRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 const app = express();
 
 app.use(cors());
@@ -28,11 +30,14 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/vehicle-inspections", vehicleInspectionRoutes);
 app.use("/api/parking-bookings", parkingBookingRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/keys", keyRoutes);
 app.use(
   "/api/parking-admin/sessions",
   parkingSessionRoutes
 );
+app.use("/api/incidents", incidentRoutes);
 
 app.use("/api/vehicles", vehicleRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 module.exports = app;

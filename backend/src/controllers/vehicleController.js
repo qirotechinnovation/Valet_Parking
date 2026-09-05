@@ -206,6 +206,7 @@ const getVehicleById = async (req, res) => {
   }
 };
 
+
 module.exports = {
   createVehicle,
   getVehicles,

@@ -3,8 +3,13 @@ const {
   createCustomer,
   getCustomers,
   getCustomerById,
+  getCustomerDashboard,
+  getCustomerParkingHistory,
+  requestCustomerRetrieval,
+  getCustomerVehicles,
+  cancelCustomerRetrieval,
+  getCustomerProfile
 } = require("../controllers/customerController");
-
 const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
@@ -31,4 +36,43 @@ router.get(
   getCustomerById
 );
 
+router.get(
+  "/portal/dashboard",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerDashboard
+);
+
+router.get(
+  "/portal/history",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerParkingHistory
+);
+
+router.patch(
+  "/portal/retrieval/:id",
+  authenticate,
+  authorizeRoles("customer"),
+  requestCustomerRetrieval
+);
+router.get(
+  "/portal/vehicles",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerVehicles
+);
+router.patch(
+  "/portal/retrieval/:id/cancel",
+  authenticate,
+  authorizeRoles("customer"),
+  cancelCustomerRetrieval
+);
+
+router.get(
+  "/portal/profile",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerProfile
+);
 module.exports = router;
