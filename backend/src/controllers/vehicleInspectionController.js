@@ -184,9 +184,14 @@ const uploadInspectionPhoto = async (req, res) => {
         message: uploadError.message
       });
     }
+    console.log("INSPECTION ID:", inspection_id);
+console.log("REQ USER:", req.user);
+console.log("UPLOADED BY:", req.user?.id);
+
 
     const { data: photo, error: photoError } = await supabase
       .from("vehicle_inspection_photos")
+      
       .insert([
         {
           inspection_id,

@@ -21,4 +21,10 @@ const supabase = createClient(
   }
 );
 
+console.log("SUPABASE URL:", supabaseUrl);
+console.log(
+  "SERVICE ROLE KEY EXISTS:",
+  !!supabaseServiceRoleKey
+);
+
 module.exports = supabase;

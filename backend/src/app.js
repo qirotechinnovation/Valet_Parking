@@ -15,6 +15,7 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const keyRoutes = require("./routes/keyRoutes");
 const incidentRoutes = require("./routes/incidentRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const app = express();
 
 app.use(cors());
@@ -39,5 +40,6 @@ app.use("/api/incidents", incidentRoutes);
 
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/payments", paymentRoutes);
 
 module.exports = app;
