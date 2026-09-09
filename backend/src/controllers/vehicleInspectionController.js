@@ -197,7 +197,9 @@ const uploadInspectionPhoto = async (req, res) => {
       .select()
       .single();
 
-    if (photoError) {
+    
+      if (photoError) {
+  console.error("PHOTO INSERT ERROR:", photoError);
       await supabase.storage
         .from("vehicle-inspection-photos")
         .remove([fileName]);
