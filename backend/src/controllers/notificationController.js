@@ -1,35 +1,9 @@
+
 const supabase = require("../config/supabase");
-const transporter = require("../config/email");
-const QRCode = require("qrcode");
-const createAuraEmail = require("../templates/auraEmailTemplate");
+const {
+  createAndSendNotification
+} = require("../services/notificationService");
 
-const getRecipientEmail = async (recipient_type, recipient_id) => {
-  if (recipient_type === "customer") {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("email")
-      .eq("id", recipient_id)
-      .single();
-
-    if (error || !data) {
-      throw new Error("Customer not found.");
-    }
-
-    return data.email;
-  }
-
-  const { data, error } = await supabase
-    .from("users")
-    .select("email")
-    .eq("id", recipient_id)
-    .single();
-
-  if (error || !data) {
-    throw new Error("Recipient not found.");
-  }
-
-  return data.email;
-};
 
 const createNotification = async (req, res) => {
   try {
@@ -55,25 +29,16 @@ const createNotification = async (req, res) => {
       });
     }
 
-    const { data: session, error: sessionError } = await supabase
+    /*
+     * Verify parking session exists before creating
+     * the notification.
+     */
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
       .from("parking_sessions")
-      .select(`
-        id,
-        vehicle_id,
-        parking_type,
-        status,
-        ticket_code,
-        parking_slot,
-        checked_in_at,
-        vehicle:vehicles(
-          license_plate,
-          model,
-          customer_id,
-          customer:customers(
-            name
-          )
-        )
-      `)
+      .select("id")
       .eq("id", parking_session_id)
       .single();
 
@@ -84,106 +49,51 @@ const createNotification = async (req, res) => {
       });
     }
 
-    const { data: notification, error: notificationError } = await supabase
-      .from("notifications")
-      .insert({
-        parking_session_id,
-        recipient_type,
-        recipient_id,
-        message,
-        channel,
-        status: "pending"
-      })
-      .select()
-      .single();
+    /*
+     * Use the reusable notification service.
+     */
+    const result = await createAndSendNotification({
+      parking_session_id,
+      recipient_type,
+      recipient_id,
+      message,
+      channel
+    });
 
-    if (notificationError) {
-      return res.status(400).json({
+    /*
+     * Email failed, but notification record was created.
+     */
+    if (channel === "email" && !result.emailSent) {
+      return res.status(500).json({
         success: false,
-        message: notificationError.message
+        message:
+          "Notification created but email could not be sent.",
+        notification: result.notification,
+        email_error: result.emailError || null
       });
     }
 
-    if (channel === "email") {
-      try {
-        const recipientEmail = await getRecipientEmail(
-          recipient_type,
-          recipient_id
-        );
-
-        const qrBuffer = await QRCode.toBuffer(session.ticket_code);
-
-        const customerName =
-          session.vehicle?.customer?.name || "Customer";
-
-        const html = createAuraEmail({
-          customerName,
-          vehicleNumber: session.vehicle?.license_plate || "N/A",
-          vehicleModel: session.vehicle?.model || "N/A",
-          parkingType:
-            session.parking_type === "valet"
-              ? "Valet Parking"
-              : "Self Parking",
-          ticketCode: session.ticket_code,
-          parkingSlot: session.parking_slot,
-          checkedInAt: new Date(session.checked_in_at).toLocaleString("en-IN"),
-          qrCode: "cid:aura-parking-qr"
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: recipientEmail,
-          subject: "Aura Valet Parking - Vehicle Check-In Confirmation",
-          text: message,
-          html,
-          attachments: [
-            {
-              filename: "aura-parking-qr.png",
-              content: qrBuffer,
-              cid: "aura-parking-qr"
-            }
-          ]
-        });
-
-        const { data: updatedNotification, error: updateError } =
-          await supabase
-            .from("notifications")
-            .update({
-              status: "sent",
-              sent_at: new Date().toISOString()
-            })
-            .eq("id", notification.id)
-            .select()
-            .single();
-
-        if (updateError) {
-          return res.status(500).json({
-            success: false,
-            message: "Email sent but notification status could not be updated."
-          });
-        }
-
-        return res.status(201).json({
-          success: true,
-          message: "Notification created and email sent successfully.",
-          notification: updatedNotification
-        });
-      } catch (emailError) {
-        console.error("Email notification error:", emailError);
-
-        return res.status(500).json({
-          success: false,
-          message: "Notification created but email could not be sent.",
-          notification
-        });
-      }
+    /*
+     * Email was sent successfully.
+     */
+    if (channel === "email" && result.emailSent) {
+      return res.status(201).json({
+        success: true,
+        message:
+          "Notification created and email sent successfully.",
+        notification: result.notification
+      });
     }
 
+    /*
+     * Non-email notification.
+     */
     return res.status(201).json({
       success: true,
       message: "Notification created successfully.",
-      notification
+      notification: result.notification
     });
+
   } catch (error) {
     console.error("Create notification error:", error);
 
@@ -193,6 +103,8 @@ const createNotification = async (req, res) => {
     });
   }
 };
+
+
 
 const getNotifications = async (req, res) => {
   try {
@@ -293,8 +205,26 @@ const updateNotificationStatus = async (req, res) => {
   }
 };
 
+const getMyNotifications = async (req, res) => {
+  try {
+    const { data: notifications, error } = await supabase
+      .from("notifications")
+      .select("id, parking_session_id, recipient_type, recipient_id, message, channel, status, sent_at, created_at")
+      .eq("recipient_id", req.user.id)
+      .eq("recipient_type", req.user.role)
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
+    return res.status(200).json({ success: true, count: notifications?.length || 0, notifications: notifications || [] });
+  } catch (error) {
+    console.error("Get my notifications error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch notifications." });
+  }
+};
+
 module.exports = {
   createNotification,
   getNotifications,
-  updateNotificationStatus
+  updateNotificationStatus,
+  getMyNotifications
 };

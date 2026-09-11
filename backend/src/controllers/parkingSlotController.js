@@ -188,6 +188,37 @@ const getParkingSlotById = async (req, res) => {
 };
 
 
+const getValetParkingSlots = async (req, res) => {
+  try {
+    const { data: slots, error } = await supabase
+      .from("parking_slots")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Get valet parking slots error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: slots?.length || 0,
+      slots: slots || []
+    });
+  } catch (error) {
+    console.error("Get valet parking slots error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch valet parking slots."
+    });
+  }
+};
+
 const updateParkingSlot = async (req, res) => {
   try {
     const { id } = req.params;
@@ -289,6 +320,7 @@ const updateParkingSlotStatus = async (req, res) => {
 module.exports = {
   createParkingSlot,
   getParkingSlots,
+  getValetParkingSlots,
   getParkingSlotById,
   updateParkingSlot,
   updateParkingSlotStatus

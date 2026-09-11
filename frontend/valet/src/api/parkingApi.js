@@ -143,3 +143,114 @@ export const getVehicles = async (search = "") => {
   return apiClient(`/api/vehicles${query}`);
 };
 
+// ============================================================
+// VALET DASHBOARD
+// ============================================================
+
+export const getValetDashboard = async () => {
+  return apiClient("/api/parking-admin/sessions/valet-dashboard");
+};
+
+
+// ============================================================
+// VALET PARKING SLOTS
+// ============================================================
+
+export const getValetParkingSlots = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/parking-slots/valet${query ? `?${query}` : ""}`
+  );
+};
+
+
+// ============================================================
+// INCIDENT MANAGEMENT
+// ============================================================
+
+export const getIncidents = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/incidents${query ? `?${query}` : ""}`
+  );
+};
+
+export const createIncident = async (incidentData) => {
+  return apiClient("/api/incidents", {
+    method: "POST",
+    body: JSON.stringify(incidentData),
+  });
+};
+
+export const getIncidentById = async (incidentId) => {
+  return apiClient(`/api/incidents/${incidentId}`);
+};
+
+export const updateIncidentStatus = async (
+  incidentId,
+  status
+) => {
+  return apiClient(
+    `/api/incidents/${incidentId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
+};
+
+export const getIncidentsBySession = async (
+  sessionId
+) => {
+  return apiClient(
+    `/api/incidents/session/${sessionId}`
+  );
+};
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+export const getParkingAdminNotifications =
+  async () => {
+    return apiClient("/api/notifications/my");
+  };
+  
+/**
+ * Get notifications for the currently authenticated user.
+ *
+ * This endpoint is user-scoped by the backend using:
+ * - req.user.id
+ * - req.user.role
+ */
+export const getMyNotifications = async () => {
+  return apiClient("/api/notifications/my");
+};
+
+/**
+ * Get notifications using the staff/admin notification endpoint.
+ *
+ * Use only where the backend route is intended to expose
+ * the requested notification scope.
+ */
+export const getNotifications = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/notifications/${query ? `?${query}` : ""}`
+  );
+};
+
+
+// ============================================================
+// FEEDBACK MANAGEMENT
+// ============================================================
+
+export const getFeedback = async () => {
+  return apiClient("/api/feedback");
+};
+
+export const getFeedbackStats = async () => {
+  return apiClient("/api/feedback/stats");
+};

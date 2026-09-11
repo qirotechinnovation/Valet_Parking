@@ -1,159 +1,407 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { RefreshCw, TrendingUp, Car, LogIn, CheckCircle2, Clock } from "lucide-react";
-import { getParkingReports, getParkingSlots } from "../../api/parkingApi";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  RefreshCw,
+  TrendingUp,
+  LogIn,
+  CheckCircle2,
+  ParkingSquare,
+  Clock3,
+} from "lucide-react";
+
+import {
+  getParkingReports,
+  getParkingSlots,
+} from "../../api/parkingApi";
+
 import "./css/ParkingReports.css";
 
-const ParkingReports = () => {
-  const [reports, setReports] = useState({
-    dailyCheckIns: 0,
-    dailyCheckOuts: 0,
-    totalSlots: 0,
-    occupiedSlots: 0,
-    occupancyRate: 0,
-    retrievalRequests: 0,
-    activeRetrievals: 0,
-  });
+const DEFAULT_REPORTS = {
+  dailyCheckIns: 0,
+  dailyCheckOuts: 0,
+  totalSlots: 0,
+  occupiedSlots: 0,
+  occupancyRate: 0,
+  retrievalRequests: 0,
+  activeRetrievals: 0,
+};
 
+const ParkingReports = () => {
+  const [reports, setReports] = useState(DEFAULT_REPORTS);
   const [rowBreakdown, setRowBreakdown] = useState([]);
+
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const loadReports = useCallback(async () => {
+  const loadReports = useCallback(async (isInitial = false) => {
     try {
-      setLoading(true);
+      if (isInitial) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
       setError("");
 
-      const [repRes, slotsRes] = await Promise.all([
+      const [reportsResponse, slotsResponse] = await Promise.all([
         getParkingReports(),
         getParkingSlots(),
       ]);
 
-      if (repRes && repRes.success) {
-        setReports(repRes.reports || {});
-      } else {
-        throw new Error(repRes?.message || "Failed to load operational reports.");
+      // --------------------------------------------------------
+      // REPORT DATA
+      // --------------------------------------------------------
+
+      if (!reportsResponse?.success) {
+        throw new Error(
+          reportsResponse?.message ||
+            "Failed to load operational reports."
+        );
       }
 
-      if (slotsRes && slotsRes.success) {
-        const slots = slotsRes.slots || [];
-        // Group by row letter (e.g. Row A, Row B, Row C)
-        const groups = {};
-        slots.forEach((s) => {
-          const slotNum = String(s.slot_number || "").trim();
-          const match = slotNum.match(/^[A-Za-z]+/);
-          const rowKey = match ? `Zone / Row ${match[0].toUpperCase()}` : "Zone General";
-          if (!groups[rowKey]) {
-            groups[rowKey] = { total: 0, occupied: 0 };
-          }
-          groups[rowKey].total += 1;
-          if (s.status === "occupied") {
-            groups[rowKey].occupied += 1;
-          }
-        });
+      setReports({
+        ...DEFAULT_REPORTS,
+        ...(reportsResponse.reports || {}),
+      });
 
-        const breakdown = Object.entries(groups).map(([name, data]) => {
-          const rate = data.total > 0 ? Math.round((data.occupied / data.total) * 100) : 0;
-          return { name, total: data.total, occupied: data.occupied, rate };
-        });
+      // --------------------------------------------------------
+      // PARKING SLOT BREAKDOWN
+      // --------------------------------------------------------
 
-        setRowBreakdown(breakdown);
+      if (!slotsResponse?.success) {
+        throw new Error(
+          slotsResponse?.message ||
+            "Failed to load parking slot data."
+        );
       }
+
+      const slots = Array.isArray(slotsResponse.slots)
+        ? slotsResponse.slots
+        : [];
+
+      const groups = {};
+
+      slots.forEach((slot) => {
+        const slotNumber = String(
+          slot.slot_number || ""
+        ).trim();
+
+        const match = slotNumber.match(/^[A-Za-z]+/);
+
+        const rowName = match
+          ? `Zone / Row ${match[0].toUpperCase()}`
+          : "Zone General";
+
+        if (!groups[rowName]) {
+          groups[rowName] = {
+            total: 0,
+            occupied: 0,
+          };
+        }
+
+        groups[rowName].total += 1;
+
+        if (slot.status === "occupied") {
+          groups[rowName].occupied += 1;
+        }
+      });
+
+      const breakdown = Object.entries(groups)
+        .map(([name, data]) => {
+          const rate =
+            data.total > 0
+              ? Math.round(
+                  (data.occupied / data.total) * 100
+                )
+              : 0;
+
+          return {
+            name,
+            total: data.total,
+            occupied: data.occupied,
+            rate,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setRowBreakdown(breakdown);
     } catch (err) {
       console.error("Load reports error:", err);
-      setError(err.message || "Failed to fetch reporting analytics.");
+
+      setError(
+        err?.message ||
+          "Failed to fetch reporting analytics."
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    loadReports();
+    loadReports(true);
   }, [loadReports]);
 
+  const retrievalActivity =
+    Number(reports.retrievalRequests || 0) +
+    Number(reports.activeRetrievals || 0);
+
   return (
-    <div className="reports-container">
-      <div className="reports-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <span className="reports-eyebrow">ANALYTICS & METRICS</span>
+    <main className="reports-container">
+
+      {/* ======================================================
+          HEADER
+          ====================================================== */}
+
+      <header className="reports-header">
+        <div className="reports-header-content">
+          <span className="reports-eyebrow">
+            ANALYTICS & METRICS
+          </span>
+
           <h2>Operational Reports</h2>
-          <p>Real-time summary of daily check-ins, facility occupancy, and vehicle operations.</p>
+
+          <p>
+            Real-time summary of daily check-ins,
+            facility occupancy, and vehicle operations.
+          </p>
         </div>
 
         <button
-          className="act-btn primary"
-          style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "36px", padding: "0 16px" }}
-          onClick={loadReports}
-          disabled={loading}
+          type="button"
+          className="reports-refresh-btn"
+          onClick={() => loadReports(false)}
+          disabled={loading || refreshing}
         >
-          <RefreshCw size={14} className={loading ? "refresh-spinning" : ""} />
-          <span>{loading ? "Refreshing..." : "Refresh"}</span>
+          <RefreshCw
+            size={15}
+            className={
+              refreshing
+                ? "refresh-spinning"
+                : ""
+            }
+          />
+
+          <span>
+            {refreshing
+              ? "Refreshing..."
+              : "Refresh"}
+          </span>
         </button>
-      </div>
+      </header>
+
+      {/* ======================================================
+          ERROR
+          ====================================================== */}
 
       {error && (
-        <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px", fontWeight: "600", fontSize: "13px" }}>
-          ⚠️ {error}
+        <div className="reports-error">
+          <span className="reports-error-icon">
+            !
+          </span>
+
+          <span>{error}</span>
         </div>
       )}
 
-      {/* KPI METRIC CARDS */}
-      <div className="report-cards-grid">
-        <div className="report-stat-card">
-          <span>DAILY CHECK-INS</span>
-          <h3>{loading ? "--" : reports.dailyCheckIns}</h3>
-          <small className="trend-positive">Vehicles admitted today</small>
-        </div>
+      {/* ======================================================
+          KPI CARDS
+          ====================================================== */}
 
-        <div className="report-stat-card">
-          <span>DAILY RETURNS</span>
-          <h3>{loading ? "--" : reports.dailyCheckOuts}</h3>
-          <small className="trend-positive">Vehicles returned today</small>
-        </div>
+      <section className="report-cards-grid">
 
-        <div className="report-stat-card">
-          <span>FACILITY OCCUPANCY</span>
-          <h3>{loading ? "--" : `${reports.occupancyRate}%`}</h3>
-          <small className="trend-neutral">
-            {reports.occupiedSlots} of {reports.totalSlots} slots occupied
-          </small>
-        </div>
+        {/* DAILY CHECK-INS */}
 
-        <div className="report-stat-card">
-          <span>ACTIVE RETRIEVALS</span>
-          <h3>{loading ? "--" : reports.activeRetrievals + reports.retrievalRequests}</h3>
-          <small className="trend-positive">
-            {reports.retrievalRequests} awaiting, {reports.activeRetrievals} in progress
-          </small>
-        </div>
-      </div>
-
-      {/* OCCUPANCY BREAKDOWN */}
-      <div className="reports-tables-section">
-        <div className="report-panel">
-          <h3>Zone & Row Occupancy Breakdown</h3>
-          {rowBreakdown.length === 0 ? (
-            <p style={{ color: "#7b7389", fontSize: "13px" }}>
-              {loading ? "Calculating zone distribution..." : "No parking zones found. Add parking slots to view breakdown."}
-            </p>
-          ) : (
-            <div className="occupancy-bar-container">
-              {rowBreakdown.map((item) => (
-                <div className="bar-item" key={item.name}>
-                  <span>{item.name} ({item.occupied}/{item.total})</span>
-                  <div className="progress-bg">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${item.rate}%` }}
-                    ></div>
-                  </div>
-                  <strong>{item.rate}%</strong>
-                </div>
-              ))}
+        <article className="report-stat-card">
+          <div className="report-stat-top">
+            <div className="report-stat-icon purple">
+              <LogIn size={18} />
             </div>
-          )}
+
+            <span className="report-stat-label">
+              DAILY CHECK-INS
+            </span>
+          </div>
+
+          <h3>
+            {loading
+              ? "--"
+              : reports.dailyCheckIns}
+          </h3>
+
+          <div className="report-stat-description">
+            <TrendingUp size={13} />
+            <span>Vehicles admitted today</span>
+          </div>
+        </article>
+
+        {/* DAILY RETURNS */}
+
+        <article className="report-stat-card">
+          <div className="report-stat-top">
+            <div className="report-stat-icon green">
+              <CheckCircle2 size={18} />
+            </div>
+
+            <span className="report-stat-label">
+              DAILY RETURNS
+            </span>
+          </div>
+
+          <h3>
+            {loading
+              ? "--"
+              : reports.dailyCheckOuts}
+          </h3>
+
+          <div className="report-stat-description positive">
+            <CheckCircle2 size={13} />
+            <span>Vehicles returned today</span>
+          </div>
+        </article>
+
+        {/* FACILITY OCCUPANCY */}
+
+        <article className="report-stat-card">
+          <div className="report-stat-top">
+            <div className="report-stat-icon blue">
+              <ParkingSquare size={18} />
+            </div>
+
+            <span className="report-stat-label">
+              FACILITY OCCUPANCY
+            </span>
+          </div>
+
+          <h3>
+            {loading
+              ? "--"
+              : `${reports.occupancyRate}%`}
+          </h3>
+
+          <div className="report-stat-description neutral">
+            <span>
+              {reports.occupiedSlots} of{" "}
+              {reports.totalSlots} slots occupied
+            </span>
+          </div>
+        </article>
+
+        {/* RETRIEVAL ACTIVITY */}
+
+        <article className="report-stat-card">
+          <div className="report-stat-top">
+            <div className="report-stat-icon amber">
+              <Clock3 size={18} />
+            </div>
+
+            <span className="report-stat-label">
+              RETRIEVAL ACTIVITY
+            </span>
+          </div>
+
+          <h3>
+            {loading
+              ? "--"
+              : retrievalActivity}
+          </h3>
+
+          <div className="report-stat-description neutral">
+            <span>
+              {reports.retrievalRequests} awaiting,{" "}
+              {reports.activeRetrievals} in progress
+            </span>
+          </div>
+        </article>
+
+      </section>
+
+      {/* ======================================================
+          ZONE / ROW OCCUPANCY
+          ====================================================== */}
+
+      <section className="report-panel">
+
+        <div className="report-panel-header">
+          <div>
+            <span className="report-panel-eyebrow">
+              FACILITY UTILIZATION
+            </span>
+
+            <h3>
+              Zone & Row Occupancy
+            </h3>
+
+            <p>
+              Current occupancy across parking
+              zones and rows.
+            </p>
+          </div>
+
+          <div className="report-panel-summary">
+            <strong>
+              {loading
+                ? "--"
+                : `${reports.occupancyRate}%`}
+            </strong>
+
+            <span>Overall occupancy</span>
+          </div>
         </div>
-      </div>
-    </div>
+
+        {rowBreakdown.length === 0 ? (
+          <div className="reports-empty">
+            <ParkingSquare size={24} />
+
+            <h4>
+              {loading
+                ? "Calculating zone distribution..."
+                : "No parking zones found"}
+            </h4>
+
+            {!loading && (
+              <p>
+                Add parking slots to view
+                occupancy breakdown.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="occupancy-bar-container">
+            {rowBreakdown.map((item) => (
+              <div
+                className="bar-item"
+                key={item.name}
+              >
+                <div className="bar-item-info">
+                  <strong>{item.name}</strong>
+
+                  <span>
+                    {item.occupied} occupied /{" "}
+                    {item.total} total
+                  </span>
+                </div>
+
+                <div className="progress-bg">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${item.rate}%`,
+                    }}
+                  />
+                </div>
+
+                <strong className="bar-percentage">
+                  {item.rate}%
+                </strong>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </section>
+
+    </main>
   );
 };
 

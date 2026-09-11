@@ -1,25 +1,34 @@
-import { Bell,
+import {
   ChevronDown,
-  Settings,
   Search,
   LogOut,
-} from 'lucide-react';
+  UserRound,
+} from "lucide-react";
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+// import ThemeToggle from "../ThemeToggle";
+import NotificationCenter from "../notifications/NotificationCenter";
 import "./Topbar.css";
 
 function Topbar({ setActivePage }) {
   const navigate = useNavigate();
-  const [showProfile, setShowProfile] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
-  let user = { name: "Super Admin", email: "admin@valetparking.com" };
+  const [showProfile, setShowProfile] = useState(false);
+
+  let user = {
+    name: "Super Admin",
+    email: "admin@valetparking.com",
+  };
+
   try {
     const stored = localStorage.getItem("user");
-    if (stored) user = JSON.parse(stored);
+
+    if (stored) {
+      user = JSON.parse(stored);
+    }
   } catch (e) {
-    // fallback
+    // Keep fallback user
   }
 
   const initials = user?.name
@@ -34,291 +43,144 @@ function Topbar({ setActivePage }) {
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
+
     navigate("/", { replace: true });
+  };
+
+  const toggleProfile = () => {
+    setShowProfile((prev) => !prev);
+  };
+
+  const openProfile = () => {
+    setShowProfile(false);
+
+    if (setActivePage) {
+      setActivePage("profile");
+    }
   };
 
   return (
     <header className="dashboard-topbar">
-
-      {/* =========================
-          LEFT
-      ========================= */}
-
       <div className="topbar-left">
-
         <div className="topbar-breadcrumb">
           <span>Admin</span>
           <span className="breadcrumb-separator">/</span>
           <strong>Dashboard</strong>
         </div>
-
       </div>
 
-
-      {/* =========================
-          RIGHT
-      ========================= */}
-
       <div className="topbar-right">
-
-        {/* Search */}
-
         <div className="topbar-search">
-
-          <span className="search-icon">
-            <Search/>
-          </span>
+          <Search
+            className="search-icon"
+            size={17}
+          />
 
           <input
             type="text"
             placeholder="Search..."
+            aria-label="Search"
           />
 
+          <span className="search-shortcut">
+            ⌘ K
+          </span>
         </div>
 
+        
 
-        {/* Notifications */}
-
-        <div className="topbar-notification">
-
-          <button
-            className="notification-button"
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowProfile(false);
-            }}
-          >
-
-            <span className="notification-icon">
-             <Bell />
-            </span>
-
-            <span className="notification-dot"></span>
-
-          </button>
-
-
-          {showNotifications && (
-
-            <div className="notification-dropdown">
-
-              <div className="dropdown-header">
-
-                <div>
-                  <strong>Notifications</strong>
-
-                  <span>
-                    Recent system activity
-                  </span>
-                </div>
-
-                <span className="notification-count">
-                  3
-                </span>
-
-              </div>
-
-
-              <div className="notification-item">
-
-                <div className="notification-item-icon warning">
-                  !
-                </div>
-
-                <div>
-                  <strong>
-                    Open incident
-                  </strong>
-
-                  <span>
-                    Vehicle delay requires attention.
-                  </span>
-
-                  <small>
-                    10 minutes ago
-                  </small>
-                </div>
-
-              </div>
-
-
-              <div className="notification-item">
-
-                <div className="notification-item-icon staff">
-                  +
-                </div>
-
-                <div>
-                  <strong>
-                    New staff member
-                  </strong>
-
-                  <span>
-                    A new staff account was created.
-                  </span>
-
-                  <small>
-                    32 minutes ago
-                  </small>
-                </div>
-
-              </div>
-
-
-              <div className="notification-item">
-
-                <div className="notification-item-icon system">
-                  ✓
-                </div>
-
-                <div>
-                  <strong>
-                    System operational
-                  </strong>
-
-                  <span>
-                    All core services are running normally.
-                  </span>
-
-                  <small>
-                    1 hour ago
-                  </small>
-                </div>
-
-              </div>
-
-
-              <button className="view-notifications">
-                View all notifications
-              </button>
-
-            </div>
-
-          )}
-
-        </div>
-
-
-        {/* Divider */}
+        <NotificationCenter />
 
         <div className="topbar-divider"></div>
 
-
-        {/* Profile */}
-
         <div className="topbar-profile">
-
           <button
-            className="profile-button"
-            onClick={() => {
-              setShowProfile(!showProfile);
-              setShowNotifications(false);
-            }}
+            type="button"
+            className={`profile-button ${
+              showProfile ? "active" : ""
+            }`}
+            onClick={toggleProfile}
           >
-
             <div className="profile-avatar">
               {initials}
             </div>
 
             <div className="profile-info">
-
               <strong>
                 {user.name || "Super Admin"}
               </strong>
 
-              <span>
-                Administrator
-              </span>
-             
+              <span>Administrator</span>
             </div>
-             <ChevronDown />
-            <span
+
+            <ChevronDown
               className={`profile-chevron ${
                 showProfile ? "open" : ""
               }`}
-            >
-              <></>
-            </span>
-
+              size={16}
+            />
           </button>
 
-
           {showProfile && (
-
             <div className="profile-dropdown">
-
               <div className="profile-dropdown-header">
-
                 <div className="profile-avatar large">
                   {initials}
                 </div>
 
                 <div>
-
                   <strong>
                     {user.name || "Super Admin"}
                   </strong>
 
                   <span>
-                    {user.email || "admin@valetparking.com"}
+                    {user.email ||
+                      "admin@valetparking.com"}
                   </span>
-
-                  
                 </div>
-
               </div>
-
 
               <div className="profile-menu-divider"></div>
 
-
               <button
+                type="button"
                 className="profile-menu-item"
-                onClick={() => {
-                  setShowProfile(false);
-                  if (setActivePage) setActivePage("profile");
-                }}
+                onClick={openProfile}
               >
-
                 <span className="menu-item-icon">
-                  ◉
+                  <UserRound size={15} />
                 </span>
 
                 <div>
                   <strong>My Profile</strong>
-                  <span>View your account</span>
+                  <span>
+                    View your account
+                  </span>
                 </div>
-
               </button>
-
 
               <div className="profile-menu-divider"></div>
 
-
               <button
+                type="button"
                 className="profile-menu-item logout-menu"
                 onClick={handleLogout}
               >
-
                 <span className="menu-item-icon">
-                  <LogOut />
+                  <LogOut size={15} />
                 </span>
 
                 <div>
                   <strong>Logout</strong>
-                  <span>Sign out of your account</span>
+                  <span>
+                    Sign out of your account
+                  </span>
                 </div>
-
               </button>
-
             </div>
-
           )}
-
         </div>
-
       </div>
-
     </header>
   );
 }

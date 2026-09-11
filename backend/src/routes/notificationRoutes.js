@@ -3,7 +3,8 @@ const express = require("express");
 const {
   createNotification,
   getNotifications,
-  updateNotificationStatus
+  updateNotificationStatus,
+  getMyNotifications
 } = require("../controllers/notificationController");
 
 const authenticate = require("../middleware/authMiddleware");
@@ -21,8 +22,22 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin", "valet"),
+  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin", "valet"),
   getNotifications
+);
+
+router.get(
+  "/my",
+  authenticate,
+  authorizeRoles(
+    "customer",
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
+  getMyNotifications
 );
 
 router.patch(
