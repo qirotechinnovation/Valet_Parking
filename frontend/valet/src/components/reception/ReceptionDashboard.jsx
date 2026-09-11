@@ -11,6 +11,8 @@ import {
   Search,
   ArrowRight,
   Users,
+  TicketCheck,
+  Bell,
 } from "lucide-react";
 
 import ReceptionSidebar from "./ReceptionSidebar";
@@ -19,12 +21,16 @@ import ReceptionStatCard from "./ReceptionStatCard";
 import RegisterCustomerModal from "./RegisterCustomerModal";
 import RegisterVehicleModal from "./RegisterVehicleModal";
 import CheckInVehicleModal from "./CheckInVehicleModal";
+import ReceptionTicketModal from "./ReceptionTicketModal";
+import ReceptionSessionDetailsModal from "./ReceptionSessionDetailsModal";
+import ReceptionKeyManagement from "./ReceptionKeyManagement";
 
 import {
   getReceptionSessions,
   requestReceptionRetrieval,
   getCustomers,
   getVehicles,
+  getReceptionNotifications,
 } from "../../api/receptionApi";
 
 import "./css/ReceptionDashboard.css";
@@ -227,7 +233,7 @@ const ProfileView = ({ onLogout }) => {
 // SESSIONS VIEW (Active Sessions Table)
 // ============================================================
 
-const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, actionLoading }) => {
+const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, onViewSession, actionLoading }) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -238,7 +244,8 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, action
         || s.ticket_code?.toLowerCase().includes(q)
         || s.vehicle?.license_plate?.toLowerCase().includes(q)
         || s.vehicle?.customer?.name?.toLowerCase().includes(q)
-        || s.vehicle?.customer?.phone?.toLowerCase().includes(q);
+        || s.vehicle?.customer?.phone?.toLowerCase().includes(q)
+        || s.valet?.name?.toLowerCase().includes(q);
       const matchesStatus = statusFilter === "all" || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -321,12 +328,12 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, action
                 return (
                   <tr key={s.id}>
                     <td>
-                      <span style={{ fontFamily: "monospace", fontWeight: "700", color: "#1a1024" }}>
+                      <span className="reception-ticket-code">
                         {s.ticket_code}
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontWeight: "700", color: "#1a1024", fontSize: "13px" }}>
+                      <div className="reception-primary-value">
                         {s.vehicle?.license_plate || "—"}
                       </div>
                       <div style={{ fontSize: "11px", color: "#7b7389" }}>
@@ -334,7 +341,7 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, action
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontWeight: "600" }}>{s.vehicle?.customer?.name || "—"}</div>
+                      <div className="reception-primary-value reception-customer-name">{s.vehicle?.customer?.name || "—"}</div>
                       <div style={{ fontSize: "11px", color: "#7b7389" }}>{s.vehicle?.customer?.phone || ""}</div>
                     </td>
                     <td>
@@ -360,6 +367,7 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, action
                       {s.valet?.name || "—"}
                     </td>
                     <td>
+                      <button className="reception-view-all-btn" onClick={() => onViewSession(s)}>View</button>
                       {s.status === "parked" && (
                         <button
                           className="reception-action-btn amber small"
@@ -395,16 +403,20 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, action
 const ReceptionDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [notifications, setNotifications] = useState([]);
 
   // Modal states
   const [modal, setModal] = useState(null); // "customer" | "vehicle" | "checkin"
   const [modalProps, setModalProps] = useState({});
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -435,6 +447,7 @@ const ReceptionDashboard = () => {
 
   useEffect(() => {
     fetchSessions();
+    getReceptionNotifications().then((response) => setNotifications(response?.notifications || [])).catch(() => setNotifications([]));
   }, [fetchSessions]);
 
   // KPI derived stats
@@ -453,6 +466,7 @@ const ReceptionDashboard = () => {
   }, [sessions]);
 
   const handleRequestRetrieval = async (sessionId) => {
+    if (!window.confirm("Are you sure you want to request retrieval for this vehicle?")) return;
     try {
       setActionLoading(sessionId);
       const res = await requestReceptionRetrieval(sessionId);
@@ -571,6 +585,11 @@ const ReceptionDashboard = () => {
             <span>Manage active parking sessions</span>
           </div>
         </button>
+
+        <button className="quick-action-card" onClick={() => setTicketModalOpen(true)}>
+          <div className="quick-action-icon" style={{ background: "#f3efff", color: "#7c3aed" }}><TicketCheck size={20} /></div>
+          <div><strong>Verify Ticket / QR</strong><span>Verify a vehicle for handover</span></div>
+        </button>
       </div>
 
       {/* KPI Stats */}
@@ -636,7 +655,7 @@ const ReceptionDashboard = () => {
               const statusInfo = STATUS_CONFIG[s.status] || { label: s.status, cls: "status-checked-in" };
               return (
                 <tr key={s.id}>
-                  <td><span style={{ fontFamily: "monospace", fontWeight: "700" }}>{s.ticket_code}</span></td>
+                  <td><span className="reception-ticket-code">{s.ticket_code}</span></td>
                   <td>
                     <strong>{s.vehicle?.license_plate || "—"}</strong>
                     <div style={{ fontSize: "11px", color: "#7b7389" }}>{s.vehicle?.make} {s.vehicle?.model}</div>
@@ -653,6 +672,13 @@ const ReceptionDashboard = () => {
           </tbody>
         </table>
       </div>
+
+      <div className="reception-operations-grid">
+        <div className="reception-operation-card"><div className="reception-recent-header"><h3>Retrieval Queue</h3><span className="reception-count-badge">{sessions.filter((s) => s.status === "retrieval_requested").length}</span></div>{sessions.filter((s) => s.status === "retrieval_requested").length === 0 ? <p className="reception-operation-empty">No retrieval requests waiting.</p> : sessions.filter((s) => s.status === "retrieval_requested").map((s) => <div className="reception-operation-row" key={s.id}><span><strong>{s.ticket_code || "Unavailable"}</strong><small>{s.vehicle?.license_plate || "Unavailable"} · {s.vehicle?.customer?.name || "Unavailable"}</small></span><span className="reception-status-tag status-retrieval">Awaiting Retrieval</span></div>)}</div>
+        <div className="reception-operation-card"><div className="reception-recent-header"><h3>Ready for Pickup</h3><span className="reception-count-badge">{stats.readyForPickup}</span></div>{sessions.filter((s) => s.status === "ready_for_pickup").length === 0 ? <p className="reception-operation-empty">No vehicles are ready for pickup.</p> : sessions.filter((s) => s.status === "ready_for_pickup").map((s) => <div className="reception-operation-row" key={s.id}><span><strong>{s.vehicle?.customer?.name || "Unavailable"}</strong><small>{s.vehicle?.license_plate || "Unavailable"} · {s.ticket_code || "Unavailable"}</small></span><button className="reception-action-btn small primary" onClick={() => setTicketModalOpen(true)}>Verify</button></div>)}</div>
+      </div>
+
+      {notifications.length > 0 && <div className="reception-notification-strip"><Bell size={15} /> {notifications[0].message}</div>}
     </div>
   );
 
@@ -665,22 +691,26 @@ const ReceptionDashboard = () => {
           loading={loading}
           onRefresh={fetchSessions}
           onRequestRetrieval={handleRequestRetrieval}
+          onViewSession={setSelectedSession}
           actionLoading={actionLoading}
         />
       );
       case "customers": return <CustomersView />;
       case "vehicles": return <VehiclesView />;
+      case "keys": return <ReceptionKeyManagement />;
       case "profile": return <ProfileView onLogout={handleLogout} />;
       default: return renderDashboardHome();
     }
   };
 
   return (
-    <div className="reception-layout">
+    <div className={`reception-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       <ReceptionSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
       />
 
       <div className="reception-main">
@@ -729,6 +759,8 @@ const ReceptionDashboard = () => {
           preselectedVehicle={modalProps.preselectedVehicle}
         />
       )}
+      {ticketModalOpen && <ReceptionTicketModal onClose={() => setTicketModalOpen(false)} onComplete={fetchSessions} />}
+      {selectedSession && <ReceptionSessionDetailsModal session={selectedSession} onClose={() => setSelectedSession(null)} />}
     </div>
   );
 };

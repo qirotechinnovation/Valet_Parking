@@ -20,6 +20,7 @@ const ReceptionTopbar = ({ activeTab, setActiveTab, onLogout }) => {
     sessions: "Active Sessions",
     customers: "Customers",
     vehicles: "Vehicles",
+    keys: "Key Management",
     profile: "My Profile",
   };
 

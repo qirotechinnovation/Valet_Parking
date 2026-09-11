@@ -22,8 +22,22 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin", "valet"),
+  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin", "valet"),
   getNotifications
+);
+
+router.get(
+  "/my",
+  authenticate,
+  authorizeRoles(
+    "customer",
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
+  getMyNotifications
 );
 
 router.patch(

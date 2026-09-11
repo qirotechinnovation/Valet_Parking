@@ -496,6 +496,47 @@ const getKeyHistory = async (req, res) => {
   }
 };
 
+const getKeyBySession = async (req, res) => {
+  try {
+    const { session_id } = req.params;
+
+    if (!session_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Session ID is required."
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("keys")
+      .select("*")
+      .eq("session_id", session_id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Get key by session error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to fetch key information."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    console.error("Get key by session error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
 module.exports = {
   getAllKeys,
   getKeyById,
@@ -504,5 +545,6 @@ module.exports = {
   assignKey,
   returnKey,
   markKeyLost,
-  getKeyHistory
+  getKeyHistory,
+  getKeyBySession
 };

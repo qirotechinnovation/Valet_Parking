@@ -1,16 +1,10 @@
 const supabase = require("../config/supabase");
-const transporter = require("../config/email");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const createAuraEmail = require("../templates/auraEmailTemplate");
-const createVehicleReturnEmail = require("../templates/vehicleReturnEmailTemplate");
-const ACTIVE_STATUSES = [
-  "checked_in",
-  "parked",
-  "retrieval_requested",
-  "retrieving",
-  "ready_for_pickup"
-];
+const {
+  createAndSendNotification
+} = require("../services/notificationService");
+
 
 const getParkingSessions = async (req, res) => {
   try {
@@ -27,6 +21,7 @@ const getParkingSessions = async (req, res) => {
         checked_in_at,
         parked_at,
         completed_at,
+        valet_id,
         vehicle:vehicles (
           id,
           license_plate,
@@ -39,12 +34,6 @@ const getParkingSessions = async (req, res) => {
             phone,
             email
           )
-        ),
-        valet:employees (
-          id,
-          name,
-          phone,
-          role
         )
       `)
       .order("checked_in_at", { ascending: false });
@@ -68,8 +57,65 @@ const getParkingSessions = async (req, res) => {
       });
     }
 
-    let result = sessions || [];
+    /*
+     * Fetch valet information separately.
+     *
+     * We cannot use:
+     * valet:users(...)
+     *
+     * because parking_sessions -> users does not have
+     * a Supabase relationship in the current database schema.
+     */
+    const valetIds = [
+      ...new Set(
+        (sessions || [])
+          .map((session) => session.valet_id)
+          .filter(Boolean)
+      )
+    ];
 
+    let valets = [];
+
+    if (valetIds.length > 0) {
+      const { data: valetUsers, error: valetError } = await supabase
+        .from("users")
+        .select(`
+          id,
+          name,
+          email,
+          role
+        `)
+        .in("id", valetIds);
+
+      if (valetError) {
+        console.error("Get valet users error:", valetError);
+      } else {
+        valets = valetUsers || [];
+      }
+    }
+
+    /*
+     * Create a quick lookup map:
+     * valet user ID -> valet user object
+     */
+    const valetMap = new Map(
+      valets.map((valet) => [valet.id, valet])
+    );
+
+    /*
+     * Add valet information back onto each session
+     * so the frontend can continue using session.valet.
+     */
+    let result = (sessions || []).map((session) => ({
+      ...session,
+      valet: session.valet_id
+        ? valetMap.get(session.valet_id) || null
+        : null
+    }));
+
+    /*
+     * Reception quick lookup
+     */
     if (search) {
       const searchTerm = search.toLowerCase();
 
@@ -108,6 +154,7 @@ const getParkingSessions = async (req, res) => {
       count: result.length,
       sessions: result
     });
+
   } catch (error) {
     console.error("Get parking sessions error:", error);
 
@@ -117,6 +164,13 @@ const getParkingSessions = async (req, res) => {
     });
   }
 };
+
+
+/*
+|--------------------------------------------------------------------------
+| CREATE PARKING SESSION / CHECK-IN
+|--------------------------------------------------------------------------
+*/
 
 const createParkingSession = async (req, res) => {
   try {
@@ -136,27 +190,30 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // ------------------------------------------------------------
-    // GET VEHICLE + CUSTOMER DETAILS
-    // ------------------------------------------------------------
-
-    const { data: vehicle, error: vehicleError } = await supabase
-      .from("vehicles")
-      .select(`
-        id,
-        license_plate,
-        make,
-        model,
-        color,
-        customer_id,
-        customer:customers (
+    /*
+     * Fetch vehicle + customer information.
+     *
+     * We need customer_id and customer email/name
+     * so the check-in confirmation can be sent.
+     */
+    const { data: vehicle, error: vehicleError } =
+      await supabase
+        .from("vehicles")
+        .select(`
           id,
-          name,
-          email
-        )
-      `)
-      .eq("id", vehicle_id)
-      .single();
+          license_plate,
+          make,
+          model,
+          color,
+          customer_id,
+          customer:customers (
+            id,
+            name,
+            email
+          )
+        `)
+        .eq("id", vehicle_id)
+        .single();
 
     if (vehicleError || !vehicle) {
       return res.status(404).json({
@@ -165,50 +222,12 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // ------------------------------------------------------------
-    // PREVENT DUPLICATE ACTIVE CHECK-IN
-    // ------------------------------------------------------------
-
-    const { data: existingSession, error: existingSessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select(`
-          id,
-          ticket_code,
-          status,
-          parking_slot
-        `)
-        .eq("vehicle_id", vehicle_id)
-        .in("status", ACTIVE_STATUSES)
-        .maybeSingle();
-
-    if (existingSessionError) {
-      console.error(
-        "Check existing parking session error:",
-        existingSessionError
-      );
-
-      return res.status(500).json({
-        success: false,
-        message: existingSessionError.message
-      });
-    }
-
-    if (existingSession) {
-      return res.status(400).json({
-        success: false,
-        message: "Vehicle is already checked in.",
-        session: existingSession
-      });
-    }
-
-    // ------------------------------------------------------------
-    // GENERATE UNIQUE TICKET CODE
-    // ------------------------------------------------------------
-
     let ticketCode;
     let ticketExists = true;
 
+    /*
+     * Generate a unique ticket code.
+     */
     while (ticketExists) {
       const randomCode = crypto
         .randomBytes(3)
@@ -236,17 +255,15 @@ const createParkingSession = async (req, res) => {
       ticketExists = !!existingTicket;
     }
 
-    // ------------------------------------------------------------
-    // GENERATE QR CODE
-    // ------------------------------------------------------------
-
+    /*
+     * Generate QR code for the ticket.
+     */
     const qrCode = await QRCode.toDataURL(ticketCode);
 
-    // ------------------------------------------------------------
-    // CREATE PARKING SESSION
-    // ------------------------------------------------------------
-
-    const { data: session, error: sessionError } = await supabase
+    /*
+     * Create parking session.
+     */
+    const { data: session, error } = await supabase
       .from("parking_sessions")
       .insert([
         {
@@ -259,187 +276,87 @@ const createParkingSession = async (req, res) => {
       .select()
       .single();
 
-    if (sessionError) {
-      console.error("Create parking session error:", sessionError);
+    if (error) {
+      console.error("Create parking session error:", error);
 
       return res.status(400).json({
         success: false,
-        message: sessionError.message
+        message: error.message
       });
     }
-    if (parking_type === "valet") {
-  const { data: existingKey, error: keyCheckError } = await supabase
-    .from("keys")
-    .select("id")
-    .eq("parking_session_id", session.id)
-    .maybeSingle();
 
-  if (keyCheckError) {
-    console.error("Check parking session key error:", keyCheckError);
-
-    return res.status(500).json({
-      success: false,
-      message: keyCheckError.message
-    });
-  }
-
-  if (!existingKey) {
-    const { error: keyError } = await supabase
-      .from("keys")
-      .insert([
-        {
-          key_number: `KEY-${ticketCode}`,
-          parking_session_id: session.id,
-          status: "stored",
-          notes: "Vehicle key received during check-in."
-        }
-      ]);
-
-    if (keyError) {
-      console.error("Create parking session key error:", keyError);
-
-      return res.status(400).json({
-        success: false,
-        message: keyError.message
-      });
-    }
-  }
-}
-
-    // ------------------------------------------------------------
-    // SEND CUSTOMER EMAIL
-    // ------------------------------------------------------------
-
+    /*
+     * Send customer check-in notification.
+     *
+     * IMPORTANT:
+     * Email failure does NOT fail the check-in.
+     */
     let emailSent = false;
-    let emailErrorMessage = null;
+    let emailError = null;
 
-    const customer = vehicle.customer;
-
-    if (customer?.email) {
+    if (vehicle.customer_id) {
       try {
-        const qrBuffer = await QRCode.toBuffer(ticketCode);
-
-        const html = createAuraEmail({
-          customerName: customer.name || "Customer",
-          vehicleNumber: vehicle.license_plate || "N/A",
-          vehicleModel: vehicle.model || vehicle.make || "N/A",
-          parkingType:
-            parking_type === "valet"
-              ? "Valet Parking"
-              : "Self Parking",
-          ticketCode,
-          parkingSlot: session.parking_slot,
-          checkedInAt: new Date(
-            session.checked_in_at
-          ).toLocaleString("en-IN"),
-          qrCode: "cid:aura-parking-qr"
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.email,
-          subject:
-            "Aura Valet Parking - Vehicle Check-In Confirmation",
-          text:
-            `Your vehicle has been successfully checked in at Aura Valet Parking. ` +
-            `Ticket Code: ${ticketCode}`,
-          html,
-          attachments: [
-            {
-              filename: "aura-parking-qr.png",
-              content: qrBuffer,
-              cid: "aura-parking-qr"
-            }
-          ]
-        });
-
-        emailSent = true;
-
-        console.log(
-          `Check-in email sent successfully to ${customer.email}`
-        );
-
-        // --------------------------------------------------------
-        // SAVE EMAIL NOTIFICATION AS SENT
-        // --------------------------------------------------------
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
+        const notificationResult =
+          await createAndSendNotification({
             parking_session_id: session.id,
             recipient_type: "customer",
-            recipient_id: customer.id,
+            recipient_id: vehicle.customer_id,
             message:
-              "Vehicle check-in confirmation email sent successfully.",
-            channel: "email",
-            status: "sent",
-            sent_at: new Date().toISOString()
+              "Your vehicle has been successfully checked in at Aura Valet Parking.",
+            channel: "email"
           });
 
-        if (notificationError) {
-          console.error(
-            "Save email notification error:",
-            notificationError
-          );
-        }
-      } catch (emailError) {
-        emailErrorMessage = emailError.message;
+        emailSent = notificationResult.emailSent;
 
+        if (!emailSent) {
+          emailError =
+            notificationResult.emailError ||
+            "Email could not be sent.";
+        }
+
+      } catch (notificationError) {
+        /*
+         * The parking session already exists, so don't
+         * roll back the successful check-in just because
+         * the notification failed.
+         */
         console.error(
-          "Check-in email notification error:",
-          emailError
+          "Create check-in notification error:",
+          notificationError
         );
 
-        // --------------------------------------------------------
-        // SAVE FAILED EMAIL NOTIFICATION
-        // --------------------------------------------------------
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            parking_session_id: session.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message:
-              "Vehicle check-in confirmation email could not be sent.",
-            channel: "email",
-            status: "failed"
-          });
-
-        if (notificationError) {
-          console.error(
-            "Save failed email notification error:",
-            notificationError
-          );
-        }
+        emailError = notificationError.message;
       }
     } else {
-      emailErrorMessage = "Customer email address not available.";
-
       console.warn(
-        "Check-in email skipped: customer email address not available."
+        "No customer_id found for vehicle:",
+        vehicle_id
       );
+
+      emailError =
+        "No customer is associated with this vehicle.";
     }
 
-    // ------------------------------------------------------------
-    // RESPONSE
-    // ------------------------------------------------------------
-
+    /*
+     * Successful check-in response.
+     *
+     * email_sent is included so the frontend/API consumer
+     * can know whether the confirmation email was sent.
+     */
     return res.status(201).json({
       success: true,
       message: emailSent
-        ? "Parking session created and confirmation email sent successfully."
+        ? "Parking session created successfully and confirmation email sent."
         : "Parking session created successfully, but confirmation email could not be sent.",
       session,
       ticket: {
         ticket_code: ticketCode,
         qr_code: qrCode
       },
-      email: {
-        sent: emailSent,
-        error: emailSent ? null : emailErrorMessage
-      }
+      email_sent: emailSent,
+      email_error: emailSent ? null : emailError
     });
+
   } catch (error) {
     console.error("Create parking session error:", error);
 
@@ -449,6 +366,7 @@ const createParkingSession = async (req, res) => {
     });
   }
 };
+
 
 const assignParkingSlot = async (req, res) => {
   try {
@@ -482,6 +400,45 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
+    /*
+     * Fetch the session first so we can validate valet ownership.
+     */
+    const {
+      data: existingSession,
+      error: existingSessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select("id, valet_id, status")
+      .eq("id", id)
+      .single();
+
+    if (existingSessionError || !existingSession) {
+      return res.status(404).json({
+        success: false,
+        message: "Parking session not found."
+      });
+    }
+
+    /*
+     * A valet can only park vehicles assigned to them.
+     */
+    if (
+      req.user?.role === "valet" &&
+      existingSession.valet_id !== req.user.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This vehicle is not assigned to you."
+      });
+    }
+
+    if (existingSession.status !== "checked_in") {
+      return res.status(400).json({
+        success: false,
+        message: "Only checked-in vehicles can be parked."
+      });
+    }
+
     const { data: session, error: sessionError } =
       await supabase
         .from("parking_sessions")
@@ -503,7 +460,9 @@ const assignParkingSlot = async (req, res) => {
 
     const { error: updateSlotError } = await supabase
       .from("parking_slots")
-      .update({ status: "occupied" })
+      .update({
+        status: "occupied"
+      })
       .eq("id", slot.id);
 
     if (updateSlotError) {
@@ -514,39 +473,13 @@ const assignParkingSlot = async (req, res) => {
         message: updateSlotError.message
       });
     }
-    const { data: vehicle, error: vehicleError } = await supabase
-  .from("vehicles")
-  .select("customer_id")
-  .eq("id", session.vehicle_id)
-  .single();
-
-if (vehicleError || !vehicle) {
-  console.error("Get vehicle customer error:", vehicleError);
-} else {
-  const { error: notificationError } = await supabase
-    .from("notifications")
-    .insert([
-      {
-        parking_session_id: session.id,
-        recipient_type: "customer",
-        recipient_id: vehicle.customer_id,
-        message: `Your vehicle has been parked successfully in slot ${parking_slot}.`,
-        channel: "in_app",
-        status: "sent",
-        sent_at: new Date().toISOString()
-      }
-    ]);
-
-  if (notificationError) {
-    console.error("Vehicle parked notification error:", notificationError);
-  }
-}
 
     return res.status(200).json({
       success: true,
       message: "Parking slot assigned successfully.",
       session
     });
+
   } catch (error) {
     console.error("Assign parking slot error:", error);
 
@@ -556,6 +489,7 @@ if (vehicleError || !vehicle) {
     });
   }
 };
+
 
 const assignValet = async (req, res) => {
   try {
@@ -570,8 +504,8 @@ const assignValet = async (req, res) => {
     }
 
     const { data: valet, error: valetError } = await supabase
-      .from("employees")
-      .select("id, name, phone, role, email, is_active")
+      .from("users")
+      .select("id, name, email, role, is_active")
       .eq("id", valet_id)
       .eq("role", "valet")
       .single();
@@ -587,20 +521,6 @@ const assignValet = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Valet is inactive."
-      });
-    }
-
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("id, name, email, role")
-      .eq("email", valet.email)
-      .eq("role", "valet")
-      .single();
-
-    if (userError || !user) {
-      return res.status(404).json({
-        success: false,
-        message: "Valet user account not found."
       });
     }
 
@@ -621,37 +541,12 @@ const assignValet = async (req, res) => {
       });
     }
 
-    const { data: key, error: keyError } = await supabase
-      .from("keys")
-      .select("id, status")
-      .eq("parking_session_id", id)
-      .maybeSingle();
-
-    if (keyError) {
-      console.error("Find parking session key error:", keyError);
-    }
-
-    if (key) {
-      const { error: keyUpdateError } = await supabase
-        .from("keys")
-        .update({
-          assigned_to: user.id,
-          status: "assigned",
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", key.id);
-
-      if (keyUpdateError) {
-        console.error("Assign key to valet error:", keyUpdateError);
-      }
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Valet assigned successfully and key assigned to valet.",
+      message: "Valet assigned successfully.",
       session
     });
+
   } catch (error) {
     console.error("Assign valet error:", error);
 
@@ -661,16 +556,20 @@ const assignValet = async (req, res) => {
     });
   }
 };
+
+
 const requestRetrieval = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select("id, status, parking_slot")
-        .eq("id", id)
-        .single();
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_slot")
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
@@ -687,14 +586,15 @@ const requestRetrieval = async (req, res) => {
       });
     }
 
-    const { data: updatedSession, error } = await supabase
-      .from("parking_sessions")
-      .update({
-        status: "retrieval_requested"
-      })
-      .eq("id", id)
-      .select()
-      .single();
+    const { data: updatedSession, error } =
+      await supabase
+        .from("parking_sessions")
+        .update({
+          status: "retrieval_requested"
+        })
+        .eq("id", id)
+        .select()
+        .single();
 
     if (error) {
       return res.status(400).json({
@@ -708,6 +608,7 @@ const requestRetrieval = async (req, res) => {
       message: "Vehicle retrieval requested successfully.",
       session: updatedSession
     });
+
   } catch (error) {
     console.error("Request retrieval error:", error);
 
@@ -718,21 +619,37 @@ const requestRetrieval = async (req, res) => {
   }
 };
 
+
 const startRetrieval = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select("id, status, parking_slot")
-        .eq("id", id)
-        .single();
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_slot, valet_id")
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
         success: false,
         message: "Parking session not found."
+      });
+    }
+
+    /*
+     * A valet can only retrieve their own assigned vehicle.
+     */
+    if (
+      req.user?.role === "valet" &&
+      session.valet_id !== req.user.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This vehicle is not assigned to you."
       });
     }
 
@@ -744,7 +661,10 @@ const startRetrieval = async (req, res) => {
       });
     }
 
-    const { data: updatedSession, error } = await supabase
+    const {
+      data: updatedSession,
+      error
+    } = await supabase
       .from("parking_sessions")
       .update({
         status: "retrieving"
@@ -760,63 +680,12 @@ const startRetrieval = async (req, res) => {
       });
     }
 
-    const { data: key, error: keyFetchError } = await supabase
-      .from("keys")
-      .select("id, status")
-      .eq("parking_session_id", id)
-      .maybeSingle();
-
-    if (keyFetchError) {
-      console.error("Find parking session key error:", keyFetchError);
-    }
-
-    if (key) {
-      const { error: keyUpdateError } = await supabase
-        .from("keys")
-        .update({
-          status: "in_use",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", key.id);
-
-      if (keyUpdateError) {
-        console.error("Update key status error:", keyUpdateError);
-      }
-    }
-
-    const { data: vehicle, error: vehicleError } = await supabase
-      .from("vehicles")
-      .select("customer_id")
-      .eq("id", updatedSession.vehicle_id)
-      .single();
-
-    if (vehicleError || !vehicle) {
-      console.error("Get vehicle customer error:", vehicleError);
-    } else {
-      const { error: notificationError } = await supabase
-        .from("notifications")
-        .insert([
-          {
-            parking_session_id: updatedSession.id,
-            recipient_type: "customer",
-            recipient_id: vehicle.customer_id,
-            message: "Your vehicle retrieval has started.",
-            channel: "in_app",
-            status: "sent",
-            sent_at: new Date().toISOString()
-          }
-        ]);
-
-      if (notificationError) {
-        console.error("Retrieval started notification error:", notificationError);
-      }
-    }
-
     return res.status(200).json({
       success: true,
-      message: "Vehicle retrieval started and key is now in use.",
+      message: "Vehicle retrieval started.",
       session: updatedSession
     });
+
   } catch (error) {
     console.error("Start retrieval error:", error);
 
@@ -826,16 +695,20 @@ const startRetrieval = async (req, res) => {
     });
   }
 };
+
+
 const markReadyForPickup = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select("id, status, vehicle_id")
-        .eq("id", id)
-        .single();
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select("id, status, valet_id")
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
@@ -844,14 +717,31 @@ const markReadyForPickup = async (req, res) => {
       });
     }
 
-    if (session.status !== "retrieving") {
-      return res.status(400).json({
+    /*
+     * A valet can only update their own assigned vehicle.
+     */
+    if (
+      req.user?.role === "valet" &&
+      session.valet_id !== req.user.id
+    ) {
+      return res.status(403).json({
         success: false,
-        message: "Vehicle must be in retrieving state."
+        message: "This vehicle is not assigned to you."
       });
     }
 
-    const { data: updatedSession, error } = await supabase
+    if (session.status !== "retrieving") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Vehicle must be in retrieving state."
+      });
+    }
+
+    const {
+      data: updatedSession,
+      error
+    } = await supabase
       .from("parking_sessions")
       .update({
         status: "ready_for_pickup"
@@ -867,39 +757,12 @@ const markReadyForPickup = async (req, res) => {
       });
     }
 
-    const { data: vehicle, error: vehicleError } = await supabase
-      .from("vehicles")
-      .select("customer_id")
-      .eq("id", session.vehicle_id)
-      .single();
-
-    if (vehicleError || !vehicle) {
-      console.error("Get vehicle customer error:", vehicleError);
-    } else {
-      const { error: notificationError } = await supabase
-        .from("notifications")
-        .insert([
-          {
-            parking_session_id: updatedSession.id,
-            recipient_type: "customer",
-            recipient_id: vehicle.customer_id,
-            message: "Your vehicle is ready for pickup.",
-            channel: "in_app",
-            status: "sent",
-            sent_at: new Date().toISOString()
-          }
-        ]);
-
-      if (notificationError) {
-        console.error("Ready for pickup notification error:", notificationError);
-      }
-    }
-
     return res.status(200).json({
       success: true,
       message: "Vehicle is ready for pickup.",
       session: updatedSession
     });
+
   } catch (error) {
     console.error("Ready for pickup error:", error);
 
@@ -909,39 +772,38 @@ const markReadyForPickup = async (req, res) => {
     });
   }
 };
+
+
 const completeReturn = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select(`
-          id,
-          status,
-          parking_slot,
-          ticket_code,
-          completed_at,
-          vehicle:vehicles (
-            id,
-            customer_id,
-            license_plate,
-            make,
-            model,
-            customer:customers (
-              id,
-              name,
-              email
-            )
-          )
-        `)
-        .eq("id", id)
-        .single();
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_slot, valet_id")
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
         success: false,
         message: "Parking session not found."
+      });
+    }
+
+    /*
+     * A valet can only complete the return of their assigned vehicle.
+     */
+    if (
+      req.user?.role === "valet" &&
+      session.valet_id !== req.user.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "This vehicle is not assigned to you."
       });
     }
 
@@ -953,8 +815,6 @@ const completeReturn = async (req, res) => {
       });
     }
 
-    const completedAt = new Date().toISOString();
-
     const {
       data: updatedSession,
       error: updateSessionError
@@ -962,7 +822,7 @@ const completeReturn = async (req, res) => {
       .from("parking_sessions")
       .update({
         status: "returned_completed",
-        completed_at: completedAt
+        completed_at: new Date().toISOString()
       })
       .eq("id", id)
       .select()
@@ -993,82 +853,13 @@ const completeReturn = async (req, res) => {
       }
     }
 
-    const { data: key, error: keyFetchError } = await supabase
-      .from("keys")
-      .select("id")
-      .eq("parking_session_id", id)
-      .maybeSingle();
-
-    if (keyFetchError) {
-      console.error("Fetch parking session key error:", keyFetchError);
-    }
-
-    if (key) {
-      const { error: keyUpdateError } = await supabase
-        .from("keys")
-        .update({
-          status: "returned",
-          assigned_to: null,
-          returned_at: completedAt,
-          updated_at: completedAt
-        })
-        .eq("id", key.id);
-
-      if (keyUpdateError) {
-        console.error("Update returned key error:", keyUpdateError);
-      }
-    }
-
-    const customer = session.vehicle?.customer;
-
-    if (customer?.id) {
-      const { error: notificationError } = await supabase
-        .from("notifications")
-        .insert([
-          {
-            parking_session_id: updatedSession.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message: "Your vehicle has been returned successfully.",
-            channel: "in_app",
-            status: "sent",
-            sent_at: completedAt
-          }
-        ]);
-
-      if (notificationError) {
-        console.error("Vehicle returned notification error:", notificationError);
-      }
-    }
-
-    if (customer?.email) {
-      try {
-        const emailHtml = createVehicleReturnEmail({
-          customerName: customer.name,
-          vehicleNumber: session.vehicle.license_plate,
-          vehicleModel: `${session.vehicle.make} ${session.vehicle.model}`,
-          ticketCode: session.ticket_code,
-          parkingSlot: session.parking_slot,
-          completedAt
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.email,
-          subject: "Vehicle Returned Successfully - Aura Valet Parking",
-          html: emailHtml
-        });
-      } catch (emailError) {
-        console.error("Vehicle returned email error:", emailError);
-      }
-    }
-
     return res.status(200).json({
       success: true,
       message:
-        "Vehicle returned successfully, parking slot is now available, key status is updated, and customer notifications were sent.",
+        "Vehicle returned successfully and parking slot is now available.",
       session: updatedSession
     });
+
   } catch (error) {
     console.error("Complete return error:", error);
 
@@ -1078,6 +869,8 @@ const completeReturn = async (req, res) => {
     });
   }
 };
+
+
 const getRetrievalRequests = async (req, res) => {
   try {
     const { search, status } = req.query;
@@ -1111,10 +904,10 @@ const getRetrievalRequests = async (req, res) => {
             email
           )
         ),
-        valet:employees (
+        valet:users (
           id,
           name,
-          phone,
+          email,
           role
         )
       `)
@@ -1172,6 +965,7 @@ const getRetrievalRequests = async (req, res) => {
       count: result.length,
       requests: result
     });
+
   } catch (error) {
     console.error("Get retrieval requests error:", error);
 
@@ -1181,6 +975,7 @@ const getRetrievalRequests = async (req, res) => {
     });
   }
 };
+
 
 const getParkingHistory = async (req, res) => {
   try {
@@ -1205,10 +1000,10 @@ const getParkingHistory = async (req, res) => {
             phone
           )
         ),
-        valet:employees (
+        valet:users (
           id,
           name,
-          phone
+          email
         )
       `)
       .eq("status", "returned_completed")
@@ -1290,6 +1085,7 @@ const getParkingHistory = async (req, res) => {
       count: result.length,
       history: result
     });
+
   } catch (error) {
     console.error("Get parking history error:", error);
 
@@ -1299,6 +1095,7 @@ const getParkingHistory = async (req, res) => {
     });
   }
 };
+
 
 const getActiveParkingSessions = async (req, res) => {
   try {
@@ -1354,6 +1151,7 @@ const getActiveParkingSessions = async (req, res) => {
       success: true,
       sessions
     });
+
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -1361,6 +1159,7 @@ const getActiveParkingSessions = async (req, res) => {
     });
   }
 };
+
 
 const getReceptionDashboard = async (req, res) => {
   try {
@@ -1407,15 +1206,17 @@ const getReceptionDashboard = async (req, res) => {
       });
     }
 
-    const awaitingRetrieval = (activeSessions || []).filter(
-      (session) =>
-        session.status === "retrieval_requested"
-    ).length;
+    const awaitingRetrieval =
+      (activeSessions || []).filter(
+        (session) =>
+          session.status === "retrieval_requested"
+      ).length;
 
-    const readyForPickup = (activeSessions || []).filter(
-      (session) =>
-        session.status === "ready_for_pickup"
-    ).length;
+    const readyForPickup =
+      (activeSessions || []).filter(
+        (session) =>
+          session.status === "ready_for_pickup"
+      ).length;
 
     return res.status(200).json({
       success: true,
@@ -1428,6 +1229,7 @@ const getReceptionDashboard = async (req, res) => {
         ready_for_pickup: readyForPickup
       }
     });
+
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -1435,6 +1237,7 @@ const getReceptionDashboard = async (req, res) => {
     });
   }
 };
+
 
 const verifyTicket = async (req, res) => {
   try {
@@ -1490,7 +1293,8 @@ const verifyTicket = async (req, res) => {
     if (session.status === "returned_completed") {
       return res.status(400).json({
         success: false,
-        message: "This ticket has already been completed."
+        message:
+          "This ticket has already been completed."
       });
     }
 
@@ -1504,6 +1308,7 @@ const verifyTicket = async (req, res) => {
       },
       session
     });
+
   } catch (error) {
     console.error("Verify ticket error:", error);
 
@@ -1514,18 +1319,21 @@ const verifyTicket = async (req, res) => {
   }
 };
 
+
 const completeSelfParking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select(
-          "id, status, parking_type, parking_slot"
-        )
-        .eq("id", id)
-        .single();
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
+      .from("parking_sessions")
+      .select(
+        "id, status, parking_type, parking_slot"
+      )
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
@@ -1597,8 +1405,12 @@ const completeSelfParking = async (req, res) => {
         "Self-parking checkout completed successfully and parking slot is now available.",
       session: updatedSession
     });
+
   } catch (error) {
-    console.error("Complete self-parking error:", error);
+    console.error(
+      "Complete self-parking error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -1606,23 +1418,41 @@ const completeSelfParking = async (req, res) => {
     });
   }
 };
+
+
+/*
+|--------------------------------------------------------------------------
+| VALET DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
 const getValetDashboard = async (req, res) => {
   try {
-    const { data: valet, error: valetError } = await supabase
-      .from("employees")
-      .select("id, name, phone, email, role, is_active")
-      .eq("email", req.user.email)
+    const valetId = req.user.id;
+
+    const {
+      data: valet,
+      error: valetError
+    } = await supabase
+      .from("users")
+      .select(
+        "id, name, email, phone, role, is_active"
+      )
+      .eq("id", valetId)
       .eq("role", "valet")
       .single();
 
     if (valetError || !valet) {
       return res.status(404).json({
         success: false,
-        message: "Valet employee record not found."
+        message: "Valet profile not found."
       });
     }
 
-    const { data: sessions, error: sessionError } = await supabase
+    const {
+      data: sessions,
+      error: sessionsError
+    } = await supabase
       .from("parking_sessions")
       .select(`
         id,
@@ -1646,93 +1476,118 @@ const getValetDashboard = async (req, res) => {
             email
           )
         ),
-        valet:employees (
+        valet:users (
           id,
           name,
-          phone,
           email,
+          phone,
           role
         )
       `)
-      .eq("valet_id", valet.id)
-      .order("checked_in_at", { ascending: false });
+      .eq("valet_id", valetId)
+      .order("checked_in_at", {
+        ascending: false
+      });
 
-    if (sessionError) {
-      console.error("Get valet dashboard sessions error:", sessionError);
+    if (sessionsError) {
+      console.error(
+        "Get valet dashboard sessions error:",
+        sessionsError
+      );
 
       return res.status(400).json({
         success: false,
-        message: sessionError.message
+        message: sessionsError.message
       });
     }
 
-    const result = sessions || [];
+    const allSessions = sessions || [];
 
-    const activeSessions = result.filter((session) =>
-      ACTIVE_STATUSES.includes(session.status)
+    const activeStatuses = [
+      "checked_in",
+      "parked",
+      "retrieval_requested",
+      "retrieving",
+      "ready_for_pickup"
+    ];
+
+    const activeSessions = allSessions.filter(
+      (session) =>
+        activeStatuses.includes(session.status)
     );
 
-    const assignedVehicles = activeSessions.filter(
-      (session) =>
-        session.status === "checked_in" ||
-        session.status === "parked"
-    ).length;
+    const checkedIn = allSessions.filter(
+      (session) => session.status === "checked_in"
+    );
 
-    const parkedVehicles = activeSessions.filter(
+    const parked = allSessions.filter(
       (session) => session.status === "parked"
-    ).length;
+    );
 
-    const retrievalRequests = activeSessions.filter(
-      (session) => session.status === "retrieval_requested"
-    ).length;
+    const retrievalRequests = allSessions.filter(
+      (session) =>
+        session.status === "retrieval_requested"
+    );
 
-    const retrievingVehicles = activeSessions.filter(
+    const retrieving = allSessions.filter(
       (session) => session.status === "retrieving"
-    ).length;
+    );
 
-    const readyForPickup = activeSessions.filter(
-      (session) => session.status === "ready_for_pickup"
-    ).length;
+    const readyForPickup = allSessions.filter(
+      (session) =>
+        session.status === "ready_for_pickup"
+    );
 
-    const completedReturns = result.filter(
-      (session) => session.status === "returned_completed"
-    ).length;
+    const completedReturns = allSessions.filter(
+      (session) =>
+        session.status === "returned_completed"
+    );
 
     return res.status(200).json({
       success: true,
-      valet: {
-        id: valet.id,
-        name: valet.name,
-        phone: valet.phone,
-        email: valet.email,
-        role: valet.role,
-        is_active: valet.is_active
-      },
+
+      valet,
+
       dashboard: {
-        assigned_vehicles: assignedVehicles,
-        parked_vehicles: parkedVehicles,
-        retrieval_requests: retrievalRequests,
-        retrieving_vehicles: retrievingVehicles,
-        ready_for_pickup: readyForPickup,
-        completed_returns: completedReturns
+        assigned_vehicles: activeSessions.length,
+        checked_in_vehicles: checkedIn.length,
+        parked_vehicles: parked.length,
+        retrieval_requests:
+          retrievalRequests.length,
+        retrieving_vehicles:
+          retrieving.length,
+        ready_for_pickup:
+          readyForPickup.length,
+        completed_returns:
+          completedReturns.length
       },
-      sessions: activeSessions
+
+      sessions: activeSessions,
+
+      retrieval_requests: retrievalRequests,
+
+      completed_returns: completedReturns
     });
+
   } catch (error) {
-    console.error("Get valet dashboard error:", error);
+    console.error(
+      "Get valet dashboard error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "Internal server error."
+      message: "Failed to load valet dashboard."
     });
   }
 };
 
+
 module.exports = {
   getParkingSessions,
   getActiveParkingSessions,
-  getValetDashboard,
   getReceptionDashboard,
+  getValetDashboard,
   createParkingSession,
   verifyTicket,
   assignParkingSlot,
@@ -1745,3 +1600,4 @@ module.exports = {
   getRetrievalRequests,
   getParkingHistory
 };
+

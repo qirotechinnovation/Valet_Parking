@@ -1,13 +1,16 @@
 import React from "react";
 import "./Overview.css";
 
+import { SquareParking,
+  
+ } from "lucide-react";
 function Overview({ stats = {}, loading = false }) {
   const formattedRevenue = Number(stats.todayRevenue || 0).toLocaleString("en-IN");
 
   return (
     <div className="system-content">
       <div className="system-status">
-        <div className="status-indicator"></div>
+        <SquareParking className="status-indicator" />
         <div>
           <strong>System Operational</strong>
           <span>All core services and database connections are running normally</span>

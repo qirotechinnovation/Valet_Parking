@@ -142,57 +142,115 @@ export const getVehicles = async (search = "") => {
   const query = search ? `?search=${encodeURIComponent(search)}` : "";
   return apiClient(`/api/vehicles${query}`);
 };
-export const getKeys = async () => {
-  return apiClient("/api/keys");
+
+// ============================================================
+// VALET DASHBOARD
+// ============================================================
+
+export const getValetDashboard = async () => {
+  return apiClient("/api/parking-admin/sessions/valet-dashboard");
 };
 
-export const getKeyById = async (keyId) => {
-  return apiClient(`/api/keys/${keyId}`);
+
+// ============================================================
+// VALET PARKING SLOTS
+// ============================================================
+
+export const getValetParkingSlots = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/parking-slots/valet${query ? `?${query}` : ""}`
+  );
 };
 
-export const createKey = async (keyData) => {
-  return apiClient("/api/keys", {
+
+// ============================================================
+// INCIDENT MANAGEMENT
+// ============================================================
+
+export const getIncidents = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/incidents${query ? `?${query}` : ""}`
+  );
+};
+
+export const createIncident = async (incidentData) => {
+  return apiClient("/api/incidents", {
     method: "POST",
-    body: JSON.stringify(keyData),
+    body: JSON.stringify(incidentData),
   });
 };
 
-export const updateKey = async (keyId, keyData) => {
-  return apiClient(`/api/keys/${keyId}`, {
-    method: "PUT",
-    body: JSON.stringify(keyData),
-  });
+export const getIncidentById = async (incidentId) => {
+  return apiClient(`/api/incidents/${incidentId}`);
 };
 
-export const assignKey = async (keyId, assignedTo, parkingSessionId = null) => {
-  return apiClient(`/api/keys/${keyId}/assign`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      assigned_to: assignedTo,
-      parking_session_id: parkingSessionId,
-    }),
-  });
+export const updateIncidentStatus = async (
+  incidentId,
+  status
+) => {
+  return apiClient(
+    `/api/incidents/${incidentId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
 };
 
-export const returnKey = async (keyId, keyLocation = null, notes = null) => {
-  return apiClient(`/api/keys/${keyId}/return`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      key_location: keyLocation,
-      notes,
-    }),
-  });
+export const getIncidentsBySession = async (
+  sessionId
+) => {
+  return apiClient(
+    `/api/incidents/session/${sessionId}`
+  );
 };
 
-export const markKeyLost = async (keyId, notes = null) => {
-  return apiClient(`/api/keys/${keyId}/lost`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      notes,
-    }),
-  });
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+export const getParkingAdminNotifications =
+  async () => {
+    return apiClient("/api/notifications/my");
+  };
+  
+/**
+ * Get notifications for the currently authenticated user.
+ *
+ * This endpoint is user-scoped by the backend using:
+ * - req.user.id
+ * - req.user.role
+ */
+export const getMyNotifications = async () => {
+  return apiClient("/api/notifications/my");
 };
 
-export const getKeyHistory = async (keyId) => {
-  return apiClient(`/api/keys/${keyId}/history`);
+/**
+ * Get notifications using the staff/admin notification endpoint.
+ *
+ * Use only where the backend route is intended to expose
+ * the requested notification scope.
+ */
+export const getNotifications = async (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+
+  return apiClient(
+    `/api/notifications/${query ? `?${query}` : ""}`
+  );
+};
+
+
+// ============================================================
+// FEEDBACK MANAGEMENT
+// ============================================================
+
+export const getFeedback = async () => {
+  return apiClient("/api/feedback");
+};
+
+export const getFeedbackStats = async () => {
+  return apiClient("/api/feedback/stats");
 };

@@ -1,4 +1,5 @@
 const express = require("express");
+
 const {
   createCustomer,
   getCustomers,
@@ -10,32 +11,70 @@ const {
   cancelCustomerRetrieval,
   getCustomerProfile
 } = require("../controllers/customerController");
+
 const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+/*
+|--------------------------------------------------------------------------
+| STAFF CUSTOMER MANAGEMENT
+|--------------------------------------------------------------------------
+*/
+
 router.post(
   "/",
   authenticate,
-  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
   createCustomer
 );
 
 router.get(
   "/",
   authenticate,
-  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
   getCustomers
 );
 
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
   getCustomerById
 );
 
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER PORTAL
+|--------------------------------------------------------------------------
+|
+| IMPORTANT:
+| These routes must remain AFTER the portal definitions only if
+| parameterized routes could interfere. Express matches in order,
+| so portal routes should come before /:id.
+|
+|--------------------------------------------------------------------------
+*/
+
+/*
+| Dashboard
+*/
 router.get(
   "/portal/dashboard",
   authenticate,
@@ -43,6 +82,19 @@ router.get(
   getCustomerDashboard
 );
 
+/*
+| Vehicles
+*/
+router.get(
+  "/portal/vehicles",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerVehicles
+);
+
+/*
+| Parking History
+*/
 router.get(
   "/portal/history",
   authenticate,
@@ -50,18 +102,29 @@ router.get(
   getCustomerParkingHistory
 );
 
+/*
+| Profile
+*/
+router.get(
+  "/portal/profile",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerProfile
+);
+
+/*
+| Request Vehicle Retrieval
+*/
 router.patch(
   "/portal/retrieval/:id",
   authenticate,
   authorizeRoles("customer"),
   requestCustomerRetrieval
 );
-router.get(
-  "/portal/vehicles",
-  authenticate,
-  authorizeRoles("customer"),
-  getCustomerVehicles
-);
+
+/*
+| Cancel Vehicle Retrieval
+*/
 router.patch(
   "/portal/retrieval/:id/cancel",
   authenticate,
@@ -69,10 +132,4 @@ router.patch(
   cancelCustomerRetrieval
 );
 
-router.get(
-  "/portal/profile",
-  authenticate,
-  authorizeRoles("customer"),
-  getCustomerProfile
-);
 module.exports = router;
