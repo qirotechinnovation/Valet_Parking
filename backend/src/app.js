@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const adminRoutes = require("./routes/adminRoutes");
@@ -21,25 +22,107 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+/*
+|--------------------------------------------------------------------------
+| Authentication
+|--------------------------------------------------------------------------
+*/
 app.use("/api/auth", authRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| User / Admin
+|--------------------------------------------------------------------------
+*/
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Parking
+|--------------------------------------------------------------------------
+*/
 app.use("/api/parking-slots", parkingSlotRoutes);
 app.use("/api/parking-admin", parkingAdminRoutes);
-app.use("/api/reception", receptionRoutes);
-app.use("/api/customers", customerRoutes);
-app.use("/api/vehicle-inspections", vehicleInspectionRoutes);
+app.use("/api/parking-admin/sessions", parkingSessionRoutes);
 app.use("/api/parking-bookings", parkingBookingRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Reception
+|--------------------------------------------------------------------------
+*/
+app.use("/api/reception", receptionRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Customers
+|--------------------------------------------------------------------------
+*/
+app.use("/api/customers", customerRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Vehicles / Inspection
+|--------------------------------------------------------------------------
+*/
+app.use("/api/vehicles", vehicleRoutes);
+app.use("/api/vehicle-inspections", vehicleInspectionRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Notifications / Keys
+|--------------------------------------------------------------------------
+*/
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/keys", keyRoutes);
-app.use(
-  "/api/parking-admin/sessions",
-  parkingSessionRoutes
-);
-app.use("/api/incidents", incidentRoutes);
 
-app.use("/api/vehicles", vehicleRoutes);
+/*
+|--------------------------------------------------------------------------
+| Incidents / Feedback
+|--------------------------------------------------------------------------
+*/
+app.use("/api/incidents", incidentRoutes);
 app.use("/api/feedback", feedbackRoutes);
+
 app.use("/api/payments", paymentRoutes);
+
+/*
+|--------------------------------------------------------------------------
+| Health Check
+|--------------------------------------------------------------------------
+*/
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Aura Valet Parking API is running."
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| 404 Handler
+|--------------------------------------------------------------------------
+*/
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Error Handler
+|--------------------------------------------------------------------------
+*/
+app.use((err, req, res, next) => {
+  console.error("Unhandled server error:", err);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal server error."
+  });
+});
 
 module.exports = app;
