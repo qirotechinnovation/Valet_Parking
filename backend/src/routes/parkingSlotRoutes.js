@@ -3,6 +3,7 @@ const express = require("express");
 const {
   createParkingSlot,
   getParkingSlots,
+  getValetParkingSlots,
   getParkingSlotById,
   updateParkingSlot,
   updateParkingSlotStatus
@@ -24,6 +25,13 @@ router.get(
   authenticate,
   authorizeRoles("super_admin", "parking_admin"),
   getParkingSlots
+);
+
+router.get(
+  "/valet",
+  authenticate,
+  authorizeRoles("valet"),
+  getValetParkingSlots
 );
 
 router.get(

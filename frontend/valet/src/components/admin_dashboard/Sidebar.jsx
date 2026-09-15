@@ -1,45 +1,82 @@
 import "./Sidebar.css";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
   LayoutDashboard,
   UserRoundPen,
-  Summary,
-  UsersRound,
+  FileChartColumn,
+  UserRound,
   LogOut,
-
-} from 'lucide-react';
-
+  ChevronLeft,
+  ChevronRight,
+  CarFront,
+} from "lucide-react";
 
 function Sidebar({ activePage, setActivePage }) {
   const navigate = useNavigate();
 
+  const [collapsed, setCollapsed] = useState(false);
+
   const handleLogout = () => {
-    // Remove authentication data
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
 
-    // Redirect to login page
     navigate("/", { replace: true });
   };
-  return (
-    <aside className="dashboard-sidebar">
 
-      {/* Brand */}
+  const handleNavigation = (page) => {
+    setActivePage(page);
+  };
+
+  return (
+    <aside
+      className={`dashboard-sidebar ${
+        collapsed ? "sidebar-collapsed" : ""
+      }`}
+    >
+
+      {/* =====================================================
+          BRAND
+      ===================================================== */}
+
       <div className="sidebar-brand">
 
-        <div className="sidebar-logo">
-          A
+        <div className="brand-logo-wrapper">
+          <img src="/aura-logo.svg" alt="Aura Valet Parking" className="brand-logo" />
         </div>
 
-        <div>
+        <div className="sidebar-brand-text">
           <h2>AURA</h2>
           <span>VALET PARKING</span>
         </div>
 
+        {/* Collapse Button */}
+
+        <button
+          type="button"
+          className="sidebar-collapse-button"
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={
+            collapsed
+              ? "Expand sidebar"
+              : "Collapse sidebar"
+          }
+        >
+          {collapsed ? (
+            <ChevronRight size={16} />
+          ) : (
+            <ChevronLeft size={16} />
+          )}
+        </button>
+
       </div>
 
 
-      {/* Navigation */}
+      {/* =====================================================
+          NAVIGATION
+      ===================================================== */}
+
       <nav className="sidebar-nav">
 
         <p className="nav-label">
@@ -48,43 +85,80 @@ function Sidebar({ activePage, setActivePage }) {
 
 
         {/* Dashboard */}
+
         <button
-          className={`nav-item ${activePage === "dashboard" ? "active" : ""
-            }`}
-          onClick={() => setActivePage("dashboard")}
+          type="button"
+          className={`nav-item ${
+            activePage === "dashboard"
+              ? "active"
+              : ""
+          }`}
+          onClick={() => handleNavigation("dashboard")}
+          data-tooltip="Dashboard"
         >
+
           <span className="nav-icon">
-            <LayoutDashboard />
+            <LayoutDashboard size={19} />
           </span>
-          <span>Dashboard</span>
+
+          <span className="nav-text">
+            Dashboard
+          </span>
+
         </button>
 
 
-        {/* Staff */}
+        {/* Staff Management */}
+
         <button
-          className={`nav-item ${activePage === "staff" ? "active" : ""
-            }`}
-          onClick={() => setActivePage("staff")}
+          type="button"
+          className={`nav-item ${
+            activePage === "staff"
+              ? "active"
+              : ""
+          }`}
+          onClick={() => handleNavigation("staff")}
+          data-tooltip="Staff Management"
         >
+
           <span className="nav-icon">
-            <UserRoundPen />
+            <UserRoundPen size={19} />
           </span>
-          <span>Staff Management</span>
+
+          <span className="nav-text">
+            Staff Management
+          </span>
+
         </button>
 
 
         {/* Reports */}
+
         <button
-          className={`nav-item ${activePage === "reports" ? "active" : ""
-            }`}
-          onClick={() => setActivePage("reports")}
+          type="button"
+          className={`nav-item ${
+            activePage === "reports"
+              ? "active"
+              : ""
+          }`}
+          onClick={() => handleNavigation("reports")}
+          data-tooltip="Reports & Overview"
         >
+
           <span className="nav-icon">
-            <Summary />
+            <FileChartColumn size={19} />
           </span>
-          <span>Reports & Overview</span>
+
+          <span className="nav-text">
+            Reports & Overview
+          </span>
+
         </button>
 
+
+        {/* =================================================
+            ACCOUNT
+        ================================================= */}
 
         <p className="nav-label nav-label-space">
           ACCOUNT
@@ -92,28 +166,65 @@ function Sidebar({ activePage, setActivePage }) {
 
 
         {/* Profile */}
+
         <button
-          className={`nav-item ${activePage === "profile" ? "active" : ""
-            }`}
-          onClick={() => setActivePage("profile")}
+          type="button"
+          className={`nav-item ${
+            activePage === "profile"
+              ? "active"
+              : ""
+          }`}
+          onClick={() => handleNavigation("profile")}
+          data-tooltip="Profile"
         >
+
           <span className="nav-icon">
-            <UsersRound />
+            <UserRound size={19} />
           </span>
-          <span>Profile</span>
+
+          <span className="nav-text">
+            Profile
+          </span>
+
         </button>
 
       </nav>
 
 
-      {/* Bottom */}
+      {/* =====================================================
+          BOTTOM SECTION
+      ===================================================== */}
+
       <div className="sidebar-bottom">
 
-        <button className="nav-item logout" onClick={handleLogout}>
-          <span className="nav-icon">
-            <LogOut />
+        <div className="sidebar-status">
+
+          <span className="sidebar-status-dot"></span>
+
+          <span className="sidebar-status-text">
+            System Online
           </span>
-          <span>Logout</span>
+
+        </div>
+
+
+        {/* Logout */}
+
+        <button
+          type="button"
+          className="nav-item logout"
+          onClick={handleLogout}
+          data-tooltip="Logout"
+        >
+
+          <span className="nav-icon">
+            <LogOut size={19} />
+          </span>
+
+          <span className="nav-text">
+            Logout
+          </span>
+
         </button>
 
       </div>

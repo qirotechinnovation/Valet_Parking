@@ -10,13 +10,19 @@ import {
   BarChart3,
   UserRoundPen,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  ShieldAlert,
+  PanelLeftClose,
+  PanelLeftOpen,
+  MessageSquare
 } from "lucide-react";
 
 const ParkingAdminSidebar = ({
   activeTab,
   setActiveTab,
   onLogout,
+  collapsed,
+  setCollapsed,
 }) => {
 
   const mainMenu = [
@@ -41,10 +47,20 @@ const ParkingAdminSidebar = ({
       icon: Users,
     },
     {
-    id: "parking-sessions",
-    label: "Parking Sessions",
-    icon: ClipboardList,
-  },
+      id: "parking-sessions",
+      label: "Parking Sessions",
+      icon: ClipboardList,
+    },
+    {
+      id: "incidents",
+      label: "Incident Management",
+      icon: ShieldAlert,
+    },
+    {
+      id: "feedback",
+      label: "Feedback",
+      icon: MessageSquare,
+    },
     {
       id: "reports",
       label: "Reports",
@@ -54,7 +70,7 @@ const ParkingAdminSidebar = ({
 
 
   return (
-    <aside className="aura-sidebar">
+    <aside className={`aura-sidebar ${collapsed ? "is-collapsed" : ""}`}>
 
       {/* ======================================================
           BRAND
@@ -62,8 +78,8 @@ const ParkingAdminSidebar = ({
 
       <div className="aura-brand">
 
-        <div className="brand-badge">
-          A
+        <div className="brand-logo-wrapper">
+          <img src="/aura-logo.svg" alt="Aura Valet Parking" className="brand-logo" />
         </div>
 
         <div className="brand-title">
@@ -102,9 +118,8 @@ const ParkingAdminSidebar = ({
               <button
                 key={item.id}
                 type="button"
-                className={`menu-item ${
-                  isActive ? "active" : ""
-                }`}
+                className={`menu-item ${isActive ? "active" : ""
+                  }`}
                 onClick={() =>
                   setActiveTab(item.id)
                 }
@@ -150,11 +165,10 @@ const ParkingAdminSidebar = ({
 
         <button
           type="button"
-          className={`menu-item ${
-            activeTab === "profile"
+          className={`menu-item ${activeTab === "profile"
               ? "active"
               : ""
-          }`}
+            }`}
           onClick={() =>
             setActiveTab("profile")
           }
@@ -190,12 +204,25 @@ const ParkingAdminSidebar = ({
 
         <button
           type="button"
+          className="sidebar-collapse-btn"
+          onClick={() => setCollapsed((value) => !value)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className="item-icon">
+            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+          </span>
+          <span className="item-text">Collapse sidebar</span>
+        </button>
+
+        <button
+          type="button"
           className="logout-btn"
           onClick={onLogout}
         >
 
           <span className="item-icon">
-            <span><LogOut/></span>
+            <span><LogOut /></span>
           </span>
 
           <span className="item-text">

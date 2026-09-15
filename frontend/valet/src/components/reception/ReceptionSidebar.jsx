@@ -4,8 +4,11 @@ import {
   Users,
   Car,
   ClipboardList,
+  KeyRound,
   UserRoundPen,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import "./css/ReceptionSidebar.css";
 
@@ -14,14 +17,17 @@ const menuItems = [
   { id: "sessions", label: "Active Sessions", icon: ClipboardList },
   { id: "customers", label: "Customers", icon: Users },
   { id: "vehicles", label: "Vehicles", icon: Car },
+  { id: "keys", label: "Key Management", icon: KeyRound },
 ];
 
-const ReceptionSidebar = ({ activeTab, setActiveTab, onLogout }) => {
+const ReceptionSidebar = ({ activeTab, setActiveTab, onLogout, collapsed, setCollapsed }) => {
   return (
-    <aside className="aura-sidebar">
+    <aside className={`aura-sidebar ${collapsed ? "is-collapsed" : ""}`}>
       {/* BRAND */}
       <div className="aura-brand">
-        <div className="brand-badge">A</div>
+        <div className="brand-logo-wrapper">
+          <img src="/aura-logo.svg" alt="Aura Valet Parking" className="brand-logo" />
+        </div>
         <div className="brand-title">
           <h2>AURA</h2>
           <span>RECEPTION DESK</span>
@@ -73,6 +79,18 @@ const ReceptionSidebar = ({ activeTab, setActiveTab, onLogout }) => {
 
       {/* LOGOUT */}
       <div className="sidebar-footer">
+        <button
+          type="button"
+          className="sidebar-collapse-btn"
+          onClick={() => setCollapsed((value) => !value)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <span className="item-icon">
+            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+          </span>
+          <span className="item-text">Collapse sidebar</span>
+        </button>
         <button type="button" className="logout-btn" onClick={onLogout}>
           <span className="item-icon"><LogOut /></span>
           <span className="item-text">Logout</span>

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 
 import Sidebar from "./Sidebar";
@@ -7,32 +8,32 @@ import StaffManagement from "./StaffManagement";
 import Reports from "./Reports";
 import Profile from "./Profile";
 
+import {
+  LayoutDashboard,
+  ParkingSquare,
+  ChartNoAxesCombined,
+  UsersRound,
+  Car,
+  User,
+  Clock3,
+  CircleAlert,
+  CircleCheckBig
+} from "lucide-react";
+
 import { getDashboardStats } from "../../api/adminApi";
 
 import "./Dashboard.css";
 
-
-const date_obj = new Date();
-
-const date = date_obj.toLocaleDateString("en-IN", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
+const getCurrentDate = () => {
+  return new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 function Dashboard() {
-
-  // ============================================================
-  // ACTIVE PAGE
-  // ============================================================
-
   const [activePage, setActivePage] = useState("dashboard");
-
-
-  // ============================================================
-  // DASHBOARD STATISTICS
-  // ============================================================
 
   const [dashboardStats, setDashboardStats] = useState({
     totalStaff: 0,
@@ -43,401 +44,236 @@ function Dashboard() {
     todayRevenue: 0,
   });
 
-
   const [dashboardLoading, setDashboardLoading] = useState(false);
-
   const [dashboardError, setDashboardError] = useState("");
 
-
-  // ============================================================
-  // LOAD DASHBOARD STATISTICS
-  // ============================================================
-
   const loadDashboardStats = async () => {
-
     try {
-
       setDashboardLoading(true);
-
       setDashboardError("");
 
-
       const response = await getDashboardStats();
-
 
       console.log(
         "Dashboard stats response:",
         response
       );
 
-
       if (!response?.success) {
-
         throw new Error(
           response?.message ||
           "Failed to load dashboard statistics."
         );
-
       }
 
-
       setDashboardStats({
-
         totalStaff:
           response?.stats?.totalStaff ?? 0,
-
         activeStaff:
           response?.stats?.activeStaff ?? 0,
-
         totalCustomers:
           response?.stats?.totalCustomers ?? 0,
-
         activeParkingSessions:
           response?.stats?.activeParkingSessions ?? 0,
-
         openIncidents:
           response?.stats?.openIncidents ?? 0,
-
         todayRevenue:
           response?.stats?.todayRevenue ?? 0,
-
       });
-
     } catch (error) {
-
       console.error(
         "Dashboard stats error:",
         error
       );
 
-
       setDashboardError(
         error?.message ||
         "Failed to load dashboard statistics."
       );
-
     } finally {
-
       setDashboardLoading(false);
-
     }
-
   };
 
-
-  // ============================================================
-  // LOAD DATA WHEN DASHBOARD IS ACTIVE
-  // ============================================================
-
   useEffect(() => {
-
     if (activePage === "dashboard") {
-
       loadDashboardStats();
-
     }
-
   }, [activePage]);
-
-
-  // ============================================================
-  // FORMAT REVENUE
-  // ============================================================
 
   const formattedRevenue =
     Number(
       dashboardStats.todayRevenue || 0
     ).toLocaleString("en-IN");
 
-
-  // ============================================================
-  // RENDER
-  // ============================================================
-
   return (
-
     <div className="dashboard">
-
-
-      {/* ======================================================
-          SIDEBAR
-      ====================================================== */}
-
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
       />
 
-
-      {/* ======================================================
-          MAIN DASHBOARD AREA
-      ====================================================== */}
-
       <div className="dashboard-main">
-
-
-        {/* ====================================================
-            TOPBAR
-        ==================================================== */}
-
-        <Topbar setActivePage={setActivePage} />
-
-
-        {/* ====================================================
-            CONTENT
-        ==================================================== */}
+        <Topbar
+          setActivePage={setActivePage}
+        />
 
         <main className="dashboard-content">
-
-
-          {/* ==================================================
-              MAIN DASHBOARD
-          ================================================== */}
-
           {activePage === "dashboard" && (
-
             <>
-
-
-              {/* =================================================
-                  DASHBOARD HEADER
-              ================================================= */}
-
               <section className="dashboard-header">
+                <div className="dashboard-heading">
+                  <span className="dashboard-eyebrow">
+                    SYSTEM OVERVIEW
+                  </span>
 
-
-                <div>
-
-                  <p className="dashboard-eyebrow">
-                    OVERVIEW
-                  </p>
-
-
-                  <h2>
-
+                  <h1>
                     Good morning, Super Admin
+                    <span className="wave"></span>
+                  </h1>
 
-                    <span className="wave">
-                      👋
-                    </span>
-
-                  </h2>
-
-
-                  <p className="dashboard-description">
-
-                    Here's what's happening with your
-                    parking system today.
-
+                  <p>
+                    Here's what's happening across
+                    your valet parking system today.
                   </p>
-
                 </div>
 
-
                 <div className="dashboard-date">
-
                   <span>
-                    Today
+                    TODAY
                   </span>
 
                   <strong>
-                    {date}
+                    {getCurrentDate()}
                   </strong>
-
                 </div>
-
-
               </section>
 
-
-              {/* =================================================
-                  ERROR MESSAGE
-              ================================================= */}
-
               {dashboardError && (
-
                 <div className="dashboard-error">
+                  <div className="dashboard-error-message">
+                    <span className="dashboard-error-icon">
+                      !
+                    </span>
 
-                  <span className="dashboard-error-icon">
-                    !
-                  </span>
-
-                  <span>
-                    {dashboardError}
-                  </span>
-
+                    <span>
+                      {dashboardError}
+                    </span>
+                  </div>
 
                   <button
                     type="button"
                     onClick={loadDashboardStats}
                     disabled={dashboardLoading}
                   >
-                    Retry
+                    {dashboardLoading
+                      ? "Retrying..."
+                      : "Retry"}
                   </button>
-
                 </div>
-
               )}
 
+              <section className="stats-section">
+                <div className="section-heading">
+                  <div>
+                    <span>
+                      PERFORMANCE
+                    </span>
 
-              {/* =================================================
-                  STATISTICS
-              ================================================= */}
+                    <h2>
+                      Today's overview
+                    </h2>
+                  </div>
+                </div>
 
-              <section className="stats-grid">
+                <div className="stats-grid">
+                  <StatCard
+                    icon="staff"
+                    title="Total Staff"
+                    value={
+                      dashboardLoading
+                        ? "--"
+                        : dashboardStats.totalStaff
+                    }
+                    description="Registered staff members"
+                  />
 
+                  <StatCard
+                    icon="active"
+                    title="Active Staff"
+                    value={
+                      dashboardLoading
+                        ? "--"
+                        : dashboardStats.activeStaff
+                    }
+                    description="Currently active"
+                  />
 
-                {/* TOTAL STAFF */}
+                  <StatCard
+                    icon="customers"
+                    title="Total Customers"
+                    value={
+                      dashboardLoading
+                        ? "--"
+                        : dashboardStats.totalCustomers
+                    }
+                    description="Registered customers"
+                  />
 
-                <StatCard
+                  <StatCard
+                    icon="parking"
+                    title="Active Sessions"
+                    value={
+                      dashboardLoading
+                        ? "--"
+                        : dashboardStats.activeParkingSessions
+                    }
+                    description="Vehicles currently parked"
+                  />
 
-                  icon="staff"
+                  <StatCard
+                    icon="incident"
+                    title="Open Incidents"
+                    value={
+                      dashboardLoading
+                        ? "--"
+                        : dashboardStats.openIncidents
+                    }
+                    description="Requires attention"
+                    warning
+                  />
 
-                  title="Total Staff"
-
-                  value={
-                    dashboardLoading
-                      ? "--"
-                      : dashboardStats.totalStaff
-                  }
-
-                  description="Registered staff members"
-
-                />
-
-
-                {/* ACTIVE STAFF */}
-
-                <StatCard
-
-                  icon="active"
-
-                  title="Active Staff"
-
-                  value={
-                    dashboardLoading
-                      ? "--"
-                      : dashboardStats.activeStaff
-                  }
-
-                  description="Currently active"
-
-                />
-
-
-                {/* TOTAL CUSTOMERS */}
-
-                <StatCard
-
-                  icon="customers"
-
-                  title="Total Customers"
-
-                  value={
-                    dashboardLoading
-                      ? "--"
-                      : dashboardStats.totalCustomers
-                  }
-
-                  description="Registered customers"
-
-                />
-
-
-                {/* ACTIVE PARKING SESSIONS */}
-
-                <StatCard
-
-                  icon="parking"
-
-                  title="Active Sessions"
-
-                  value={
-                    dashboardLoading
-                      ? "--"
-                      : dashboardStats.activeParkingSessions
-                  }
-
-                  description="Vehicles currently parked"
-
-                />
-
-
-                {/* OPEN INCIDENTS */}
-
-                <StatCard
-
-                  icon="incident"
-
-                  title="Open Incidents"
-
-                  value={
-                    dashboardLoading
-                      ? "--"
-                      : dashboardStats.openIncidents
-                  }
-
-                  description="Requires attention"
-
-                  warning
-
-                />
-
-
-                {/* TODAY'S REVENUE */}
-
-                <StatCard
-
-                  icon="revenue"
-
-                  title="Today's Revenue"
-
-                  value={
-                    dashboardLoading
-                      ? "₹ --"
-                      : `₹ ${formattedRevenue}`
-                  }
-
-                  description="Revenue generated today"
-
-                  revenue
-
-                />
-
-
+                  <StatCard
+                    icon="revenue"
+                    title="Today's Revenue"
+                    value={
+                      dashboardLoading
+                        ? "₹ --"
+                        : `₹ ${formattedRevenue}`
+                    }
+                    description="Revenue generated today"
+                    revenue
+                  />
+                </div>
               </section>
 
-
-              {/* =================================================
-                  LOWER DASHBOARD
-              ================================================= */}
-
               <section className="dashboard-grid">
-
-
-                {/* =================================================
-                    SYSTEM OVERVIEW
-                ================================================= */}
-
                 <div className="dashboard-panel system-panel">
-
-
                   <div className="panel-header">
-
-
                     <div>
+                      <span className="panel-kicker">
+                        SYSTEM STATUS
+                      </span>
 
                       <h3>
-                        System Overview
+                        Parking system overview
                       </h3>
 
-
                       <p>
-                        Current parking system performance
+                        Current performance of the
+                        parking management system.
                       </p>
-
                     </div>
-
 
                     <button
                       className="panel-action"
@@ -446,226 +282,236 @@ function Dashboard() {
                         setActivePage("reports")
                       }
                     >
-                      View details
+                      View reports
+                      <span>→</span>
                     </button>
-
-
                   </div>
 
-
                   <div className="system-content">
-
-
-                    {/* SYSTEM STATUS */}
-
                     <div className="system-status">
+                      <div className="status-icon">
+                        <CircleCheckBig />
+                      </div>
 
-
-                      <div className="status-indicator"></div>
-
-
-                      <div>
-
+                      <div className="status-text">
                         <strong>
                           System Operational
                         </strong>
 
-
                         <span>
-                          All core services are running normally
+                          All core services are
+                          running normally
                         </span>
-
                       </div>
 
-
+                      <span className="status-badge">
+                        Online
+                      </span>
                     </div>
-
-
-                    {/* SYSTEM METRICS */}
 
                     <div className="system-metrics">
-
-
-                      {/* PARKING CAPACITY */}
-
                       <div className="system-metric">
+                        <div className="metric-icon blue">
+                          <ParkingSquare />
+                        </div>
 
-                        <span>
-                          Parking Capacity
-                        </span>
+                        <div>
+                          <span>
+                            Parking Capacity
+                          </span>
 
-
-                        <strong>
-                          --
-                        </strong>
-
+                          <strong>
+                            --
+                          </strong>
+                        </div>
                       </div>
 
-
-                      {/* ACTIVE SESSIONS */}
-
                       <div className="system-metric">
+                        <div className="metric-icon green">
+                          <Car />
+                        </div>
 
-                        <span>
-                          Active Sessions
-                        </span>
+                        <div>
+                          <span>
+                            Active Sessions
+                          </span>
 
-
-                        <strong>
-
-                          {dashboardLoading
-                            ? "--"
-                            : dashboardStats.activeParkingSessions}
-
-                        </strong>
-
+                          <strong>
+                            {dashboardLoading
+                              ? "--"
+                              : dashboardStats.activeParkingSessions}
+                          </strong>
+                        </div>
                       </div>
 
-
-                      {/* OPEN INCIDENTS */}
-
                       <div className="system-metric">
+                        <div className="metric-icon orange">
+                          <CircleAlert />
+                        </div>
 
-                        <span>
-                          Open Incidents
-                        </span>
+                        <div>
+                          <span>
+                            Open Incidents
+                          </span>
 
-
-                        <strong>
-
-                          {dashboardLoading
-                            ? "--"
-                            : dashboardStats.openIncidents}
-
-                        </strong>
-
+                          <strong>
+                            {dashboardLoading
+                              ? "--"
+                              : dashboardStats.openIncidents}
+                          </strong>
+                        </div>
                       </div>
-
-
                     </div>
-
                   </div>
-
                 </div>
 
-
-                {/* =================================================
-                    RECENT ACTIVITY
-                ================================================= */}
-
                 <div className="dashboard-panel activity-panel">
-
-
                   <div className="panel-header">
-
-
                     <div>
+                      <span className="panel-kicker">
+                        ACTIVITY
+                      </span>
 
                       <h3>
-                        Recent Activity
+                        Recent activity
                       </h3>
 
-
                       <p>
-                        Latest system activity
+                        Latest administrative events.
                       </p>
-
                     </div>
-
-
-                    <button
-                      className="panel-action"
-                      type="button"
-                    >
-                      View all
-                    </button>
-
-
                   </div>
 
-
                   <div className="activity-list">
-
-
                     <div className="empty-activity">
-
-
                       <div className="empty-icon">
-                        ◷
+                        <Clock3 />
                       </div>
-
 
                       <strong>
                         No recent activity
                       </strong>
 
-
                       <span>
-                        Administrative activity will appear here.
+                        Administrative activity will
+                        appear here.
                       </span>
-
-
                     </div>
-
-
                   </div>
-
-
                 </div>
-
-
               </section>
 
+              <section className="quick-section">
+                <div className="section-heading">
+                  <div>
+                    <span>
+                      QUICK ACCESS
+                    </span>
 
+                    <h2>
+                      Manage your system
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="quick-grid">
+                  <button
+                    type="button"
+                    className="quick-card"
+                    onClick={() =>
+                      setActivePage("staff")
+                    }
+                  >
+                    <div className="quick-icon staff-icon">
+                      <UsersRound />
+                    </div>
+
+                    <div>
+                      <strong>
+                        Staff Management
+                      </strong>
+
+                      <span>
+                        Manage system staff
+                      </span>
+                    </div>
+
+                    <span className="quick-arrow">
+                      →
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="quick-card"
+                    onClick={() =>
+                      setActivePage("reports")
+                    }
+                  >
+                    <div className="quick-icon report-icon">
+                      <ChartNoAxesCombined />
+                    </div>
+
+                    <div>
+                      <strong>
+                        Reports & Analytics
+                      </strong>
+
+                      <span>
+                        View system performance
+                      </span>
+                    </div>
+
+                    <span className="quick-arrow">
+                      →
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="quick-card"
+                    onClick={() =>
+                      setActivePage("profile")
+                    }
+                  >
+                    <div className="quick-icon profile-icon">
+                      <User />
+                    </div>
+
+                    <div>
+                      <strong>
+                        Admin Profile
+                      </strong>
+
+                      <span>
+                        Manage your account
+                      </span>
+                    </div>
+
+                    <span className="quick-arrow">
+                      →
+                    </span>
+                  </button>
+                </div>
+              </section>
             </>
-
           )}
-
-
-          {/* ======================================================
-              STAFF MANAGEMENT
-          ====================================================== */}
 
           {activePage === "staff" && (
-
             <StaffManagement />
-
           )}
-
-
-          {/* ======================================================
-              REPORTS
-          ====================================================== */}
 
           {activePage === "reports" && (
-
             <Reports />
-
           )}
-
-
-          {/* ======================================================
-              PROFILE
-          ====================================================== */}
 
           {activePage === "profile" && (
-
             <Profile />
-
           )}
-
-
         </main>
-
-
       </div>
-
-
     </div>
-
   );
-
 }
-
 
 export default Dashboard;

@@ -27,6 +27,8 @@ import ValetManagement from "./ValetManagement";
 import ParkingReports from "./ParkingReports";
 import ParkingAdminProfile from "./ParkingAdminProfile";
 import ParkingSessions from "./ParkingSessions";
+import IncidentManagement from "./IncidentManagement";
+import FeedbackManagement from "./FeedbackManagement";
 
 import apiClient from "../../api/apiClient";
 
@@ -35,6 +37,7 @@ import "./css/ParkingAdminDashboard.css";
 const ParkingAdminDashboard = ({ onLogout }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
@@ -77,7 +80,7 @@ const ParkingAdminDashboard = ({ onLogout }) => {
       if (!data?.success) {
         throw new Error(
           data?.message ||
-            "Failed to fetch dashboard statistics."
+          "Failed to fetch dashboard statistics."
         );
       }
 
@@ -103,7 +106,7 @@ const ParkingAdminDashboard = ({ onLogout }) => {
 
       setError(
         err?.message ||
-          "Unable to load dashboard statistics."
+        "Unable to load dashboard statistics."
       );
     } finally {
       setLoading(false);
@@ -121,10 +124,10 @@ const ParkingAdminDashboard = ({ onLogout }) => {
   const occupancyPercentage =
     dashboardStats.totalSlots > 0
       ? Math.round(
-          (dashboardStats.occupiedSlots /
-            dashboardStats.totalSlots) *
-            100
-        )
+        (dashboardStats.occupiedSlots /
+          dashboardStats.totalSlots) *
+        100
+      )
       : 0;
 
   // ============================================================
@@ -206,23 +209,15 @@ const ParkingAdminDashboard = ({ onLogout }) => {
     },
   ];
 
-  // ============================================================
-  // RENDER ACTIVE VIEW
-  // ============================================================
+
 
   const renderView = () => {
     switch (activeTab) {
-      // ========================================================
-      // DASHBOARD
-      // ========================================================
+
 
       case "dashboard":
         return (
           <div className="dashboard-wrapper">
-
-            {/* ==================================================
-                DASHBOARD HEADER
-            ================================================== */}
 
             <div className="dashboard-top-bar">
 
@@ -333,15 +328,8 @@ const ParkingAdminDashboard = ({ onLogout }) => {
 
             </div>
 
-            {/* ==================================================
-                BOTTOM WIDGETS
-            ================================================== */}
-
             <div className="dashboard-bottom-grid">
 
-              {/* ==================================================
-                  PARKING OCCUPANCY
-              ================================================== */}
 
               <div className="dashboard-widget-card">
 
@@ -590,7 +578,7 @@ const ParkingAdminDashboard = ({ onLogout }) => {
 
                           Pending Retrieval
                           {dashboardStats.pendingRetrievals !==
-                          1
+                            1
                             ? "s"
                             : ""}
 
@@ -669,6 +657,18 @@ const ParkingAdminDashboard = ({ onLogout }) => {
         return <ParkingReports />;
 
       // ========================================================
+      // INCIDENT MANAGEMENT
+      // ========================================================
+      case "incidents":
+        return <IncidentManagement />;
+
+     
+      // INCIDENT MANAGEMENT
+
+      case "feedback":
+        return <FeedbackManagement />;
+
+      // ========================================================
       // PROFILE
       // ========================================================
 
@@ -700,12 +700,14 @@ const ParkingAdminDashboard = ({ onLogout }) => {
   // ============================================================
 
   return (
-    <div className="parking-admin-layout">
+    <div className={`parking-admin-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
 
       <ParkingAdminSidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLogout={handleLogout}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
       />
 
       <div className="parking-admin-main">

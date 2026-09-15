@@ -220,7 +220,7 @@
   justify-content: center;
 
   background: #231633;
-  color: #ffffff;
+  color: white;
 
   border-radius: 10px;
 
@@ -357,4 +357,55 @@
   .breadcrumb {
     font-size: 11px;
   }
+}
+
+.parking-admin-layout .aura-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  min-height: 76px;
+  padding: 0 34px;
+  background: rgba(255, 255, 255, 0.74);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.04);
+  backdrop-filter: blur(14px);
+}
+
+.parking-admin-layout .breadcrumb strong {
+  color: var(--text-main, #171324);
+}
+
+.parking-admin-layout .search-bar {
+  border-color: rgba(124, 58, 237, 0.12);
+  border-radius: 9999px;
+  background: var(--bg-card-secondary, #f8f6fc);
+}
+
+.parking-admin-layout .notification-bell {
+  border-color: rgba(124, 58, 237, 0.12);
+  border-radius: 50%;
+  background: var(--bg-card, #ffffff);
+}
+
+.parking-admin-layout .profile-chip {
+  border-radius: 9999px;
+}
+
+.parking-admin-layout .profile-avatar {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #6a26ea);
+}
+
+html[data-theme="dark"] .parking-admin-layout .aura-topbar {
+  background: rgba(15, 11, 22, 0.84);
+  border-color: #30263a;
+}
+
+html[data-theme="dark"] .parking-admin-layout .breadcrumb strong {
+  color: #f8f5fc;
+}
+
+html[data-theme="dark"] .parking-admin-layout .search-bar,
+html[data-theme="dark"] .parking-admin-layout .notification-bell {
+  background: #17111f;
 }

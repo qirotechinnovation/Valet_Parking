@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chatbot from "./Chatbot";
@@ -58,14 +59,28 @@ function LoginCard() {
       const role = data.user?.role;
 
       if (role === "super_admin") {
-        navigate("/admin-dashboard");
+        navigate("/admin-dashboard", {
+          replace: true,
+        });
       } else if (role === "parking_admin") {
-        navigate("/parking-admin-dashboard");
+        navigate("/parking-admin-dashboard", {
+          replace: true,
+        });
       } else if (
         role === "cashier" ||
         role === "reception_security"
       ) {
-        navigate("/reception-dashboard");
+        navigate("/reception-dashboard", {
+          replace: true,
+        });
+      } else if (role === "valet") {
+        navigate("/valet-dashboard", {
+          replace: true,
+        });
+      } else if (role === "customer") {
+        navigate("/customer-dashboard", {
+          replace: true,
+        });
       } else {
         setError(
           "You do not have permission to access this application."
@@ -296,6 +311,7 @@ function LoginCard() {
           <button
             type="button"
             className="customer-button"
+            onClick={() => navigate("/customer-login")}
           >
             <span>
               Customer Site
