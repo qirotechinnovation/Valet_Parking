@@ -496,9 +496,65 @@ const getKeyHistory = async (req, res) => {
   }
 };
 
+const getKeyBySession = async (req, res) => {
+  try {
+    const { session_id } = req.params;
+
+    if (!session_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Parking session ID is required."
+      });
+    }
+
+    const { data: key, error } = await supabase
+      .from("keys")
+      .select(`
+        *,
+        assigned_user:users!assigned_to(id, name, email, role),
+        parking_session:parking_sessions(
+          id,
+          ticket_code,
+          vehicle_id,
+          status
+        )
+      `)
+      .eq("parking_session_id", session_id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Get key by session error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch key."
+      });
+    }
+
+    if (!key) {
+      return res.status(404).json({
+        success: false,
+        message: "Key not found for this parking session."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: key
+    });
+  } catch (error) {
+    console.error("Get key by session error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
 module.exports = {
   getAllKeys,
   getKeyById,
+  getKeyBySession,
   createKey,
   updateKey,
   assignKey,

@@ -4,6 +4,7 @@ const QRCode = require("qrcode");
 const crypto = require("crypto");
 const createAuraEmail = require("../templates/auraEmailTemplate");
 const createVehicleReturnEmail = require("../templates/vehicleReturnEmailTemplate");
+
 const ACTIVE_STATUSES = [
   "checked_in",
   "parked",
@@ -136,10 +137,6 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // ------------------------------------------------------------
-    // GET VEHICLE + CUSTOMER DETAILS
-    // ------------------------------------------------------------
-
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
       .select(`
@@ -164,10 +161,6 @@ const createParkingSession = async (req, res) => {
         message: "Vehicle not found."
       });
     }
-
-    // ------------------------------------------------------------
-    // PREVENT DUPLICATE ACTIVE CHECK-IN
-    // ------------------------------------------------------------
 
     const { data: existingSession, error: existingSessionError } =
       await supabase
@@ -202,10 +195,6 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    // ------------------------------------------------------------
-    // GENERATE UNIQUE TICKET CODE
-    // ------------------------------------------------------------
-
     let ticketCode;
     let ticketExists = true;
 
@@ -236,15 +225,7 @@ const createParkingSession = async (req, res) => {
       ticketExists = !!existingTicket;
     }
 
-    // ------------------------------------------------------------
-    // GENERATE QR CODE
-    // ------------------------------------------------------------
-
     const qrCode = await QRCode.toDataURL(ticketCode);
-
-    // ------------------------------------------------------------
-    // CREATE PARKING SESSION
-    // ------------------------------------------------------------
 
     const { data: session, error: sessionError } = await supabase
       .from("parking_sessions")
@@ -267,48 +248,45 @@ const createParkingSession = async (req, res) => {
         message: sessionError.message
       });
     }
+
     if (parking_type === "valet") {
-  const { data: existingKey, error: keyCheckError } = await supabase
-    .from("keys")
-    .select("id")
-    .eq("parking_session_id", session.id)
-    .maybeSingle();
+      const { data: existingKey, error: keyCheckError } = await supabase
+        .from("keys")
+        .select("id")
+        .eq("parking_session_id", session.id)
+        .maybeSingle();
 
-  if (keyCheckError) {
-    console.error("Check parking session key error:", keyCheckError);
+      if (keyCheckError) {
+        console.error("Check parking session key error:", keyCheckError);
 
-    return res.status(500).json({
-      success: false,
-      message: keyCheckError.message
-    });
-  }
+        return res.status(500).json({
+          success: false,
+          message: keyCheckError.message
+        });
+      }
 
-  if (!existingKey) {
-    const { error: keyError } = await supabase
-      .from("keys")
-      .insert([
-        {
-          key_number: `KEY-${ticketCode}`,
-          parking_session_id: session.id,
-          status: "stored",
-          notes: "Vehicle key received during check-in."
+      if (!existingKey) {
+        const { error: keyError } = await supabase
+          .from("keys")
+          .insert([
+            {
+              key_number: `KEY-${ticketCode}`,
+              parking_session_id: session.id,
+              status: "stored",
+              notes: "Vehicle key received during check-in."
+            }
+          ]);
+
+        if (keyError) {
+          console.error("Create parking session key error:", keyError);
+
+          return res.status(400).json({
+            success: false,
+            message: keyError.message
+          });
         }
-      ]);
-
-    if (keyError) {
-      console.error("Create parking session key error:", keyError);
-
-      return res.status(400).json({
-        success: false,
-        message: keyError.message
-      });
+      }
     }
-  }
-}
-
-    // ------------------------------------------------------------
-    // SEND CUSTOMER EMAIL
-    // ------------------------------------------------------------
 
     let emailSent = false;
     let emailErrorMessage = null;
@@ -359,10 +337,6 @@ const createParkingSession = async (req, res) => {
           `Check-in email sent successfully to ${customer.email}`
         );
 
-        // --------------------------------------------------------
-        // SAVE EMAIL NOTIFICATION AS SENT
-        // --------------------------------------------------------
-
         const { error: notificationError } = await supabase
           .from("notifications")
           .insert({
@@ -390,10 +364,6 @@ const createParkingSession = async (req, res) => {
           emailError
         );
 
-        // --------------------------------------------------------
-        // SAVE FAILED EMAIL NOTIFICATION
-        // --------------------------------------------------------
-
         const { error: notificationError } = await supabase
           .from("notifications")
           .insert({
@@ -420,10 +390,6 @@ const createParkingSession = async (req, res) => {
         "Check-in email skipped: customer email address not available."
       );
     }
-
-    // ------------------------------------------------------------
-    // RESPONSE
-    // ------------------------------------------------------------
 
     return res.status(201).json({
       success: true,
@@ -514,33 +480,34 @@ const assignParkingSlot = async (req, res) => {
         message: updateSlotError.message
       });
     }
+
     const { data: vehicle, error: vehicleError } = await supabase
-  .from("vehicles")
-  .select("customer_id")
-  .eq("id", session.vehicle_id)
-  .single();
+      .from("vehicles")
+      .select("customer_id")
+      .eq("id", session.vehicle_id)
+      .single();
 
-if (vehicleError || !vehicle) {
-  console.error("Get vehicle customer error:", vehicleError);
-} else {
-  const { error: notificationError } = await supabase
-    .from("notifications")
-    .insert([
-      {
-        parking_session_id: session.id,
-        recipient_type: "customer",
-        recipient_id: vehicle.customer_id,
-        message: `Your vehicle has been parked successfully in slot ${parking_slot}.`,
-        channel: "in_app",
-        status: "sent",
-        sent_at: new Date().toISOString()
+    if (vehicleError || !vehicle) {
+      console.error("Get vehicle customer error:", vehicleError);
+    } else {
+      const { error: notificationError } = await supabase
+        .from("notifications")
+        .insert([
+          {
+            parking_session_id: session.id,
+            recipient_type: "customer",
+            recipient_id: vehicle.customer_id,
+            message: `Your vehicle has been parked successfully in slot ${parking_slot}.`,
+            channel: "in_app",
+            status: "sent",
+            sent_at: new Date().toISOString()
+          }
+        ]);
+
+      if (notificationError) {
+        console.error("Vehicle parked notification error:", notificationError);
       }
-    ]);
-
-  if (notificationError) {
-    console.error("Vehicle parked notification error:", notificationError);
-  }
-}
+    }
 
     return res.status(200).json({
       success: true,
@@ -604,7 +571,63 @@ const assignValet = async (req, res) => {
       });
     }
 
-    const { data: session, error: sessionError } =
+    const { data: session, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_type, valet_id")
+      .eq("id", id)
+      .single();
+
+    if (sessionError || !session) {
+      return res.status(404).json({
+        success: false,
+        message: "Parking session not found."
+      });
+    }
+
+    if (session.parking_type !== "valet") {
+      return res.status(400).json({
+        success: false,
+        message: "Valet can only be assigned to valet parking sessions."
+      });
+    }
+
+    const { data: key, error: keyError } = await supabase
+      .from("keys")
+      .select("id, status, parking_session_id")
+      .eq("parking_session_id", id)
+      .maybeSingle();
+
+    if (keyError) {
+      console.error("Find parking session key error:", keyError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify vehicle key."
+      });
+    }
+
+    if (!key) {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key record not found for this parking session."
+      });
+    }
+
+    if (key.status === "lost") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key is marked as lost."
+      });
+    }
+
+    if (!["stored", "available", "returned"].includes(key.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key is not available for valet assignment."
+      });
+    }
+
+    const { data: updatedSession, error: sessionUpdateError } =
       await supabase
         .from("parking_sessions")
         .update({
@@ -614,43 +637,48 @@ const assignValet = async (req, res) => {
         .select()
         .single();
 
-    if (sessionError || !session) {
-      return res.status(404).json({
+    if (sessionUpdateError || !updatedSession) {
+      return res.status(400).json({
         success: false,
-        message: "Parking session not found."
+        message:
+          sessionUpdateError?.message || "Unable to assign valet."
       });
     }
 
-    const { data: key, error: keyError } = await supabase
+    const { data: updatedKey, error: keyUpdateError } = await supabase
       .from("keys")
-      .select("id, status")
+      .update({
+        assigned_to: user.id,
+        status: "assigned",
+        assigned_at: new Date().toISOString(),
+        returned_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", key.id)
       .eq("parking_session_id", id)
-      .maybeSingle();
+      .select()
+      .single();
 
-    if (keyError) {
-      console.error("Find parking session key error:", keyError);
-    }
-
-    if (key) {
-      const { error: keyUpdateError } = await supabase
-        .from("keys")
+    if (keyUpdateError || !updatedKey) {
+      await supabase
+        .from("parking_sessions")
         .update({
-          assigned_to: user.id,
-          status: "assigned",
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          valet_id: session.valet_id || null
         })
-        .eq("id", key.id);
+        .eq("id", id);
 
-      if (keyUpdateError) {
-        console.error("Assign key to valet error:", keyUpdateError);
-      }
+      return res.status(400).json({
+        success: false,
+        message:
+          keyUpdateError?.message || "Unable to assign vehicle key to valet."
+      });
     }
 
     return res.status(200).json({
       success: true,
       message: "Valet assigned successfully and key assigned to valet.",
-      session
+      session: updatedSession,
+      key: updatedKey
     });
   } catch (error) {
     console.error("Assign valet error:", error);
@@ -661,6 +689,7 @@ const assignValet = async (req, res) => {
     });
   }
 };
+
 const requestRetrieval = async (req, res) => {
   try {
     const { id } = req.params;
@@ -693,6 +722,7 @@ const requestRetrieval = async (req, res) => {
         status: "retrieval_requested"
       })
       .eq("id", id)
+      .eq("status", "parked")
       .select()
       .single();
 
@@ -722,12 +752,11 @@ const startRetrieval = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select("id, status, parking_slot")
-        .eq("id", id)
-        .single();
+    const { data: session, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select("id, status, parking_slot, vehicle_id")
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
@@ -739,49 +768,90 @@ const startRetrieval = async (req, res) => {
     if (session.status !== "retrieval_requested") {
       return res.status(400).json({
         success: false,
-        message:
-          "Vehicle must have a retrieval request first."
-      });
-    }
-
-    const { data: updatedSession, error } = await supabase
-      .from("parking_sessions")
-      .update({
-        status: "retrieving"
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.message
+        message: "Vehicle must have a retrieval request first."
       });
     }
 
     const { data: key, error: keyFetchError } = await supabase
       .from("keys")
-      .select("id, status")
+      .select("id, status, assigned_to, parking_session_id")
       .eq("parking_session_id", id)
       .maybeSingle();
 
     if (keyFetchError) {
       console.error("Find parking session key error:", keyFetchError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify vehicle key."
+      });
     }
 
-    if (key) {
-      const { error: keyUpdateError } = await supabase
+    if (!key) {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key record not found for this parking session."
+      });
+    }
+
+    if (key.status === "lost") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key is marked as lost."
+      });
+    }
+
+    if (key.status !== "assigned") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key must be assigned to a valet before retrieval."
+      });
+    }
+
+    const { data: updatedKey, error: keyUpdateError } = await supabase
+      .from("keys")
+      .update({
+        status: "in_use",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", key.id)
+      .eq("status", "assigned")
+      .select()
+      .single();
+
+    if (keyUpdateError || !updatedKey) {
+      return res.status(400).json({
+        success: false,
+        message:
+          keyUpdateError?.message || "Unable to start vehicle key retrieval."
+      });
+    }
+
+    const { data: updatedSession, error: sessionUpdateError } =
+      await supabase
+        .from("parking_sessions")
+        .update({
+          status: "retrieving"
+        })
+        .eq("id", id)
+        .eq("status", "retrieval_requested")
+        .select()
+        .single();
+
+    if (sessionUpdateError || !updatedSession) {
+      await supabase
         .from("keys")
         .update({
-          status: "in_use",
+          status: "assigned",
           updated_at: new Date().toISOString()
         })
         .eq("id", key.id);
 
-      if (keyUpdateError) {
-        console.error("Update key status error:", keyUpdateError);
-      }
+      return res.status(400).json({
+        success: false,
+        message:
+          sessionUpdateError?.message || "Unable to start vehicle retrieval."
+      });
     }
 
     const { data: vehicle, error: vehicleError } = await supabase
@@ -808,7 +878,10 @@ const startRetrieval = async (req, res) => {
         ]);
 
       if (notificationError) {
-        console.error("Retrieval started notification error:", notificationError);
+        console.error(
+          "Retrieval started notification error:",
+          notificationError
+        );
       }
     }
 
@@ -826,6 +899,7 @@ const startRetrieval = async (req, res) => {
     });
   }
 };
+
 const markReadyForPickup = async (req, res) => {
   try {
     const { id } = req.params;
@@ -857,6 +931,7 @@ const markReadyForPickup = async (req, res) => {
         status: "ready_for_pickup"
       })
       .eq("id", id)
+      .eq("status", "retrieving")
       .select()
       .single();
 
@@ -909,34 +984,34 @@ const markReadyForPickup = async (req, res) => {
     });
   }
 };
+
 const completeReturn = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { data: session, error: sessionError } =
-      await supabase
-        .from("parking_sessions")
-        .select(`
+    const { data: session, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select(`
+        id,
+        status,
+        parking_slot,
+        ticket_code,
+        completed_at,
+        vehicle:vehicles (
           id,
-          status,
-          parking_slot,
-          ticket_code,
-          completed_at,
-          vehicle:vehicles (
+          customer_id,
+          license_plate,
+          make,
+          model,
+          customer:customers (
             id,
-            customer_id,
-            license_plate,
-            make,
-            model,
-            customer:customers (
-              id,
-              name,
-              email
-            )
+            name,
+            email
           )
-        `)
-        .eq("id", id)
-        .single();
+        )
+      `)
+      .eq("id", id)
+      .single();
 
     if (sessionError || !session) {
       return res.status(404).json({
@@ -948,32 +1023,102 @@ const completeReturn = async (req, res) => {
     if (session.status !== "ready_for_pickup") {
       return res.status(400).json({
         success: false,
-        message:
-          "Vehicle must be ready for pickup before completing return."
+        message: "Vehicle must be ready for pickup before completing return."
+      });
+    }
+
+    const { data: finalInspection, error: inspectionError } = await supabase
+      .from("vehicle_inspections")
+      .select("id, inspection_stage, condition_status")
+      .eq("session_id", id)
+      .eq("inspection_stage", "final")
+      .maybeSingle();
+
+    if (inspectionError) {
+      console.error("Final inspection lookup error:", inspectionError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify final vehicle inspection."
+      });
+    }
+
+    if (!finalInspection) {
+      return res.status(400).json({
+        success: false,
+        message: "Final vehicle inspection is required before completing return."
+      });
+    }
+
+    const { data: payment, error: paymentError } = await supabase
+      .from("payments")
+      .select("id, payment_status, total_amount")
+      .eq("parking_session_id", id)
+      .maybeSingle();
+
+    if (paymentError) {
+      console.error("Payment lookup error:", paymentError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify payment."
+      });
+    }
+
+    if (!payment) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment is required before completing return."
+      });
+    }
+
+    if (payment.payment_status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Payment must be completed before returning the vehicle."
+      });
+    }
+
+    const { data: key, error: keyFetchError } = await supabase
+      .from("keys")
+      .select("id, status, assigned_to, returned_at")
+      .eq("parking_session_id", id)
+      .maybeSingle();
+
+    if (keyFetchError) {
+      console.error("Fetch parking session key error:", keyFetchError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify vehicle key."
+      });
+    }
+
+    if (!key) {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key record not found for this parking session."
+      });
+    }
+
+    if (key.status === "lost") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key is marked as lost and return cannot be completed."
+      });
+    }
+
+    if (key.status !== "in_use") {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle key has not completed the required retrieval lifecycle."
       });
     }
 
     const completedAt = new Date().toISOString();
 
-    const {
-      data: updatedSession,
-      error: updateSessionError
-    } = await supabase
-      .from("parking_sessions")
-      .update({
-        status: "returned_completed",
-        completed_at: completedAt
-      })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (updateSessionError) {
-      return res.status(400).json({
-        success: false,
-        message: updateSessionError.message
-      });
-    }
+    let slotUpdated = false;
+    let keyUpdated = false;
 
     if (session.parking_slot) {
       const { error: slotError } = await supabase
@@ -988,35 +1133,90 @@ const completeReturn = async (req, res) => {
 
         return res.status(400).json({
           success: false,
-          message: slotError.message
+          message: "Unable to release parking slot."
         });
       }
+
+      slotUpdated = true;
     }
 
-    const { data: key, error: keyFetchError } = await supabase
+    const { data: updatedKey, error: keyUpdateError } = await supabase
       .from("keys")
-      .select("id")
-      .eq("parking_session_id", id)
-      .maybeSingle();
+      .update({
+        status: "returned",
+        assigned_to: null,
+        returned_at: completedAt,
+        updated_at: completedAt
+      })
+      .eq("id", key.id)
+      .eq("status", "in_use")
+      .select()
+      .single();
 
-    if (keyFetchError) {
-      console.error("Fetch parking session key error:", keyFetchError);
+    if (keyUpdateError || !updatedKey) {
+      if (slotUpdated && session.parking_slot) {
+        await supabase
+          .from("parking_slots")
+          .update({
+            status: "occupied"
+          })
+          .eq("slot_number", session.parking_slot);
+      }
+
+      console.error("Update returned key error:", keyUpdateError);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          keyUpdateError?.message ||
+          "Unable to complete key return."
+      });
     }
 
-    if (key) {
-      const { error: keyUpdateError } = await supabase
-        .from("keys")
-        .update({
-          status: "returned",
-          assigned_to: null,
-          returned_at: completedAt,
-          updated_at: completedAt
-        })
-        .eq("id", key.id);
+    keyUpdated = true;
 
-      if (keyUpdateError) {
-        console.error("Update returned key error:", keyUpdateError);
+    const {
+      data: updatedSession,
+      error: updateSessionError
+    } = await supabase
+      .from("parking_sessions")
+      .update({
+        status: "returned_completed",
+        completed_at: completedAt
+      })
+      .eq("id", id)
+      .eq("status", "ready_for_pickup")
+      .select()
+      .single();
+
+    if (updateSessionError || !updatedSession) {
+      if (keyUpdated) {
+        await supabase
+          .from("keys")
+          .update({
+            status: "in_use",
+            assigned_to: key.assigned_to,
+            returned_at: key.returned_at,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", key.id);
       }
+
+      if (slotUpdated && session.parking_slot) {
+        await supabase
+          .from("parking_slots")
+          .update({
+            status: "occupied"
+          })
+          .eq("slot_number", session.parking_slot);
+      }
+
+      return res.status(400).json({
+        success: false,
+        message:
+          updateSessionError?.message ||
+          "Unable to complete vehicle return."
+      });
     }
 
     const customer = session.vehicle?.customer;
@@ -1078,6 +1278,7 @@ const completeReturn = async (req, res) => {
     });
   }
 };
+
 const getRetrievalRequests = async (req, res) => {
   try {
     const { search, status } = req.query;
@@ -1560,6 +1761,7 @@ const completeSelfParking = async (req, res) => {
         completed_at: new Date().toISOString()
       })
       .eq("id", id)
+      .eq("status", "parked")
       .select()
       .single();
 
@@ -1606,6 +1808,7 @@ const completeSelfParking = async (req, res) => {
     });
   }
 };
+
 const getValetDashboard = async (req, res) => {
   try {
     const { data: valet, error: valetError } = await supabase

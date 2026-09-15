@@ -418,6 +418,7 @@ const generateInvoicePDF = async ({
   });
 };
 
+
 const createPayment = async (req, res) => {
   try {
     const {
@@ -466,15 +467,66 @@ const createPayment = async (req, res) => {
 
       return res.status(404).json({
         success: false,
-        message: "Parking session not found.",
-        error: sessionError?.message
+        message: "Parking session not found."
       });
     }
 
-    if (session.status !== "returned_completed") {
+    if (session.status !== "ready_for_pickup") {
       return res.status(400).json({
         success: false,
-        message: "Payment can only be created for completed parking sessions."
+        message: "Payment can only be created when the vehicle is ready for pickup."
+      });
+    }
+
+    const parkingCharge = Number(parking_charge);
+    const valetServiceCharge = Number(valet_service_charge);
+    const extraCharges = Number(extra_charges);
+    const discountAmount = Number(discount);
+    const gstAmount = Number(gst);
+
+    const amounts = [
+      parkingCharge,
+      valetServiceCharge,
+      extraCharges,
+      discountAmount,
+      gstAmount
+    ];
+
+    if (amounts.some((amount) => !Number.isFinite(amount))) {
+      return res.status(400).json({
+        success: false,
+        message: "All payment amounts must be valid numbers."
+      });
+    }
+
+    if (amounts.some((amount) => amount < 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment amounts cannot be negative."
+      });
+    }
+
+    const subtotal =
+      parkingCharge +
+      valetServiceCharge +
+      extraCharges;
+
+    if (discountAmount > subtotal) {
+      return res.status(400).json({
+        success: false,
+        message: "Discount cannot exceed the subtotal."
+      });
+    }
+
+    const totalAmount =
+      subtotal -
+      discountAmount +
+      gstAmount;
+
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Total amount is invalid."
       });
     }
 
@@ -526,32 +578,9 @@ const createPayment = async (req, res) => {
     }
 
     if (existingPayment) {
-      return res.status(400).json({
+      return res.status(409).json({
         success: false,
         message: "Payment already exists for this parking session."
-      });
-    }
-
-    const parkingCharge = Number(parking_charge) || 0;
-    const valetServiceCharge = Number(valet_service_charge) || 0;
-    const extraCharges = Number(extra_charges) || 0;
-    const discountAmount = Number(discount) || 0;
-    const gstAmount = Number(gst) || 0;
-
-    const subtotal =
-      parkingCharge +
-      valetServiceCharge +
-      extraCharges;
-
-    const totalAmount =
-      subtotal -
-      discountAmount +
-      gstAmount;
-
-    if (totalAmount < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Total amount cannot be negative."
       });
     }
 
@@ -579,6 +608,13 @@ const createPayment = async (req, res) => {
 
     if (paymentError) {
       console.error("Payment creation error:", paymentError);
+
+      if (paymentError.code === "23505") {
+        return res.status(409).json({
+          success: false,
+          message: "Payment already exists for this parking session."
+        });
+      }
 
       return res.status(500).json({
         success: false,
@@ -638,6 +674,7 @@ const createPayment = async (req, res) => {
     });
   }
 };
+
 
 const downloadInvoice = async (req, res) => {
   try {

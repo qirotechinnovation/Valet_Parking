@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getAllKeys,
   getKeyById,
+  getKeyBySession,
   createKey,
   updateKey,
   assignKey,
@@ -22,7 +23,12 @@ router.get(
   authorizeRoles("super_admin", "parking_admin", "valet"),
   getAllKeys
 );
-
+router.get(
+  "/session/:session_id",
+  authenticate,
+  authorizeRoles("super_admin", "parking_admin", "valet"),
+  getKeyBySession
+);
 router.get(
   "/:id",
   authenticate,
