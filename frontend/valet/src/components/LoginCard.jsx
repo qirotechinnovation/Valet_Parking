@@ -1,31 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Chatbot from "./Chatbot";
 
 function LoginCard() {
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showChatbot, setShowChatbot] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
-  e.preventDefault();
-  setError("");
+    e.preventDefault();
+    setError("");
 
-  if (!email || !password) {
-    setError("Email and password are required.");
-    return;
-  }
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-    const response = await fetch(
-      `${apiUrl}/api/auth/login`,
-      {
+      const apiUrl =
+        import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -34,123 +36,85 @@ function LoginCard() {
           email,
           password,
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || "Login failed.");
+        return;
       }
-    );
 
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      setError(data.message || "Login failed.");
-      return;
-    }
-
-    // Save authentication token
-    localStorage.setItem(
-      "access_token",
-      data.session.access_token
-    );
-
-    // Save logged-in user
-    localStorage.setItem(
-      "user",
-      JSON.stringify(data.user)
-    );
-
-    console.log("Login successful:", data.user);
-    console.log("User role:", data.user?.role);
-
-    // ==========================================
-    // ROLE-BASED REDIRECTION
-    // ==========================================
-
-    const role = data.user?.role;
-
-    if (role === "super_admin") {
-      navigate("/admin-dashboard");
-    } 
-    else if (role === "parking_admin") {
-      navigate("/parking-admin-dashboard");
-    }
-    else if (role === "cashier" || role === "reception_security") {
-      navigate("/reception-dashboard");
-    }
-    else {
-      setError(
-        "You do not have permission to access this application."
+      localStorage.setItem(
+        "access_token",
+        data.session.access_token
       );
-    }
 
-  } catch (err) {
-    console.error("Login error:", err);
-    setError("Unable to connect to the server.");
-  } finally {
-    setLoading(false);
-  }
-};
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user)
+      );
+
+      const role = data.user?.role;
+
+      if (role === "super_admin") {
+        navigate("/admin-dashboard");
+      } else if (role === "parking_admin") {
+        navigate("/parking-admin-dashboard");
+      } else if (
+        role === "cashier" ||
+        role === "reception_security"
+      ) {
+        navigate("/reception-dashboard");
+      } else {
+        setError(
+          "You do not have permission to access this application."
+        );
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Unable to connect to the server.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="login-wrapper">
-
-      {/* Help Link */}
-
       <div className="login-top">
-
         <button
           className="help"
           type="button"
+          onClick={() => setShowChatbot(true)}
         >
-          <span className="help-icon">
-            ?
-          </span>
-
-          <span>
-            Need help?
-          </span>
+          <span className="help-icon">?</span>
+          <span>Need help?</span>
         </button>
-
       </div>
 
-
-      {/* Main Login Card Container */}
-
       <div className="login-card-container">
-
         <div className="login-card">
-
-          {/* Heading */}
-
           <div className="login-heading">
-
-            <h1>
-              Welcome Back
-            </h1>
+            <h1>Welcome Back</h1>
 
             <p>
               Login to your account to continue
             </p>
-
           </div>
 
-
           <form onSubmit={handleLogin}>
-
-            {/* Email Field */}
-
             <div className="input-group">
-
               <label htmlFor="email">
                 Email or Phone Number
               </label>
 
               <div className="input-wrapper">
-
                 <svg
                   className="input-icon"
                   viewBox="0 0 20 20"
                   fill="none"
                   aria-hidden="true"
                 >
-
                   <path
                     d="M2.5 6.5 L10 11.25 L17.5 6.5"
                     stroke="currentColor"
@@ -168,9 +132,7 @@ function LoginCard() {
                     stroke="currentColor"
                     strokeWidth="1.6"
                   />
-
                 </svg>
-
 
                 <input
                   id="email"
@@ -181,29 +143,21 @@ function LoginCard() {
                     setEmail(e.target.value)
                   }
                 />
-
               </div>
-
             </div>
 
-
-            {/* Password Field */}
-
             <div className="input-group">
-
               <label htmlFor="password">
                 Password
               </label>
 
               <div className="input-wrapper">
-
                 <svg
                   className="input-icon"
                   viewBox="0 0 20 20"
                   fill="none"
                   aria-hidden="true"
                 >
-
                   <rect
                     x="4"
                     y="9"
@@ -220,9 +174,7 @@ function LoginCard() {
                     strokeWidth="1.6"
                     strokeLinecap="round"
                   />
-
                 </svg>
-
 
                 <input
                   id="password"
@@ -238,7 +190,6 @@ function LoginCard() {
                   }
                 />
 
-
                 <button
                   type="button"
                   className="password-toggle"
@@ -251,15 +202,12 @@ function LoginCard() {
                       : "Show password"
                   }
                 >
-
                   {showPassword ? (
-
                     <svg
                       viewBox="0 0 20 20"
                       fill="none"
                       aria-hidden="true"
                     >
-
                       <path
                         d="M2.5 10s2.5-5 7.5-5 7.5 5 7.5 5-2.5 5-7.5 5-7.5-5-7.5-5Z"
                         stroke="currentColor"
@@ -273,17 +221,13 @@ function LoginCard() {
                         stroke="currentColor"
                         strokeWidth="1.6"
                       />
-
                     </svg>
-
                   ) : (
-
                     <svg
                       viewBox="0 0 20 20"
                       fill="none"
                       aria-hidden="true"
                     >
-
                       <path
                         d="M3 3l14 14M7.5 7.8A4.2 4.2 0 0 0 10 14.5c2.5 0 4.5-2 4.5-4.5a4.2 4.2 0 0 0-.7-2.3"
                         stroke="currentColor"
@@ -297,94 +241,57 @@ function LoginCard() {
                         strokeWidth="1.6"
                         strokeLinecap="round"
                       />
-
                     </svg>
-
                   )}
-
                 </button>
-
               </div>
-
             </div>
 
-
-            {/* Remember Me */}
-
             <div className="password-options">
-
               <label className="remember">
-
-                <input
-                  type="checkbox"
-                />
+                <input type="checkbox" />
 
                 <span>
                   Remember me
                 </span>
-
               </label>
-
 
               <a href="#forgot">
                 Forgot Password?
               </a>
-
             </div>
 
-
-            {/* Error */}
-
             {error && (
-
               <div
                 className="login-error"
                 role="alert"
               >
                 {error}
               </div>
-
             )}
-
-
-            {/* Login */}
 
             <button
               type="submit"
               className="login-button"
               disabled={loading}
             >
-
               {loading
                 ? "Logging in..."
                 : "Login"}
-
             </button>
-
           </form>
 
-
-          {/* Divider */}
-
           <div className="divider">
-
             <span></span>
 
-            <p>
-              or
-            </p>
+            <p>or</p>
 
             <span></span>
-
           </div>
-
-
-          {/* Customer */}
 
           <div className="signup">
             Are you a customer?
           </div>
-
 
           <button
             type="button"
@@ -394,11 +301,14 @@ function LoginCard() {
               Customer Site
             </span>
           </button>
-
         </div>
-
       </div>
 
+      {showChatbot && (
+        <Chatbot
+          onClose={() => setShowChatbot(false)}
+        />
+      )}
     </div>
   );
 }
