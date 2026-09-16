@@ -162,7 +162,7 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    const { data: existingSession, error: existingSessionError } =
+        const { data: existingSessions, error: existingSessionError } =
       await supabase
         .from("parking_sessions")
         .select(`
@@ -173,7 +173,7 @@ const createParkingSession = async (req, res) => {
         `)
         .eq("vehicle_id", vehicle_id)
         .in("status", ACTIVE_STATUSES)
-        .maybeSingle();
+        .order("checked_in_at", { ascending: false });
 
     if (existingSessionError) {
       console.error(
@@ -187,11 +187,11 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-    if (existingSession) {
+    if (existingSessions && existingSessions.length > 0) {
       return res.status(400).json({
         success: false,
         message: "Vehicle is already checked in.",
-        session: existingSession
+        session: existingSessions[0]
       });
     }
 
