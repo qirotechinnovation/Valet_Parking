@@ -1,4 +1,3 @@
-
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -6,8 +5,11 @@ const apiClient = async (endpoint, options = {}) => {
   const token = localStorage.getItem("access_token");
 
   const isFormData = options.body instanceof FormData;
+
   const headers = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(isFormData
+      ? {}
+      : { "Content-Type": "application/json" }),
     ...(options.headers || {}),
   };
 
@@ -24,26 +26,21 @@ const apiClient = async (endpoint, options = {}) => {
       }
     );
 
-    // Try to parse JSON response
     let data = {};
 
-    const contentType = response.headers.get("content-type");
+    const contentType =
+      response.headers.get("content-type");
 
     if (contentType?.includes("application/json")) {
       data = await response.json();
     } else {
       const text = await response.text();
-
       data = text ? { message: text } : {};
     }
 
     if (!response.ok) {
-      // Handle authentication failure
       if (response.status === 401) {
         console.error("Authentication failed.");
-
-        // Optional: remove invalid token
-        // localStorage.removeItem("access_token");
       }
 
       throw new Error(
@@ -65,4 +62,3 @@ const apiClient = async (endpoint, options = {}) => {
 };
 
 export default apiClient;
-

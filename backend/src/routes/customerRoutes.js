@@ -12,6 +12,11 @@ const {
   getCustomerProfile
 } = require("../controllers/customerController");
 
+const {
+  getCustomerPayments,
+  downloadCustomerInvoice
+} = require("../controllers/paymentController");
+
 const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
@@ -63,18 +68,14 @@ router.get(
 |--------------------------------------------------------------------------
 | CUSTOMER PORTAL
 |--------------------------------------------------------------------------
-|
-| IMPORTANT:
-| These routes must remain AFTER the portal definitions only if
-| parameterized routes could interfere. Express matches in order,
-| so portal routes should come before /:id.
-|
-|--------------------------------------------------------------------------
 */
 
 /*
+|--------------------------------------------------------------------------
 | Dashboard
+|--------------------------------------------------------------------------
 */
+
 router.get(
   "/portal/dashboard",
   authenticate,
@@ -83,8 +84,11 @@ router.get(
 );
 
 /*
+|--------------------------------------------------------------------------
 | Vehicles
+|--------------------------------------------------------------------------
 */
+
 router.get(
   "/portal/vehicles",
   authenticate,
@@ -93,8 +97,11 @@ router.get(
 );
 
 /*
+|--------------------------------------------------------------------------
 | Parking History
+|--------------------------------------------------------------------------
 */
+
 router.get(
   "/portal/history",
   authenticate,
@@ -103,8 +110,31 @@ router.get(
 );
 
 /*
-| Profile
+|--------------------------------------------------------------------------
+| Payments
+|--------------------------------------------------------------------------
 */
+
+router.get(
+  "/portal/payments",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerPayments
+);
+
+router.get(
+  "/portal/payments/:id/invoice",
+  authenticate,
+  authorizeRoles("customer"),
+  downloadCustomerInvoice
+);
+
+/*
+|--------------------------------------------------------------------------
+| Profile
+|--------------------------------------------------------------------------
+*/
+
 router.get(
   "/portal/profile",
   authenticate,
@@ -113,8 +143,11 @@ router.get(
 );
 
 /*
+|--------------------------------------------------------------------------
 | Request Vehicle Retrieval
+|--------------------------------------------------------------------------
 */
+
 router.patch(
   "/portal/retrieval/:id",
   authenticate,
@@ -123,8 +156,11 @@ router.patch(
 );
 
 /*
+|--------------------------------------------------------------------------
 | Cancel Vehicle Retrieval
+|--------------------------------------------------------------------------
 */
+
 router.patch(
   "/portal/retrieval/:id/cancel",
   authenticate,

@@ -27,9 +27,9 @@ import "./css/ReceptionSessionDetailsModal.css";
 const formatDate = (value) =>
   value
     ? new Date(value).toLocaleString([], {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
+      dateStyle: "medium",
+      timeStyle: "short",
+    })
     : "Not recorded";
 
 const formatCondition = (condition) => {
@@ -39,8 +39,12 @@ const formatCondition = (condition) => {
 };
 
 function ReceptionSessionDetailsModal({ session, onClose }) {
-  const [inspection, setInspection] = useState(null);
-  const [photos, setPhotos] = useState([]);
+  const [inspections, setInspections] = useState([]);
+
+  const [inspectionPhotos, setInspectionPhotos] = useState({
+    initial: [],
+    final: [],
+  });
   const [history, setHistory] = useState([]);
   const [key, setKey] = useState(null);
 
@@ -49,6 +53,7 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
   const [photoError, setPhotoError] = useState("");
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhotoList, setSelectedPhotoList] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -71,38 +76,85 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
         if (!active) return;
 
         // INSPECTION
+        // INSPECTIONS
         if (inspectionResult.status === "fulfilled") {
           const inspectionData =
-            inspectionResult.value?.inspection || null;
+            inspectionResult.value?.inspections || [];
 
-          setInspection(inspectionData);
+          setInspections(inspectionData);
 
-          // PHOTOS
-          if (inspectionData?.id) {
+          const initialInspection = inspectionData.find(
+            (item) => item.inspection_stage === "initial"
+          );
+
+          const finalInspection = inspectionData.find(
+            (item) => item.inspection_stage === "final"
+          );
+
+          const loadedPhotos = {
+            initial: [],
+            final: [],
+          };
+
+          // INITIAL INSPECTION PHOTOS
+          if (initialInspection?.id) {
             try {
               const photoResponse = await getInspectionPhotos(
-                inspectionData.id
+                initialInspection.id
+              );
+
+              loadedPhotos.initial =
+                photoResponse?.photos || [];
+            } catch (error) {
+              console.error(
+                "Failed to load initial inspection photos:",
+                error
               );
 
               if (active) {
-                setPhotos(photoResponse?.photos || []);
-              }
-            } catch (error) {
-              console.error("Failed to load inspection photos:", error);
-
-              if (active) {
-                setPhotos([]);
-                setPhotoError("Inspection photos could not be loaded.");
+                setPhotoError(
+                  "Some inspection photos could not be loaded."
+                );
               }
             }
           }
+
+          // FINAL INSPECTION PHOTOS
+          if (finalInspection?.id) {
+            try {
+              const photoResponse = await getInspectionPhotos(
+                finalInspection.id
+              );
+
+              loadedPhotos.final =
+                photoResponse?.photos || [];
+            } catch (error) {
+              console.error(
+                "Failed to load final inspection photos:",
+                error
+              );
+
+              if (active) {
+                setPhotoError(
+                  "Some inspection photos could not be loaded."
+                );
+              }
+            }
+          }
+
+          if (active) {
+            setInspectionPhotos(loadedPhotos);
+          }
         } else {
-          // A 404 means this session simply has no inspection.
           const message =
             inspectionResult.reason?.message || "";
 
           if (message === "Inspection not found.") {
-            setInspection(null);
+            setInspections([]);
+            setInspectionPhotos({
+              initial: [],
+              final: [],
+            });
           } else {
             setInspectionError(
               "Unable to load vehicle inspection details."
@@ -145,9 +197,20 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
     };
   }, [session]);
 
+  const initialInspection = inspections.find(
+    (item) => item.inspection_stage === "initial"
+  );
+
+  const finalInspection = inspections.find(
+    (item) => item.inspection_stage === "final"
+  );
+
   const stages = [
     ["Check-in", session.checked_in_at],
-    ["Inspection", inspection?.inspected_at],
+    [
+      "Initial Inspection",
+      initialInspection?.inspected_at,
+    ],
     [
       "Slot Assigned",
       session.parking_slot
@@ -183,20 +246,27 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
     ],
   ];
 
-  const openPhoto = (photo) => {
+  const openPhoto = (photo, photoList) => {
     setSelectedPhoto(photo);
+    setSelectedPhotoList(photoList);
   };
 
   const closePhoto = () => {
     setSelectedPhoto(null);
+    setSelectedPhotoList([]);
   };
 
   const showPreviousPhoto = (event) => {
     event.stopPropagation();
 
-    if (!selectedPhoto || photos.length === 0) return;
+    if (
+      !selectedPhoto ||
+      selectedPhotoList.length === 0
+    ) {
+      return;
+    }
 
-    const currentIndex = photos.findIndex(
+    const currentIndex = selectedPhotoList.findIndex(
       (photo) => photo.id === selectedPhoto.id
     );
 
@@ -209,9 +279,14 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
   const showNextPhoto = (event) => {
     event.stopPropagation();
 
-    if (!selectedPhoto || photos.length === 0) return;
+    if (
+      !selectedPhoto ||
+      selectedPhotoList.length === 0
+    ) {
+      return;
+    }
 
-    const currentIndex = photos.findIndex(
+    const currentIndex = selectedPhotoList.findIndex(
       (photo) => photo.id === selectedPhoto.id
     );
 
@@ -316,9 +391,8 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
             <div className="session-timeline">
               {stages.map(([label, timestamp]) => (
                 <div
-                  className={`timeline-item ${
-                    timestamp ? "occurred" : "pending"
-                  }`}
+                  className={`timeline-item ${timestamp ? "occurred" : "pending"
+                    }`}
                   key={label}
                 >
                   <span className="timeline-dot" />
@@ -381,10 +455,10 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
               )}
             </div>
 
-            {/* INSPECTION */}
+            {/* INSPECTIONS */}
             <h4>
               <Image size={15} />
-              Vehicle Inspection
+              Vehicle Inspections
             </h4>
 
             {inspectionError ? (
@@ -392,144 +466,308 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
                 <AlertTriangle size={17} />
                 <span>{inspectionError}</span>
               </div>
-            ) : inspection ? (
-              <div className="session-inspection">
-                {/* INSPECTION META */}
-                <div className="inspection-meta-grid">
-                  <div className="inspection-meta-item">
+            ) : (
+              <>
+                {/* INITIAL INSPECTION */}
+                <div className="session-inspection">
+                  <div className="inspection-section-heading">
+                    <strong>Initial Inspection</strong>
                     <span>
-                      <CheckCircle2 size={15} />
-                      Condition
+                      {initialInspection
+                        ? "Recorded at vehicle check-in"
+                        : "Not recorded"}
                     </span>
-
-                    <strong
-                      className={`inspection-condition ${
-                        inspection.condition_status === "damaged"
-                          ? "damaged"
-                          : "good"
-                      }`}
-                    >
-                      {inspection.condition_status === "damaged" ? (
-                        <AlertTriangle size={14} />
-                      ) : (
-                        <CheckCircle2 size={14} />
-                      )}
-
-                      {formatCondition(
-                        inspection.condition_status
-                      )}
-                    </strong>
                   </div>
 
-                  <div className="inspection-meta-item">
-                    <span>
-                      <User size={15} />
-                      Inspected By
-                    </span>
+                  {initialInspection ? (
+                    <>
+                      {/* INSPECTION META */}
+                      <div className="inspection-meta-grid">
+                        <div className="inspection-meta-item">
+                          <span>
+                            <CheckCircle2 size={15} />
+                            Condition
+                          </span>
 
-                    <strong>
-                      {inspection.users?.name ||
-                        "Unavailable"}
-                    </strong>
-                  </div>
+                          <strong
+                            className={`inspection-condition ${initialInspection.condition_status ===
+                              "damaged"
+                              ? "damaged"
+                              : "good"
+                              }`}
+                          >
+                            {initialInspection.condition_status ===
+                              "damaged" ? (
+                              <AlertTriangle size={14} />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
 
-                  <div className="inspection-meta-item">
-                    <span>
-                      <CalendarDays size={15} />
-                      Inspected At
-                    </span>
+                            {formatCondition(
+                              initialInspection.condition_status
+                            )}
+                          </strong>
+                        </div>
 
-                    <strong>
-                      {formatDate(inspection.inspected_at)}
-                    </strong>
-                  </div>
-                </div>
+                        <div className="inspection-meta-item">
+                          <span>
+                            <User size={15} />
+                            Inspected By
+                          </span>
 
-                {/* DAMAGE */}
-                <div className="inspection-info-block">
-                  <div className="inspection-info-title">
-                    <AlertTriangle size={15} />
-                    <strong>Damage Description</strong>
-                  </div>
+                          <strong>
+                            {initialInspection.users?.name ||
+                              "Unavailable"}
+                          </strong>
+                        </div>
 
-                  <p>
-                    {inspection.damage_description ||
-                      "No damage was recorded."}
-                  </p>
-                </div>
+                        <div className="inspection-meta-item">
+                          <span>
+                            <CalendarDays size={15} />
+                            Inspected At
+                          </span>
 
-                {/* NOTES */}
-                <div className="inspection-info-block">
-                  <div className="inspection-info-title">
-                    <FileText size={15} />
-                    <strong>Inspection Notes</strong>
-                  </div>
+                          <strong>
+                            {formatDate(
+                              initialInspection.inspected_at
+                            )}
+                          </strong>
+                        </div>
+                      </div>
 
-                  <p>
-                    {inspection.inspection_notes ||
-                      "No inspection notes were recorded."}
-                  </p>
-                </div>
+                      {/* DAMAGE */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <AlertTriangle size={15} />
+                          <strong>Damage Description</strong>
+                        </div>
 
-                {/* PHOTOS */}
-                <div className="inspection-info-block">
-                  <div className="inspection-info-title">
-                    <Image size={15} />
-                    <strong>
-                      Inspection Photos
-                      {photos.length > 0 &&
-                        ` (${photos.length})`}
-                    </strong>
-                  </div>
+                        <p>
+                          {initialInspection.damage_description ||
+                            "No damage was recorded."}
+                        </p>
+                      </div>
 
-                  {photoError ? (
-                    <div className="inspection-photo-empty error">
-                      <AlertTriangle size={17} />
-                      <span>{photoError}</span>
-                    </div>
-                  ) : photos.length > 0 ? (
-                    <div className="inspection-photo-gallery">
-                      {photos.map(
-                        (photo) =>
-                          photo.photo_url && (
-                            <button
-                              type="button"
-                              className="inspection-photo-card"
-                              key={photo.id}
-                              onClick={() =>
-                                openPhoto(photo)
-                              }
-                            >
-                              <img
-                                src={photo.photo_url}
-                                alt="Vehicle inspection"
-                              />
+                      {/* NOTES */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <FileText size={15} />
+                          <strong>Inspection Notes</strong>
+                        </div>
 
-                              <span>
-                                View photo
-                              </span>
-                            </button>
-                          )
-                      )}
-                    </div>
+                        <p>
+                          {initialInspection.inspection_notes ||
+                            "No inspection notes were recorded."}
+                        </p>
+                      </div>
+
+                      {/* PHOTOS */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <Image size={15} />
+                          <strong>
+                            Initial Inspection Photos
+                            {inspectionPhotos.initial.length > 0 &&
+                              ` (${inspectionPhotos.initial.length})`}
+                          </strong>
+                        </div>
+
+                        {inspectionPhotos.initial.length > 0 ? (
+                          <div className="inspection-photo-gallery">
+                            {inspectionPhotos.initial.map(
+                              (photo) =>
+                                photo.photo_url && (
+                                  <button
+                                    type="button"
+                                    className="inspection-photo-card"
+                                    key={photo.id}
+                                    onClick={() =>
+                                      openPhoto(
+                                        photo,
+                                        inspectionPhotos.initial
+                                      )
+                                    }
+                                  >
+                                    <img
+                                      src={photo.photo_url}
+                                      alt="Initial vehicle inspection"
+                                    />
+
+                                    <span>View photo</span>
+                                  </button>
+                                )
+                            )}
+                          </div>
+                        ) : (
+                          <div className="inspection-photo-empty">
+                            <Image size={20} />
+                            <span>
+                              No initial inspection photos uploaded.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   ) : (
-                    <div className="inspection-photo-empty">
-                      <Image size={20} />
+                    <div className="session-inspection-message">
+                      <Image size={18} />
                       <span>
-                        No inspection photos uploaded.
+                        No initial inspection has been recorded.
                       </span>
                     </div>
                   )}
                 </div>
-              </div>
-            ) : (
-              <div className="session-inspection-message">
-                <Image size={18} />
-                <span>
-                  No vehicle inspection has been recorded
-                  for this session.
-                </span>
-              </div>
+
+                {/* FINAL INSPECTION */}
+                <div className="session-inspection">
+                  <div className="inspection-section-heading">
+                    <strong>Final Inspection</strong>
+                    <span>
+                      {finalInspection
+                        ? "Recorded before vehicle handover"
+                        : "Not recorded"}
+                    </span>
+                  </div>
+
+                  {finalInspection ? (
+                    <>
+                      {/* INSPECTION META */}
+                      <div className="inspection-meta-grid">
+                        <div className="inspection-meta-item">
+                          <span>
+                            <CheckCircle2 size={15} />
+                            Condition
+                          </span>
+
+                          <strong
+                            className={`inspection-condition ${finalInspection.condition_status ===
+                              "damaged"
+                              ? "damaged"
+                              : "good"
+                              }`}
+                          >
+                            {finalInspection.condition_status ===
+                              "damaged" ? (
+                              <AlertTriangle size={14} />
+                            ) : (
+                              <CheckCircle2 size={14} />
+                            )}
+
+                            {formatCondition(
+                              finalInspection.condition_status
+                            )}
+                          </strong>
+                        </div>
+
+                        <div className="inspection-meta-item">
+                          <span>
+                            <User size={15} />
+                            Inspected By
+                          </span>
+
+                          <strong>
+                            {finalInspection.users?.name ||
+                              "Unavailable"}
+                          </strong>
+                        </div>
+
+                        <div className="inspection-meta-item">
+                          <span>
+                            <CalendarDays size={15} />
+                            Inspected At
+                          </span>
+
+                          <strong>
+                            {formatDate(
+                              finalInspection.inspected_at
+                            )}
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* DAMAGE */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <AlertTriangle size={15} />
+                          <strong>Damage Description</strong>
+                        </div>
+
+                        <p>
+                          {finalInspection.damage_description ||
+                            "No damage was recorded."}
+                        </p>
+                      </div>
+
+                      {/* NOTES */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <FileText size={15} />
+                          <strong>Inspection Notes</strong>
+                        </div>
+
+                        <p>
+                          {finalInspection.inspection_notes ||
+                            "No inspection notes were recorded."}
+                        </p>
+                      </div>
+
+                      {/* PHOTOS */}
+                      <div className="inspection-info-block">
+                        <div className="inspection-info-title">
+                          <Image size={15} />
+                          <strong>
+                            Final Inspection Photos
+                            {inspectionPhotos.final.length > 0 &&
+                              ` (${inspectionPhotos.final.length})`}
+                          </strong>
+                        </div>
+
+                        {inspectionPhotos.final.length > 0 ? (
+                          <div className="inspection-photo-gallery">
+                            {inspectionPhotos.final.map(
+                              (photo) =>
+                                photo.photo_url && (
+                                  <button
+                                    type="button"
+                                    className="inspection-photo-card"
+                                    key={photo.id}
+                                    onClick={() =>
+                                      openPhoto(
+                                        photo,
+                                        inspectionPhotos.final
+                                      )
+                                    }
+                                  >
+                                    <img
+                                      src={photo.photo_url}
+                                      alt="Final vehicle inspection"
+                                    />
+
+                                    <span>View photo</span>
+                                  </button>
+                                )
+                            )}
+                          </div>
+                        ) : (
+                          <div className="inspection-photo-empty">
+                            <Image size={20} />
+                            <span>
+                              No final inspection photos uploaded.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="session-inspection-message">
+                      <Image size={18} />
+                      <span>
+                        Final inspection not recorded.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             {/* HISTORY */}
@@ -555,11 +793,10 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
                       </strong>
 
                       <span
-                        className={`history-condition ${
-                          item.condition_status === "damaged"
-                            ? "damaged"
-                            : "good"
-                        }`}
+                        className={`history-condition ${item.condition_status === "damaged"
+                          ? "damaged"
+                          : "good"
+                          }`}
                       >
                         {formatCondition(
                           item.condition_status
@@ -611,7 +848,7 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
             <X size={22} />
           </button>
 
-          {photos.length > 1 && (
+          {selectedPhotoList.length > 1 && (
             <>
               <button
                 type="button"
@@ -640,10 +877,10 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
           />
 
           <div className="inspection-lightbox-counter">
-            {photos.findIndex(
+            {selectedPhotoList.findIndex(
               (photo) => photo.id === selectedPhoto.id
             ) + 1}{" "}
-            / {photos.length}
+            / {selectedPhotoList.length}
           </div>
         </div>
       )}

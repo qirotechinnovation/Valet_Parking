@@ -42,3 +42,21 @@ export const createFeedback = async (feedbackData) => {
     body: JSON.stringify(feedbackData),
   });
 };
+
+
+// ============================================================
+// CUSTOMER PAYMENTS
+// ============================================================
+
+export const getCustomerPayments = async () => {
+  return apiClient("/api/customers/portal/payments");
+};
+
+export const downloadCustomerInvoice = async (paymentId) => {
+  return apiClient(
+    `/api/customers/portal/payments/${paymentId}/invoice`,
+    {
+      responseType: "blob",
+    }
+  );
+};

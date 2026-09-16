@@ -24,7 +24,7 @@ import CheckInVehicleModal from "./CheckInVehicleModal";
 import ReceptionTicketModal from "./ReceptionTicketModal";
 import ReceptionSessionDetailsModal from "./ReceptionSessionDetailsModal";
 import ReceptionKeyManagement from "./ReceptionKeyManagement";
-
+import ReceptionPayments from "./ReceptionPayments";
 import {
   getReceptionSessions,
   requestReceptionRetrieval,
@@ -40,12 +40,12 @@ import "./css/ReceptionDashboard.css";
 // ============================================================
 
 const STATUS_CONFIG = {
-  checked_in:          { label: "Checked In",       cls: "status-checked-in" },
-  parked:              { label: "Parked",            cls: "status-parked" },
-  retrieval_requested: { label: "Awaiting Retrieval",cls: "status-retrieval" },
-  retrieving:          { label: "Retrieving",        cls: "status-retrieving" },
-  ready_for_pickup:    { label: "Ready for Pickup",  cls: "status-ready" },
-  returned_completed:  { label: "Returned",          cls: "status-returned" },
+  checked_in: { label: "Checked In", cls: "status-checked-in" },
+  parked: { label: "Parked", cls: "status-parked" },
+  retrieval_requested: { label: "Awaiting Retrieval", cls: "status-retrieval" },
+  retrieving: { label: "Retrieving", cls: "status-retrieving" },
+  ready_for_pickup: { label: "Ready for Pickup", cls: "status-ready" },
+  returned_completed: { label: "Returned", cls: "status-returned" },
 };
 
 // ============================================================
@@ -197,7 +197,7 @@ const ProfileView = ({ onLogout }) => {
   try {
     const s = localStorage.getItem("user");
     if (s) user = JSON.parse(s);
-  } catch (e) {}
+  } catch (e) { }
 
   const initials = user.name
     ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
@@ -698,6 +698,8 @@ const ReceptionDashboard = () => {
       case "customers": return <CustomersView />;
       case "vehicles": return <VehiclesView />;
       case "keys": return <ReceptionKeyManagement />;
+      case "payments":
+        return <ReceptionPayments />;
       case "profile": return <ProfileView onLogout={handleLogout} />;
       default: return renderDashboardHome();
     }

@@ -106,9 +106,6 @@ function CustomerRegister() {
 
   return (
     <main className="customer-auth-page">
-      <div className="customer-auth-theme">
-        <ThemeToggle />
-      </div>
 
       <div className="customer-auth-shell">
         <div className="customer-auth-brand">

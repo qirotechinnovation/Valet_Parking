@@ -730,7 +730,289 @@ const downloadInvoice = async (req, res) => {
   }
 };
 
+// ============================================================
+// CUSTOMER PORTAL - GET MY PAYMENTS
+// ============================================================
+
+const getCustomerPayments = async (req, res) => {
+  try {
+    if (!req.user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Customer authentication required."
+      });
+    }
+
+    // Find the logged-in customer
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id, name, email, phone")
+      .eq("email", req.user.email)
+      .single();
+
+    if (customerError || !customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found."
+      });
+    }
+
+    // Find all vehicles owned by this customer
+    const { data: vehicles, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select("id, license_plate, make, model, color")
+      .eq("customer_id", customer.id);
+
+    if (vehicleError) {
+      console.error("Customer payment vehicle fetch error:", vehicleError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch customer vehicles."
+      });
+    }
+
+    const vehicleIds = (vehicles || []).map((vehicle) => vehicle.id);
+
+    if (!vehicleIds.length) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        payments: []
+      });
+    }
+
+    // Find this customer's parking sessions
+    const { data: sessions, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select(`
+        id,
+        ticket_code,
+        status,
+        parking_type,
+        parking_slot,
+        checked_in_at,
+        parked_at,
+        completed_at,
+        vehicle_id
+      `)
+      .in("vehicle_id", vehicleIds)
+      .order("completed_at", { ascending: false });
+
+    if (sessionError) {
+      console.error(
+        "Customer payment session fetch error:",
+        sessionError
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch parking sessions."
+      });
+    }
+
+    const sessionIds = (sessions || []).map((session) => session.id);
+
+    if (!sessionIds.length) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        payments: []
+      });
+    }
+
+    // Find payments belonging to those sessions
+    const { data: payments, error: paymentError } = await supabase
+      .from("payments")
+      .select(`
+        id,
+        parking_session_id,
+        parking_charge,
+        valet_service_charge,
+        extra_charges,
+        discount,
+        gst,
+        total_amount,
+        payment_method,
+        payment_status,
+        paid_at,
+        invoice_number,
+        created_at
+      `)
+      .in("parking_session_id", sessionIds)
+      .order("created_at", { ascending: false });
+
+    if (paymentError) {
+      console.error(
+        "Customer payment fetch error:",
+        paymentError
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch customer payments."
+      });
+    }
+
+    // Create quick lookup maps
+    const sessionMap = new Map(
+      (sessions || []).map((session) => [session.id, session])
+    );
+
+    const vehicleMap = new Map(
+      (vehicles || []).map((vehicle) => [vehicle.id, vehicle])
+    );
+
+    // Attach only customer-owned session and vehicle information
+    const result = (payments || []).map((payment) => {
+      const session = sessionMap.get(payment.parking_session_id);
+      const vehicle = session
+        ? vehicleMap.get(session.vehicle_id)
+        : null;
+
+      return {
+        ...payment,
+
+        parking_session: session
+          ? {
+              id: session.id,
+              ticket_code: session.ticket_code,
+              status: session.status,
+              parking_type: session.parking_type,
+              parking_slot: session.parking_slot,
+              checked_in_at: session.checked_in_at,
+              parked_at: session.parked_at,
+              completed_at: session.completed_at
+            }
+          : null,
+
+        vehicle: vehicle || null
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: result.length,
+      payments: result
+    });
+  } catch (error) {
+    console.error("Get customer payments error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer payments."
+    });
+  }
+};
+
+
+// ============================================================
+// CUSTOMER PORTAL - DOWNLOAD MY INVOICE
+// ============================================================
+
+const downloadCustomerInvoice = async (req, res) => {
+  try {
+    if (!req.user?.email) {
+      return res.status(401).json({
+        success: false,
+        message: "Customer authentication required."
+      });
+    }
+
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment ID is required."
+      });
+    }
+
+    // Find logged-in customer
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id, name, email, phone")
+      .eq("email", req.user.email)
+      .single();
+
+    if (customerError || !customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found."
+      });
+    }
+
+    // Get the payment and all associated details
+    const {
+      payment,
+      session,
+      vehicle,
+      customer: paymentCustomer,
+      valet
+    } = await getPaymentDetails(id);
+
+    if (!payment || !session) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found."
+      });
+    }
+
+    // SECURITY CHECK:
+    // The vehicle connected to the parking session must belong
+    // to the currently authenticated customer.
+    if (
+      !vehicle ||
+      vehicle.customer_id !== customer.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to access this invoice."
+      });
+    }
+
+    if (payment.payment_status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Invoice is available only for paid payments."
+      });
+    }
+
+    const invoicePDF = await generateInvoicePDF({
+      payment,
+      session,
+      vehicle,
+      customer: paymentCustomer || customer,
+      valet
+    });
+
+    const fileName = `Invoice-${payment.invoice_number || payment.id}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}"`
+    );
+
+    return res.send(invoicePDF);
+  } catch (error) {
+    console.error(
+      "Customer invoice generation error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate invoice.",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createPayment,
-  downloadInvoice
+  downloadInvoice,
+  getCustomerPayments,
+  downloadCustomerInvoice
 };
