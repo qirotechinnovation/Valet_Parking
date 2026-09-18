@@ -2,52 +2,48 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   X,
   Search,
-  RefreshCw,
   CheckCircle2,
   Upload,
   Trash2,
+  Car,
+  ParkingSquare,
+  Mail,
+  AlertCircle
 } from "lucide-react";
 import {
   createReceptionSession,
   createVehicleInspection,
   getVehicles,
-  uploadInspectionPhoto,
+  uploadInspectionPhoto
 } from "../../api/receptionApi";
 import "./css/ReceptionDashboard.css";
 import "./css/ReceptionVehicleModal.css";
 import "./css/CheckInVehicleModal.css";
-import { Car, ParkingSquare } from "lucide-react";
 
-const generateTicketCode = () => {
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `TKT-${num}`;
-};
-
-// Backend allows a maximum of 10 MB per image.
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
-  "image/webp",
+  "image/webp"
 ];
 
 const ALLOWED_IMAGE_EXTENSIONS = [
   ".jpg",
   ".jpeg",
   ".png",
-  ".webp",
+  ".webp"
 ];
 
 const createInspectionPhoto = (file) => ({
   file,
-  previewUrl: URL.createObjectURL(file),
+  previewUrl: URL.createObjectURL(file)
 });
 
 const CheckInVehicleModal = ({
   onClose,
   onSuccess,
-  preselectedVehicle = null,
+  preselectedVehicle = null
 }) => {
   const [vehicleSearch, setVehicleSearch] = useState(
     preselectedVehicle?.license_plate || ""
@@ -69,23 +65,16 @@ const CheckInVehicleModal = ({
   const [loadingVehicles, setLoadingVehicles] = useState(false);
 
   const [parkingType, setParkingType] = useState("valet");
-  const [ticketCode, setTicketCode] = useState(generateTicketCode());
 
   const [loading, setLoading] = useState(false);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState(null);
 
-  // Inspection state
   const [conditionStatus, setConditionStatus] = useState("good");
   const [damageDescription, setDamageDescription] = useState("");
   const [inspectionNotes, setInspectionNotes] = useState("");
 
-  // Each item:
-  // {
-  //   file: File,
-  //   previewUrl: string
-  // }
   const [inspectionPhotos, setInspectionPhotos] = useState([]);
 
   const searchVehicles = useCallback(async (q) => {
@@ -111,9 +100,6 @@ const CheckInVehicleModal = ({
     }
   }, [preselectedVehicle, searchVehicles]);
 
-  /*
-   * Clean up object URLs when the modal is unmounted.
-   */
   useEffect(() => {
     return () => {
       inspectionPhotos.forEach(({ previewUrl }) => {
@@ -134,16 +120,13 @@ const CheckInVehicleModal = ({
     searchVehicles(q);
   };
 
-  const selectVehicle = (v) => {
-    setVehicleId(v.id);
-    setSelectedVehicle(v);
-    setVehicleSearch(v.license_plate);
+  const selectVehicle = (vehicle) => {
+    setVehicleId(vehicle.id);
+    setSelectedVehicle(vehicle);
+    setVehicleSearch(vehicle.license_plate);
     setVehicleDropdownOpen(false);
   };
 
-  /*
-   * Validate inspection image before adding it to the selection.
-   */
   const validateInspectionPhoto = (file) => {
     const extension = `.${file.name
       .split(".")
@@ -169,9 +152,6 @@ const CheckInVehicleModal = ({
     return null;
   };
 
-  /*
-   * Prevent selecting the same physical file more than once.
-   */
   const isDuplicatePhoto = (file, currentPhotos) => {
     return currentPhotos.some(
       ({ file: existingFile }) =>
@@ -181,13 +161,8 @@ const CheckInVehicleModal = ({
     );
   };
 
-  /*
-   * Handle multiple inspection photo selection.
-   */
   const handleInspectionPhotoChange = (event) => {
-    const selectedFiles = Array.from(
-      event.target.files || []
-    );
+    const selectedFiles = Array.from(event.target.files || []);
 
     if (selectedFiles.length === 0) {
       return;
@@ -223,17 +198,13 @@ const CheckInVehicleModal = ({
     if (validFiles.length > 0) {
       setInspectionPhotos((current) => [
         ...current,
-        ...validFiles.map(createInspectionPhoto),
+        ...validFiles.map(createInspectionPhoto)
       ]);
     }
 
-    // Allows selecting the same file again after removing it.
     event.target.value = "";
   };
 
-  /*
-   * Remove a selected photo before check-in.
-   */
   const removeInspectionPhoto = (indexToRemove) => {
     setInspectionPhotos((current) => {
       const photoToRemove = current[indexToRemove];
@@ -248,9 +219,6 @@ const CheckInVehicleModal = ({
     });
   };
 
-  /*
-   * Reset inspection fields and release preview URLs.
-   */
   const resetInspection = () => {
     setInspectionPhotos((current) => {
       current.forEach(({ previewUrl }) => {
@@ -267,20 +235,12 @@ const CheckInVehicleModal = ({
     setInspectionNotes("");
   };
 
-  /*
-   * Submit check-in + inspection + inspection photos.
-   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     if (!vehicleId) {
       setError("Please select a vehicle to check in.");
-      return;
-    }
-
-    if (!ticketCode.trim()) {
-      setError("Ticket code is required.");
       return;
     }
 
@@ -295,13 +255,9 @@ const CheckInVehicleModal = ({
     try {
       setLoading(true);
 
-      /*
-       * 1. Create parking session.
-       */
       const res = await createReceptionSession({
         vehicle_id: vehicleId,
-        parking_type: parkingType,
-        ticket_code: ticketCode.trim().toUpperCase(),
+        parking_type: parkingType
       });
 
       if (!res || !res.success || !res.session?.id) {
@@ -310,22 +266,16 @@ const CheckInVehicleModal = ({
         );
       }
 
-      /*
-       * 2. Create vehicle inspection.
-       *
-       * The backend automatically uses the logged-in
-       * authenticated user as inspected_by.
-       */
-      const inspectionResponse =
-        await createVehicleInspection({
-          session_id: res.session.id,
-          vehicle_id: vehicleId,
-          condition_status: conditionStatus,
-          damage_description:
-            damageDescription.trim() || undefined,
-          inspection_notes:
-            inspectionNotes.trim() || undefined,
-        });
+      const inspectionResponse = await createVehicleInspection({
+        session_id: res.session.id,
+        vehicle_id: vehicleId,
+        inspection_stage: "initial",
+        condition_status: conditionStatus,
+        damage_description:
+          damageDescription.trim() || undefined,
+        inspection_notes:
+          inspectionNotes.trim() || undefined
+      });
 
       if (
         !inspectionResponse ||
@@ -338,9 +288,6 @@ const CheckInVehicleModal = ({
         );
       }
 
-      /*
-       * 3. Upload inspection photos.
-       */
       if (inspectionPhotos.length > 0) {
         setUploadingPhotos(true);
 
@@ -353,25 +300,27 @@ const CheckInVehicleModal = ({
           )
         );
 
+        setUploadingPhotos(false);
+
         const failedUploads = uploadResults.filter(
           (result) => result.status === "rejected"
         );
 
-        setUploadingPhotos(false);
-
         if (failedUploads.length > 0) {
+          const firstError = failedUploads[0]?.reason;
+
           throw new Error(
-            `${failedUploads.length} inspection photo${
-              failedUploads.length > 1 ? "s" : ""
-            } could not be uploaded. The session and inspection were created, but please verify the inspection photos.`
+            firstError?.message ||
+              "Inspection photo upload failed."
           );
         }
       }
 
-      /*
-       * 4. Show success state.
-       */
-      setCreated(res.session);
+      setCreated({
+        session: res.session,
+        ticket: res.ticket,
+        email: res.email
+      });
 
       if (onSuccess) {
         onSuccess(res.session);
@@ -389,9 +338,6 @@ const CheckInVehicleModal = ({
     }
   };
 
-  /*
-   * Start another check-in.
-   */
   const handleCheckInAnother = () => {
     setCreated(null);
 
@@ -399,12 +345,18 @@ const CheckInVehicleModal = ({
     setVehicleId("");
     setSelectedVehicle(null);
 
-    setTicketCode(generateTicketCode());
-
     resetInspection();
 
     setError("");
   };
+
+  const ticketCode =
+    created?.ticket?.ticket_code ||
+    created?.session?.ticket_code ||
+    "—";
+
+  const emailSent = created?.email?.sent === true;
+  const emailError = created?.email?.error;
 
   return (
     <div
@@ -415,7 +367,6 @@ const CheckInVehicleModal = ({
         className="reception-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* HEADER */}
         <div className="reception-modal-header">
           <div>
             <p className="modal-eyebrow">
@@ -439,7 +390,6 @@ const CheckInVehicleModal = ({
           </button>
         </div>
 
-        {/* SUCCESS STATE */}
         {created ? (
           <div className="modal-success-body">
             <div className="modal-success-icon">
@@ -449,7 +399,7 @@ const CheckInVehicleModal = ({
             <h4>Vehicle Checked In!</h4>
 
             <p>
-              A parking session and vehicle inspection
+              The parking session and vehicle inspection
               have been recorded successfully.
             </p>
 
@@ -457,7 +407,7 @@ const CheckInVehicleModal = ({
               <span>TICKET CODE</span>
 
               <strong>
-                {created.ticket_code}
+                {ticketCode}
               </strong>
             </div>
 
@@ -475,10 +425,10 @@ const CheckInVehicleModal = ({
 
                 <strong
                   style={{
-                    textTransform: "capitalize",
+                    textTransform: "capitalize"
                   }}
                 >
-                  {created.parking_type}
+                  {created.session?.parking_type || parkingType}
                 </strong>
               </div>
 
@@ -487,7 +437,7 @@ const CheckInVehicleModal = ({
 
                 <strong
                   style={{
-                    color: "#047857",
+                    color: "#047857"
                   }}
                 >
                   Checked In
@@ -499,11 +449,71 @@ const CheckInVehicleModal = ({
 
                 <strong
                   style={{
-                    textTransform: "capitalize",
+                    textTransform: "capitalize"
                   }}
                 >
                   {conditionStatus}
                 </strong>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: "16px",
+                padding: "14px 16px",
+                borderRadius: "10px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                background: emailSent
+                  ? "#ecfdf5"
+                  : "#fff7ed",
+                border: `1px solid ${
+                  emailSent ? "#a7f3d0" : "#fed7aa"
+                }`,
+                color: emailSent ? "#065f46" : "#9a3412"
+              }}
+            >
+              {emailSent ? (
+                <Mail
+                  size={18}
+                  style={{
+                    flexShrink: 0,
+                    marginTop: "1px"
+                  }}
+                />
+              ) : (
+                <AlertCircle
+                  size={18}
+                  style={{
+                    flexShrink: 0,
+                    marginTop: "1px"
+                  }}
+                />
+              )}
+
+              <div>
+                <strong
+                  style={{
+                    display: "block",
+                    marginBottom: "3px"
+                  }}
+                >
+                  {emailSent
+                    ? "Check-in email sent"
+                    : "Check-in email could not be sent"}
+                </strong>
+
+                <span
+                  style={{
+                    fontSize: "12px"
+                  }}
+                >
+                  {emailSent
+                    ? "The customer confirmation email was sent successfully."
+                    : emailError ||
+                      "The vehicle was checked in successfully, but the confirmation email could not be sent."}
+                </span>
               </div>
             </div>
 
@@ -524,7 +534,6 @@ const CheckInVehicleModal = ({
             </div>
           </div>
         ) : (
-          /* CHECK-IN FORM */
           <form
             onSubmit={handleSubmit}
             className="modal-form-body"
@@ -535,7 +544,6 @@ const CheckInVehicleModal = ({
               </div>
             )}
 
-            {/* VEHICLE */}
             <div className="modal-field">
               <label>
                 Vehicle{" "}
@@ -544,7 +552,7 @@ const CheckInVehicleModal = ({
 
               <div
                 style={{
-                  position: "relative",
+                  position: "relative"
                 }}
               >
                 <div className="modal-input-wrap">
@@ -564,23 +572,24 @@ const CheckInVehicleModal = ({
                 {vehicleDropdownOpen &&
                   vehicles.length > 0 && (
                     <div className="modal-dropdown">
-                      {vehicles.map((v) => (
+                      {vehicles.map((vehicle) => (
                         <button
-                          key={v.id}
+                          key={vehicle.id}
                           type="button"
                           className="modal-dropdown-item"
                           onClick={() =>
-                            selectVehicle(v)
+                            selectVehicle(vehicle)
                           }
                           disabled={loading}
                         >
                           <strong>
-                            {v.license_plate}
+                            {vehicle.license_plate}
                           </strong>
 
                           <span>
-                            {v.make} {v.model} •{" "}
-                            {v.customer?.name || "—"}
+                            {vehicle.make}{" "}
+                            {vehicle.model} •{" "}
+                            {vehicle.customer?.name || "—"}
                           </span>
                         </button>
                       ))}
@@ -614,7 +623,6 @@ const CheckInVehicleModal = ({
               )}
             </div>
 
-            {/* PARKING TYPE */}
             <div className="modal-field">
               <label>
                 Parking Type{" "}
@@ -656,51 +664,27 @@ const CheckInVehicleModal = ({
               </div>
             </div>
 
-            {/* TICKET CODE */}
             <div className="modal-field">
               <label>
-                Ticket Code{" "}
-                <span className="required">*</span>
+                Ticket Code
               </label>
 
-              <div className="modal-input-wrap">
+              <div
+                className="modal-input-wrap"
+                style={{
+                  background: "#f8f7fa"
+                }}
+              >
                 <input
-                  value={ticketCode}
-                  onChange={(e) =>
-                    setTicketCode(
-                      e.target.value.toUpperCase()
-                    )
-                  }
-                  placeholder="e.g. TKT-1234"
+                  value="Generated automatically after check-in"
+                  readOnly
                   disabled={loading}
                   style={{
-                    textTransform: "uppercase",
                     fontFamily: "monospace",
                     fontWeight: "700",
+                    color: "#7b7389"
                   }}
                 />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setTicketCode(
-                      generateTicketCode()
-                    )
-                  }
-                  title="Generate new ticket code"
-                  disabled={loading}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: loading
-                      ? "not-allowed"
-                      : "pointer",
-                    color: "#5e3573",
-                    padding: "0 4px",
-                  }}
-                >
-                  <RefreshCw size={15} />
-                </button>
               </div>
 
               <small
@@ -708,22 +692,20 @@ const CheckInVehicleModal = ({
                   color: "#7b7389",
                   fontSize: "11px",
                   marginTop: "4px",
-                  display: "block",
+                  display: "block"
                 }}
               >
-                Auto-generated. You can edit manually
-                if needed.
+                The system securely generates the ticket
+                code after check-in.
               </small>
             </div>
 
-            {/* VEHICLE INSPECTION */}
             <div className="modal-field inspection-fields">
               <label>
                 Vehicle Inspection{" "}
                 <span className="required">*</span>
               </label>
 
-              {/* CONDITION */}
               <div className="inspection-condition-toggle">
                 <button
                   type="button"
@@ -756,7 +738,6 @@ const CheckInVehicleModal = ({
                 </button>
               </div>
 
-              {/* DAMAGE DESCRIPTION */}
               {conditionStatus === "damaged" && (
                 <textarea
                   value={damageDescription}
@@ -771,7 +752,6 @@ const CheckInVehicleModal = ({
                 />
               )}
 
-              {/* INSPECTION NOTES */}
               <textarea
                 value={inspectionNotes}
                 onChange={(event) =>
@@ -783,7 +763,6 @@ const CheckInVehicleModal = ({
                 disabled={loading}
               />
 
-              {/* PHOTO UPLOAD */}
               <div className="inspection-upload-wrapper">
                 <label className="inspection-upload-label">
                   <Upload size={16} />
@@ -809,7 +788,6 @@ const CheckInVehicleModal = ({
                 </small>
               </div>
 
-              {/* PHOTO PREVIEWS */}
               {inspectionPhotos.length > 0 && (
                 <div className="inspection-photo-previews">
                   {inspectionPhotos.map(
@@ -858,7 +836,6 @@ const CheckInVehicleModal = ({
                 </div>
               )}
 
-              {/* PHOTO COUNT */}
               {inspectionPhotos.length > 0 && (
                 <small className="inspection-photo-count">
                   {inspectionPhotos.length} photo
@@ -870,7 +847,6 @@ const CheckInVehicleModal = ({
               )}
             </div>
 
-            {/* FOOTER */}
             <div className="modal-footer">
               <button
                 type="button"

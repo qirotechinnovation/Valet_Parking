@@ -17,22 +17,32 @@ const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+const KEY_VIEW_ROLES = [
+  "super_admin",
+  "parking_admin",
+  "valet",
+  "reception_security",
+  "cashier"
+];
+
 router.get(
   "/",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin", "valet"),
+  authorizeRoles(...KEY_VIEW_ROLES),
   getAllKeys
 );
+
 router.get(
   "/session/:session_id",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin", "valet"),
+  authorizeRoles(...KEY_VIEW_ROLES),
   getKeyBySession
 );
+
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin", "valet"),
+  authorizeRoles(...KEY_VIEW_ROLES),
   getKeyById
 );
 
@@ -74,7 +84,7 @@ router.patch(
 router.get(
   "/:id/history",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin", "valet"),
+  authorizeRoles(...KEY_VIEW_ROLES),
   getKeyHistory
 );
 

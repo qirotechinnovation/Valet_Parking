@@ -1,12 +1,13 @@
-import apiClient from "./apiClient";
 
-// ============================================================
-// RECEPTION SESSIONS
-// ============================================================
+import apiClient from "./apiClient";
 
 export const getReceptionSessions = async (params = {}) => {
   const query = new URLSearchParams(params).toString();
   return apiClient(`/api/reception/sessions${query ? `?${query}` : ""}`);
+};
+
+export const getReceptionValets = async () => {
+  return apiClient("/api/reception/valets");
 };
 
 export const createReceptionSession = async (sessionData) => {
@@ -22,10 +23,6 @@ export const requestReceptionRetrieval = async (sessionId) => {
   });
 };
 
-// ============================================================
-// CUSTOMERS
-// ============================================================
-
 export const createCustomer = async (customerData) => {
   return apiClient("/api/customers", {
     method: "POST",
@@ -37,10 +34,6 @@ export const getCustomers = async (search = "") => {
   const query = search ? `?search=${encodeURIComponent(search)}` : "";
   return apiClient(`/api/customers${query}`);
 };
-
-// ============================================================
-// VEHICLES
-// ============================================================
 
 export const createVehicle = async (vehicleData) => {
   return apiClient("/api/vehicles", {
@@ -59,7 +52,9 @@ export const verifyReceptionTicket = async (ticketCode) => {
 };
 
 export const completeReceptionHandover = async (sessionId) => {
-  return apiClient(`/api/reception/sessions/${sessionId}/complete`, { method: "PATCH" });
+  return apiClient(`/api/reception/sessions/${sessionId}/complete`, {
+    method: "PATCH",
+  });
 };
 
 export const getReceptionNotifications = async () => {
@@ -80,6 +75,7 @@ export const createVehicleInspection = async (inspection) => {
 export const uploadInspectionPhoto = async (inspectionId, file) => {
   const formData = new FormData();
   formData.append("photo", file);
+
   return apiClient(`/api/vehicle-inspections/${inspectionId}/photos`, {
     method: "POST",
     body: formData,
@@ -98,15 +94,11 @@ export const getVehicleInspectionHistory = async (vehicleId) => {
   return apiClient(`/api/vehicle-inspections/vehicle/${vehicleId}/history`);
 };
 
-
 export const deleteInspectionPhoto = async (photoId) => {
   return apiClient(`/api/vehicle-inspections/photos/${photoId}`, {
     method: "DELETE",
   });
 };
-// ============================================================
-// KEY MANAGEMENT
-// ============================================================
 
 export const getKeys = async (params = {}) => {
   const query = new URLSearchParams(params).toString();

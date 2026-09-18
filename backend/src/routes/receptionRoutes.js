@@ -7,7 +7,8 @@ const {
   createParkingSession,
   requestRetrieval,
   verifyTicket,
-  completeReturn
+  completeReturn,
+  getReceptionValets
 } = require("../controllers/parkingSessionController");
 
 const authenticate = require("../middleware/authMiddleware");
@@ -43,6 +44,13 @@ router.get(
   getActiveParkingSessions
 );
 
+router.get(
+  "/valets",
+  authenticate,
+  authorizeRoles(...RECEPTION_ROLES),
+  getReceptionValets
+);
+
 router.post(
   "/sessions",
   authenticate,
@@ -67,7 +75,12 @@ router.patch(
 router.get(
   "/tickets/:ticket_code",
   authenticate,
-  authorizeRoles("cashier", "reception_security", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
   verifyTicket
 );
 

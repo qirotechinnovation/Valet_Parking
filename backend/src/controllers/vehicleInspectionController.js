@@ -1,4 +1,3 @@
-
 const supabase = require("../config/supabase");
 
 const createVehicleInspection = async (req, res) => {
@@ -12,9 +11,6 @@ const createVehicleInspection = async (req, res) => {
       inspection_notes
     } = req.body;
 
-    // --------------------------------------------------
-    // Basic validation
-    // --------------------------------------------------
     if (
       !session_id ||
       !vehicle_id ||
@@ -28,9 +24,6 @@ const createVehicleInspection = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Validate inspection stage
-    // --------------------------------------------------
     if (!["initial", "final"].includes(inspection_stage)) {
       return res.status(400).json({
         success: false,
@@ -38,9 +31,6 @@ const createVehicleInspection = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Validate vehicle condition
-    // --------------------------------------------------
     if (!["good", "damaged"].includes(condition_status)) {
       return res.status(400).json({
         success: false,
@@ -48,10 +38,10 @@ const createVehicleInspection = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Fetch parking session
-    // --------------------------------------------------
-    const { data: session, error: sessionError } = await supabase
+    const {
+      data: session,
+      error: sessionError
+    } = await supabase
       .from("parking_sessions")
       .select("id, vehicle_id, status")
       .eq("id", session_id)
@@ -64,9 +54,6 @@ const createVehicleInspection = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Verify vehicle belongs to this session
-    // --------------------------------------------------
     if (session.vehicle_id !== vehicle_id) {
       return res.status(400).json({
         success: false,
@@ -74,15 +61,6 @@ const createVehicleInspection = async (req, res) => {
       });
     }
 
-    // --------------------------------------------------
-    // Validate inspection stage against parking status
-    //
-    // Initial inspection:
-    // Can happen during the initial parking process.
-    //
-    // Final inspection:
-    // Must happen when vehicle is ready for customer pickup.
-    // --------------------------------------------------
     if (inspection_stage === "initial") {
       const allowedInitialStatuses = ["checked_in", "parked"];
 
@@ -105,19 +83,21 @@ const createVehicleInspection = async (req, res) => {
       }
     }
 
-    // --------------------------------------------------
-    // Check whether this inspection stage already exists
-    // --------------------------------------------------
-    const { data: existingInspection, error: existingError } =
-      await supabase
-        .from("vehicle_inspections")
-        .select("id")
-        .eq("session_id", session_id)
-        .eq("inspection_stage", inspection_stage)
-        .maybeSingle();
+    const {
+      data: existingInspection,
+      error: existingError
+    } = await supabase
+      .from("vehicle_inspections")
+      .select("id")
+      .eq("session_id", session_id)
+      .eq("inspection_stage", inspection_stage)
+      .maybeSingle();
 
     if (existingError) {
-      console.error("Existing inspection lookup error:", existingError);
+      console.error(
+        "Existing inspection lookup error:",
+        existingError
+      );
 
       return res.status(500).json({
         success: false,
@@ -128,14 +108,15 @@ const createVehicleInspection = async (req, res) => {
     if (existingInspection) {
       return res.status(409).json({
         success: false,
-        message: `${inspection_stage === "initial" ? "Initial" : "Final"} inspection already exists for this parking session.`
+        message:
+          `${inspection_stage === "initial" ? "Initial" : "Final"} inspection already exists for this parking session.`
       });
     }
 
-    // --------------------------------------------------
-    // Create inspection
-    // --------------------------------------------------
-    const { data: inspection, error } = await supabase
+    const {
+      data: inspection,
+      error
+    } = await supabase
       .from("vehicle_inspections")
       .insert([
         {
@@ -152,13 +133,16 @@ const createVehicleInspection = async (req, res) => {
       .single();
 
     if (error) {
-      console.error("Create vehicle inspection error:", error);
+      console.error(
+        "Create vehicle inspection error:",
+        error
+      );
 
-      // Handles race-condition / unique constraint failure
       if (error.code === "23505") {
         return res.status(409).json({
           success: false,
-          message: `${inspection_stage === "initial" ? "Initial" : "Final"} inspection already exists for this parking session.`
+          message:
+            `${inspection_stage === "initial" ? "Initial" : "Final"} inspection already exists for this parking session.`
         });
       }
 
@@ -170,11 +154,15 @@ const createVehicleInspection = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `${inspection_stage === "initial" ? "Initial" : "Final"} vehicle inspection recorded successfully.`,
+      message:
+        `${inspection_stage === "initial" ? "Initial" : "Final"} vehicle inspection recorded successfully.`,
       inspection
     });
   } catch (error) {
-    console.error("Create vehicle inspection error:", error);
+    console.error(
+      "Create vehicle inspection error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -183,50 +171,61 @@ const createVehicleInspection = async (req, res) => {
   }
 };
 
-
-// ======================================================
-// GET ALL INSPECTIONS FOR A PARKING SESSION
-// ======================================================
-
 const getInspectionBySession = async (req, res) => {
   try {
     const { session_id } = req.params;
 
-    const { data: inspections, error } = await supabase
+    if (!session_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Session ID is required."
+      });
+    }
+
+    const {
+      data: inspections,
+      error
+    } = await supabase
       .from("vehicle_inspections")
       .select(`
-        id,
-        session_id,
-        vehicle_id,
-        inspection_stage,
-        condition_status,
-        damage_description,
-        inspection_notes,
-        inspected_by,
-        inspected_at,
-        users (
+        *,
+        vehicle_inspection_photos (
           id,
-          name,
-          email,
-          role
+          inspection_id,
+          photo_path,
+          uploaded_by,
+          uploaded_at
         )
       `)
       .eq("session_id", session_id)
-      .order("inspected_at", { ascending: true });
+      .order("inspected_at", {
+        ascending: true
+      });
 
     if (error) {
+      console.error(
+        "Get inspection by session error:",
+        error
+      );
+
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
 
+    const inspection = inspections?.[0] || null;
+
     return res.status(200).json({
       success: true,
+      inspection,
       inspections: inspections || []
     });
   } catch (error) {
-    console.error("Get inspection by session error:", error);
+    console.error(
+      "Get inspection by session error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -235,15 +234,16 @@ const getInspectionBySession = async (req, res) => {
   }
 };
 
-
-// ======================================================
-// UPLOAD INSPECTION PHOTO
-// Existing storage design preserved
-// ======================================================
-
 const uploadInspectionPhoto = async (req, res) => {
   try {
     const { inspection_id } = req.params;
+
+    if (!inspection_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Inspection ID is required."
+      });
+    }
 
     if (!req.file) {
       return res.status(400).json({
@@ -252,13 +252,21 @@ const uploadInspectionPhoto = async (req, res) => {
       });
     }
 
-    const { data: inspection, error: inspectionError } = await supabase
+    const {
+      data: inspection,
+      error: inspectionError
+    } = await supabase
       .from("vehicle_inspections")
       .select("id, session_id, vehicle_id")
       .eq("id", inspection_id)
       .single();
 
     if (inspectionError || !inspection) {
+      console.error(
+        "PHOTO DEBUG: inspection lookup failed:",
+        inspectionError
+      );
+
       return res.status(404).json({
         success: false,
         message: "Vehicle inspection not found."
@@ -270,19 +278,68 @@ const uploadInspectionPhoto = async (req, res) => {
       .pop()
       .toLowerCase();
 
-    const fileName = `${inspection_id}/${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 10)}.${fileExtension}`;
+    const fileName =
+      `${inspection_id}/${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 10)}.${fileExtension}`;
 
-    const { error: uploadError } = await supabase.storage
+    console.log(
+      "PHOTO DEBUG: starting storage upload"
+    );
+
+    console.log(
+      "PHOTO DEBUG: file name:",
+      fileName
+    );
+
+    console.log(
+      "PHOTO DEBUG: original name:",
+      req.file.originalname
+    );
+
+    console.log(
+      "PHOTO DEBUG: mime type:",
+      req.file.mimetype
+    );
+
+    console.log(
+      "PHOTO DEBUG: file size:",
+      req.file.size
+    );
+
+    const {
+      error: uploadError
+    } = await supabase.storage
       .from("vehicle-inspection-photos")
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: false
-      });
+      .upload(
+        fileName,
+        req.file.buffer,
+        {
+          contentType: req.file.mimetype,
+          upsert: false
+        }
+      );
 
     if (uploadError) {
-      console.error("Inspection photo upload error:", uploadError);
+      console.error(
+        "PHOTO DEBUG: STORAGE UPLOAD FAILED:",
+        uploadError
+      );
+
+      console.error(
+        "PHOTO DEBUG: STORAGE ERROR MESSAGE:",
+        uploadError.message
+      );
+
+      console.error(
+        "PHOTO DEBUG: STORAGE ERROR NAME:",
+        uploadError.name
+      );
+
+      console.error(
+        "PHOTO DEBUG: STORAGE ERROR STATUS:",
+        uploadError.status
+      );
 
       return res.status(400).json({
         success: false,
@@ -290,11 +347,33 @@ const uploadInspectionPhoto = async (req, res) => {
       });
     }
 
-    console.log("INSPECTION ID:", inspection_id);
-    console.log("REQ USER:", req.user);
-    console.log("UPLOADED BY:", req.user?.id);
+    console.log(
+      "PHOTO DEBUG: STORAGE UPLOAD SUCCESS"
+    );
 
-    const { data: photo, error: photoError } = await supabase
+    console.log(
+      "PHOTO DEBUG: inspection id:",
+      inspection_id
+    );
+
+    console.log(
+      "PHOTO DEBUG: authenticated user:",
+      req.user
+    );
+
+    console.log(
+      "PHOTO DEBUG: uploaded by:",
+      req.user?.id
+    );
+
+    console.log(
+      "PHOTO DEBUG: starting database insert"
+    );
+
+    const {
+      data: photo,
+      error: photoError
+    } = await supabase
       .from("vehicle_inspection_photos")
       .insert([
         {
@@ -307,11 +386,47 @@ const uploadInspectionPhoto = async (req, res) => {
       .single();
 
     if (photoError) {
-      console.error("PHOTO INSERT ERROR:", photoError);
+      console.error(
+        "PHOTO DEBUG: DATABASE INSERT FAILED:",
+        photoError
+      );
 
-      await supabase.storage
+      console.error(
+        "PHOTO DEBUG: DATABASE ERROR MESSAGE:",
+        photoError.message
+      );
+
+      console.error(
+        "PHOTO DEBUG: DATABASE ERROR CODE:",
+        photoError.code
+      );
+
+      console.error(
+        "PHOTO DEBUG: DATABASE ERROR DETAILS:",
+        photoError.details
+      );
+
+      console.error(
+        "PHOTO DEBUG: DATABASE ERROR HINT:",
+        photoError.hint
+      );
+
+      const {
+        error: cleanupError
+      } = await supabase.storage
         .from("vehicle-inspection-photos")
         .remove([fileName]);
+
+      if (cleanupError) {
+        console.error(
+          "PHOTO DEBUG: STORAGE CLEANUP FAILED:",
+          cleanupError
+        );
+      } else {
+        console.log(
+          "PHOTO DEBUG: STORAGE CLEANUP SUCCESS"
+        );
+      }
 
       return res.status(400).json({
         success: false,
@@ -319,13 +434,31 @@ const uploadInspectionPhoto = async (req, res) => {
       });
     }
 
+    console.log(
+      "PHOTO DEBUG: DATABASE INSERT SUCCESS"
+    );
+
     return res.status(201).json({
       success: true,
-      message: "Inspection photo uploaded successfully.",
+      message:
+        "Inspection photo uploaded successfully.",
       photo
     });
   } catch (error) {
-    console.error("Upload inspection photo error:", error);
+    console.error(
+      "Upload inspection photo error:",
+      error
+    );
+
+    console.error(
+      "PHOTO DEBUG: CATCH ERROR MESSAGE:",
+      error.message
+    );
+
+    console.error(
+      "PHOTO DEBUG: CATCH ERROR STACK:",
+      error.stack
+    );
 
     return res.status(500).json({
       success: false,
@@ -334,16 +467,21 @@ const uploadInspectionPhoto = async (req, res) => {
   }
 };
 
-
-// ======================================================
-// GET INSPECTION PHOTOS
-// ======================================================
-
 const getInspectionPhotos = async (req, res) => {
   try {
     const { inspection_id } = req.params;
 
-    const { data: photos, error } = await supabase
+    if (!inspection_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Inspection ID is required."
+      });
+    }
+
+    const {
+      data: photos,
+      error
+    } = await supabase
       .from("vehicle_inspection_photos")
       .select(`
         id,
@@ -353,38 +491,31 @@ const getInspectionPhotos = async (req, res) => {
         uploaded_at
       `)
       .eq("inspection_id", inspection_id)
-      .order("uploaded_at", { ascending: true });
+      .order("uploaded_at", {
+        ascending: true
+      });
 
     if (error) {
+      console.error(
+        "Get inspection photos error:",
+        error
+      );
+
       return res.status(400).json({
         success: false,
         message: error.message
       });
     }
 
-    const photosWithUrls = await Promise.all(
-      (photos || []).map(async (photo) => {
-        const { data: signedUrlData, error: signedUrlError } =
-          await supabase.storage
-            .from("vehicle-inspection-photos")
-            .createSignedUrl(photo.photo_path, 3600);
-
-        return {
-          ...photo,
-          photo_url: signedUrlError
-            ? null
-            : signedUrlData.signedUrl
-        };
-      })
-    );
-
     return res.status(200).json({
       success: true,
-      count: photosWithUrls.length,
-      photos: photosWithUrls
+      photos: photos || []
     });
   } catch (error) {
-    console.error("Get inspection photos error:", error);
+    console.error(
+      "Get inspection photos error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -393,45 +524,64 @@ const getInspectionPhotos = async (req, res) => {
   }
 };
 
-
-// ======================================================
-// DELETE INSPECTION PHOTO
-// ======================================================
-
 const deleteInspectionPhoto = async (req, res) => {
   try {
     const { photo_id } = req.params;
 
-    const { data: photo, error: photoError } = await supabase
+    if (!photo_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Photo ID is required."
+      });
+    }
+
+    const {
+      data: photo,
+      error: photoLookupError
+    } = await supabase
       .from("vehicle_inspection_photos")
       .select("id, photo_path")
       .eq("id", photo_id)
       .single();
 
-    if (photoError || !photo) {
+    if (photoLookupError || !photo) {
       return res.status(404).json({
         success: false,
         message: "Inspection photo not found."
       });
     }
 
-    const { error: storageError } = await supabase.storage
+    const {
+      error: storageError
+    } = await supabase.storage
       .from("vehicle-inspection-photos")
       .remove([photo.photo_path]);
 
     if (storageError) {
+      console.error(
+        "Delete inspection photo storage error:",
+        storageError
+      );
+
       return res.status(400).json({
         success: false,
         message: storageError.message
       });
     }
 
-    const { error: deleteError } = await supabase
+    const {
+      error: deleteError
+    } = await supabase
       .from("vehicle_inspection_photos")
       .delete()
       .eq("id", photo_id);
 
     if (deleteError) {
+      console.error(
+        "Delete inspection photo database error:",
+        deleteError
+      );
+
       return res.status(400).json({
         success: false,
         message: deleteError.message
@@ -440,10 +590,14 @@ const deleteInspectionPhoto = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Inspection photo deleted successfully."
+      message:
+        "Inspection photo deleted successfully."
     });
   } catch (error) {
-    console.error("Delete inspection photo error:", error);
+    console.error(
+      "Delete inspection photo error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -452,38 +606,43 @@ const deleteInspectionPhoto = async (req, res) => {
   }
 };
 
-
-// ======================================================
-// VEHICLE INSPECTION HISTORY
-// ======================================================
-
 const getVehicleInspectionHistory = async (req, res) => {
   try {
     const { vehicle_id } = req.params;
 
-    const { data: inspections, error } = await supabase
+    if (!vehicle_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Vehicle ID is required."
+      });
+    }
+
+    const {
+      data: inspections,
+      error
+    } = await supabase
       .from("vehicle_inspections")
       .select(`
-        id,
-        session_id,
-        vehicle_id,
-        inspection_stage,
-        condition_status,
-        damage_description,
-        inspection_notes,
-        inspected_by,
-        inspected_at,
-        users (
+        *,
+        vehicle_inspection_photos (
           id,
-          name,
-          email,
-          role
+          inspection_id,
+          photo_path,
+          uploaded_by,
+          uploaded_at
         )
       `)
       .eq("vehicle_id", vehicle_id)
-      .order("inspected_at", { ascending: false });
+      .order("inspected_at", {
+        ascending: true
+      });
 
     if (error) {
+      console.error(
+        "Get vehicle inspection history error:",
+        error
+      );
+
       return res.status(400).json({
         success: false,
         message: error.message
@@ -492,11 +651,14 @@ const getVehicleInspectionHistory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      count: inspections?.length || 0,
+      vehicle_id,
       inspections: inspections || []
     });
   } catch (error) {
-    console.error("Get vehicle inspection history error:", error);
+    console.error(
+      "Get vehicle inspection history error:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
@@ -504,7 +666,6 @@ const getVehicleInspectionHistory = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   createVehicleInspection,

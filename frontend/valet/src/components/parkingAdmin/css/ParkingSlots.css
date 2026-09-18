@@ -1641,3 +1641,160 @@ html[data-theme="dark"] .parking-slot-modal-footer {
     align-items: flex-start;
   }
 }
+.parking-add-slot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.parking-add-slot-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.parking-empty-cell {
+  min-height: 180px;
+  border: 1px dashed rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+}
+
+.parking-slots-empty button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: 9px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.add-slot-modal {
+  width: min(460px, calc(100vw - 32px));
+}
+
+.add-slot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+}
+
+.add-slot-form-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+.add-slot-form-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.add-slot-form-heading strong {
+  font-size: 16px;
+  color: #111827;
+}
+
+.add-slot-form-heading span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.add-slot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.add-slot-field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.add-slot-field input,
+.add-slot-field select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.add-slot-field input:focus,
+.add-slot-field select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.add-slot-field small {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.add-slot-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.add-slot-message.error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+.add-slot-message.success {
+  background: rgba(34, 197, 94, 0.08);
+  color: #16a34a;
+}
+
+.parking-slot-modal-footer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+@media (max-width: 700px) {
+  .parking-slots-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .parking-add-slot-button {
+    width: 100%;
+  }
+}

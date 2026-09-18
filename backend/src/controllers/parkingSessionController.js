@@ -1,5 +1,5 @@
 const supabase = require("../config/supabase");
-const transporter = require("../config/email");
+const { transporter } = require("../config/email");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const createAuraEmail = require("../templates/auraEmailTemplate");
@@ -51,8 +51,14 @@ const getParkingSessions = async (req, res) => {
       .order("checked_in_at", { ascending: false });
 
     if (status) {
-      query = query.eq("status", status);
-    }
+  const statuses = status.split(",").map((value) => value.trim()).filter(Boolean);
+
+  if (statuses.length === 1) {
+    query = query.eq("status", statuses[0]);
+  } else {
+    query = query.in("status", statuses);
+  }
+}
 
     if (parking_type) {
       query = query.eq("parking_type", parking_type);
@@ -1563,6 +1569,39 @@ const getActiveParkingSessions = async (req, res) => {
   }
 };
 
+
+const getReceptionValets = async (req, res) => {
+  try {
+    const { data: valets, error } = await supabase
+      .from("users")
+      .select("id, name, email, role, is_active, created_at")
+      .eq("role", "valet")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Get reception valets error:", error);
+
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: valets?.length || 0,
+      valets: valets || []
+    });
+  } catch (error) {
+    console.error("Get reception valets error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
 const getReceptionDashboard = async (req, res) => {
   try {
     const activeStatuses = [
@@ -1936,6 +1975,7 @@ module.exports = {
   getActiveParkingSessions,
   getValetDashboard,
   getReceptionDashboard,
+  getReceptionValets,
   createParkingSession,
   verifyTicket,
   assignParkingSlot,

@@ -81,6 +81,13 @@ const getAllStaff = async (req, res) => {
     const { data: users, error } = await supabase
       .from("users")
       .select("id, name, email, role, created_at, auth_user_id, is_active")
+      .in("role", [
+        "super_admin",
+        "parking_admin",
+        "reception_security",
+        "valet",
+        "cashier"
+      ])
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -95,7 +102,6 @@ const getAllStaff = async (req, res) => {
       count: users.length,
       users
     });
-
   } catch (error) {
     console.error("Get staff error:", error);
 
@@ -105,7 +111,6 @@ const getAllStaff = async (req, res) => {
     });
   }
 };
-
 const getStaffById = async (req, res) => {
   try {
     const { id } = req.params;

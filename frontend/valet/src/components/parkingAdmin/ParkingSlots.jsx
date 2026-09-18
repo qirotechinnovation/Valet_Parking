@@ -1,22 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
   RefreshCw,
   Search,
   Settings2,
   X,
+  Plus,
+  CircleParking,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 import "./css/ParkingSlots.css";
 import apiClient from "../../api/apiClient";
-
-/* ============================================================
-   PRODUCTION VEHICLE SVG
-   Top-view vehicle used inside occupied parking slots.
-   ============================================================ */
 
 const CarSVG = ({ className = "" }) => (
   <svg
@@ -63,47 +59,21 @@ const CarSVG = ({ className = "" }) => (
       </filter>
     </defs>
 
-    {/* Shadow + complete body */}
     <g filter="url(#carShadow)">
       <path
-        d="
-          M17.2 4
-          C12.6 4.8 10.2 9.2 9.2 15.4
-          L5.4 39
-          C4.8 43.2 4.8 50.8 5.4 55
-          L9.2 78.6
-          C10.2 84.8 12.6 89.2 17.2 90
-          C20.5 90.7 31.5 90.7 34.8 90
-          C39.4 89.2 41.8 84.8 42.8 78.6
-          L46.6 55
-          C47.2 50.8 47.2 43.2 46.6 39
-          L42.8 15.4
-          C41.8 9.2 39.4 4.8 34.8 4
-          C31.5 3.3 20.5 3.3 17.2 4Z
-        "
+        d="M17.2 4C12.6 4.8 10.2 9.2 9.2 15.4L5.4 39C4.8 43.2 4.8 50.8 5.4 55L9.2 78.6C10.2 84.8 12.6 89.2 17.2 90C20.5 90.7 31.5 90.7 34.8 90C39.4 89.2 41.8 84.8 42.8 78.6L46.6 55C47.2 50.8 47.2 43.2 46.6 39L42.8 15.4C41.8 9.2 39.4 4.8 34.8 4C31.5 3.3 20.5 3.3 17.2 4Z"
         fill="url(#carBodyGradient)"
         stroke="#7C828D"
         strokeWidth="1"
       />
 
-      {/* Roof / windshield */}
       <path
-        d="
-          M15 19
-          C16.1 13.5 19.2 10.2 26 10.2
-          C32.8 10.2 35.9 13.5 37 19
-          L40.2 35.8
-          C40.7 38.5 38.7 40.8 36 40.8
-          H16
-          C13.3 40.8 11.3 38.5 11.8 35.8
-          L15 19Z
-        "
+        d="M15 19C16.1 13.5 19.2 10.2 26 10.2C32.8 10.2 35.9 13.5 37 19L40.2 35.8C40.7 38.5 38.7 40.8 36 40.8H16C13.3 40.8 11.3 38.5 11.8 35.8L15 19Z"
         fill="url(#carGlassGradient)"
         stroke="#8D94A0"
         strokeWidth="0.8"
       />
 
-      {/* Windshield division */}
       <path
         d="M13.2 30.2H38.8"
         stroke="#AEB4BE"
@@ -111,25 +81,13 @@ const CarSVG = ({ className = "" }) => (
         strokeWidth="1"
       />
 
-      {/* Rear glass */}
       <path
-        d="
-          M12.4 53.2
-          C13.1 49.8 15.7 47.5 19.1 47.5
-          H32.9
-          C36.3 47.5 38.9 49.8 39.6 53.2
-          L41.4 63.6
-          C41.8 66 40 68.2 37.5 68.2
-          H14.5
-          C12 68.2 10.2 66 10.6 63.6
-          L12.4 53.2Z
-        "
+        d="M12.4 53.2C13.1 49.8 15.7 47.5 19.1 47.5H32.9C36.3 47.5 38.9 49.8 39.6 53.2L41.4 63.6C41.8 66 40 68.2 37.5 68.2H14.5C12 68.2 10.2 66 10.6 63.6L12.4 53.2Z"
         fill="#4A5260"
         stroke="#8D94A0"
         strokeWidth="0.8"
       />
 
-      {/* Glass reflections */}
       <path
         d="M17 17.2C19.5 14.2 22.2 13 26 13"
         stroke="white"
@@ -146,7 +104,6 @@ const CarSVG = ({ className = "" }) => (
         strokeLinecap="round"
       />
 
-      {/* Side mirrors */}
       <path
         d="M7.4 28.2C4.8 27.6 3.4 29.2 3.6 31.5L4.2 34.2L8.1 33.4L8.5 29.4Z"
         fill="#8A909A"
@@ -157,7 +114,6 @@ const CarSVG = ({ className = "" }) => (
         fill="#8A909A"
       />
 
-      {/* Door seams */}
       <path
         d="M9.8 43H42.2"
         stroke="#737A86"
@@ -172,7 +128,6 @@ const CarSVG = ({ className = "" }) => (
         strokeWidth="0.8"
       />
 
-      {/* Front / rear details */}
       <path
         d="M17 6.8C20.3 6.2 31.7 6.2 35 6.8"
         stroke="url(#carHighlight)"
@@ -188,7 +143,6 @@ const CarSVG = ({ className = "" }) => (
         strokeLinecap="round"
       />
 
-      {/* Lights */}
       <rect
         x="11"
         y="13.2"
@@ -228,10 +182,6 @@ const CarSVG = ({ className = "" }) => (
   </svg>
 );
 
-/* ============================================================
-   PARKING BAY
-   ============================================================ */
-
 const ParkingBay = ({ slot, selected, onClick }) => {
   const status = String(slot.status || "available").toLowerCase();
 
@@ -256,20 +206,19 @@ const ParkingBay = ({ slot, selected, onClick }) => {
       aria-label={`Parking slot ${slot.slot_number}, ${status}`}
       aria-pressed={selected}
     >
-      {/* Slot number */}
-      <span className="slot-number">
-        {slot.slot_number}
-      </span>
+      <span className="slot-number">{slot.slot_number}</span>
 
-      {/* Status indicator */}
       <span
         className={`slot-status-dot ${status}`}
         aria-hidden="true"
       />
 
-      {/* Vehicle area */}
       <div className="slot-space">
-        {isOccupied || isRetrieval || isReady || isReserved || isCharging ? (
+        {isOccupied ||
+        isRetrieval ||
+        isReady ||
+        isReserved ||
+        isCharging ? (
           <CarSVG />
         ) : isMaintenance ? (
           <div className="slot-maintenance-mark">
@@ -280,14 +229,12 @@ const ParkingBay = ({ slot, selected, onClick }) => {
         )}
       </div>
 
-      {/* Vehicle registration */}
       {slot.assigned_vehicle && (
         <span className="slot-vehicle-number">
           {slot.assigned_vehicle}
         </span>
       )}
 
-      {/* Status badge only where it adds operational meaning */}
       {isRetrieval && (
         <span className="slot-state-badge retrieval">
           Retrieving
@@ -314,10 +261,6 @@ const ParkingBay = ({ slot, selected, onClick }) => {
     </button>
   );
 };
-
-/* ============================================================
-   ZONE HELPERS
-   ============================================================ */
 
 const getZoneName = (zone) => {
   const normalized = String(zone || "").toUpperCase();
@@ -354,10 +297,6 @@ const getSlotNumber = (slot) => {
   return parseInt(value.replace(/\D/g, ""), 10) || 0;
 };
 
-/* ============================================================
-   PARKING SLOTS PAGE
-   ============================================================ */
-
 const ParkingSlots = () => {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -366,7 +305,6 @@ const ParkingSlots = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [zoneFilter, setZoneFilter] = useState("all");
-
   const [activeZone, setActiveZone] = useState("all");
 
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -374,9 +312,14 @@ const ParkingSlots = () => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState("");
 
-  /* ==========================================================
-     FETCH REAL BACKEND DATA
-     ========================================================== */
+  const [showAddSlot, setShowAddSlot] = useState(false);
+  const [creatingSlot, setCreatingSlot] = useState(false);
+  const [createSlotError, setCreateSlotError] = useState("");
+  const [createSlotSuccess, setCreateSlotSuccess] = useState("");
+  const [newSlot, setNewSlot] = useState({
+    slot_number: "",
+    parking_type: "car",
+  });
 
   const fetchSlots = useCallback(async () => {
     try {
@@ -396,10 +339,6 @@ const ParkingSlots = () => {
         : [];
 
       setSlots(fetchedSlots);
-
-      if (fetchedSlots.length === 0) {
-        setError("");
-      }
     } catch (err) {
       console.error("Fetch parking slots error:", err);
 
@@ -416,10 +355,6 @@ const ParkingSlots = () => {
   useEffect(() => {
     fetchSlots();
   }, [fetchSlots]);
-
-  /* ==========================================================
-     AVAILABLE ZONES
-     ========================================================== */
 
   const availableZones = useMemo(() => {
     const zoneMap = new Map();
@@ -460,20 +395,11 @@ const ParkingSlots = () => {
     });
   }, [slots]);
 
-  /* ==========================================================
-     SLOT CLICK
-     ========================================================== */
-
   const handleSlotClick = (slot) => {
     setSelectedSlot(slot);
     setSelectedStatus(slot.status || "available");
     setStatusUpdateError("");
   };
-
-  /* ==========================================================
-     STATUS UPDATE
-     Existing backend endpoint preserved.
-     ========================================================== */
 
   const handleStatusUpdate = async () => {
     if (!selectedSlot || !selectedStatus) return;
@@ -517,10 +443,7 @@ const ParkingSlots = () => {
 
       setSelectedSlot(null);
     } catch (err) {
-      console.error(
-        "Update slot status error:",
-        err
-      );
+      console.error("Update slot status error:", err);
 
       setStatusUpdateError(
         err?.message ||
@@ -531,9 +454,91 @@ const ParkingSlots = () => {
     }
   };
 
-  /* ==========================================================
-     FILTERING
-     ========================================================== */
+  const handleCreateSlot = async (event) => {
+    event.preventDefault();
+
+    const slotNumber = newSlot.slot_number.trim().toUpperCase();
+
+    if (!slotNumber) {
+      setCreateSlotError("Enter a parking slot number.");
+      return;
+    }
+
+    const exists = slots.some(
+      (slot) =>
+        String(slot.slot_number || "").trim().toUpperCase() ===
+        slotNumber
+    );
+
+    if (exists) {
+      setCreateSlotError(
+        `${slotNumber} already exists. Please choose another slot number.`
+      );
+      return;
+    }
+
+    try {
+      setCreatingSlot(true);
+      setCreateSlotError("");
+      setCreateSlotSuccess("");
+
+      const response = await apiClient("/api/parking-slots", {
+        method: "POST",
+        body: JSON.stringify({
+          slot_number: slotNumber,
+          parking_type: newSlot.parking_type,
+        }),
+      });
+
+      if (!response || response.success !== true) {
+        throw new Error(
+          response?.message || "Failed to create parking slot."
+        );
+      }
+
+      setCreateSlotSuccess(
+        `${slotNumber} has been added successfully.`
+      );
+
+      setNewSlot({
+        slot_number: "",
+        parking_type: "car",
+      });
+
+      await fetchSlots();
+
+      setTimeout(() => {
+        setShowAddSlot(false);
+        setCreateSlotSuccess("");
+      }, 900);
+    } catch (err) {
+      console.error("Create parking slot error:", err);
+
+      setCreateSlotError(
+        err?.message || "Failed to create parking slot."
+      );
+    } finally {
+      setCreatingSlot(false);
+    }
+  };
+
+  const openAddSlotModal = () => {
+    setCreateSlotError("");
+    setCreateSlotSuccess("");
+    setNewSlot({
+      slot_number: "",
+      parking_type: "car",
+    });
+    setShowAddSlot(true);
+  };
+
+  const closeAddSlotModal = () => {
+    if (creatingSlot) return;
+
+    setShowAddSlot(false);
+    setCreateSlotError("");
+    setCreateSlotSuccess("");
+  };
 
   const filteredSlots = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
@@ -599,10 +604,6 @@ const ParkingSlots = () => {
     activeZone,
   ]);
 
-  /* ==========================================================
-     MAP ROWS
-     ========================================================== */
-
   const parkingRows = useMemo(() => {
     const sorted = [...filteredSlots].sort(
       (a, b) =>
@@ -617,10 +618,6 @@ const ParkingSlots = () => {
 
     return groups;
   }, [filteredSlots]);
-
-  /* ==========================================================
-     COUNTS
-     ========================================================== */
 
   const slotCounts = useMemo(() => {
     return {
@@ -640,10 +637,6 @@ const ParkingSlots = () => {
     };
   }, [filteredSlots]);
 
-  /* ==========================================================
-     STATUS LABEL
-     ========================================================== */
-
   const formatStatus = (status) => {
     if (!status) return "Unknown";
 
@@ -656,10 +649,6 @@ const ParkingSlots = () => {
 
   return (
     <div className="parking-slots-page">
-      {/* ======================================================
-          PAGE HEADER
-          ====================================================== */}
-
       <div className="parking-slots-page-header">
         <div className="parking-slots-heading">
           <span className="parking-slots-eyebrow">
@@ -675,24 +664,16 @@ const ParkingSlots = () => {
         </div>
 
         <div className="parking-slots-header-actions">
-          {/* <span className="live-indicator">
-            <span />
-            Live facility view
-          </span>
-
           <button
             type="button"
-            className="parking-header-more"
-            aria-label="More parking options"
+            className="parking-add-slot-button"
+            onClick={openAddSlotModal}
           >
-            <MoreHorizontal size={18} />
-          </button> */}
+            <Plus size={16} />
+            Add Parking Slot
+          </button>
         </div>
       </div>
-
-      {/* ======================================================
-          SEARCH + FILTERS
-          ====================================================== */}
 
       <div className="parking-slots-controls">
         <div className="parking-slots-search">
@@ -727,30 +708,16 @@ const ParkingSlots = () => {
                 setStatusFilter(event.target.value)
               }
             >
-              <option value="all">
-                All Status
-              </option>
-              <option value="available">
-                Available
-              </option>
-              <option value="occupied">
-                Occupied
-              </option>
-              <option value="reserved">
-                Reserved
-              </option>
-              <option value="retrieval">
-                Retrieval
-              </option>
-              <option value="ready">
-                Ready
-              </option>
+              <option value="all">All Status</option>
+              <option value="available">Available</option>
+              <option value="occupied">Occupied</option>
+              <option value="reserved">Reserved</option>
+              <option value="retrieval">Retrieval</option>
+              <option value="ready">Ready</option>
               <option value="maintenance">
                 Maintenance
               </option>
-              <option value="charging">
-                Charging
-              </option>
+              <option value="charging">Charging</option>
             </select>
 
             <ChevronDown size={14} />
@@ -763,9 +730,7 @@ const ParkingSlots = () => {
                 setZoneFilter(event.target.value)
               }
             >
-              <option value="all">
-                All Zones
-              </option>
+              <option value="all">All Zones</option>
 
               {availableZones.map((zone) => (
                 <option
@@ -804,10 +769,6 @@ const ParkingSlots = () => {
         </div>
       </div>
 
-      {/* ======================================================
-          ZONE TABS
-          ====================================================== */}
-
       {availableZones.length > 0 && (
         <div className="parking-zone-tabs">
           <button
@@ -841,10 +802,6 @@ const ParkingSlots = () => {
         </div>
       )}
 
-      {/* ======================================================
-          LEGEND
-          ====================================================== */}
-
       <div className="parking-map-legend">
         <span className="legend-label">
           STATUS
@@ -870,10 +827,6 @@ const ParkingSlots = () => {
           Maintenance
         </span>
       </div>
-
-      {/* ======================================================
-          MAP CARD
-          ====================================================== */}
 
       <div className="parking-layout-card">
         <div className="parking-card-header">
@@ -921,10 +874,6 @@ const ParkingSlots = () => {
           </div>
         </div>
 
-        {/* ====================================================
-            LOADING
-            ==================================================== */}
-
         {loading && (
           <div className="parking-slots-loading">
             <div className="parking-loading-spinner" />
@@ -934,10 +883,6 @@ const ParkingSlots = () => {
             </span>
           </div>
         )}
-
-        {/* ====================================================
-            ERROR
-            ==================================================== */}
 
         {!loading && error && (
           <div className="parking-slots-error">
@@ -956,10 +901,6 @@ const ParkingSlots = () => {
           </div>
         )}
 
-        {/* ====================================================
-            EMPTY
-            ==================================================== */}
-
         {!loading &&
           !error &&
           filteredSlots.length === 0 && (
@@ -972,12 +913,16 @@ const ParkingSlots = () => {
                 Try changing your filters or
                 search criteria.
               </span>
+
+              <button
+                type="button"
+                onClick={openAddSlotModal}
+              >
+                <Plus size={14} />
+                Add Parking Slot
+              </button>
             </div>
           )}
-
-        {/* ====================================================
-            PARKING MAP
-            ==================================================== */}
 
         {!loading &&
           !error &&
@@ -987,6 +932,7 @@ const ParkingSlots = () => {
                 <span className="road-arrow">
                   ↓
                 </span>
+
                 <span>ENTRANCE</span>
               </div>
 
@@ -1019,7 +965,6 @@ const ParkingSlots = () => {
                               )
                             )}
 
-                            {/* Preserve seven-column geometry */}
                             {rowSlots.length < 7 &&
                               Array.from({
                                 length:
@@ -1058,6 +1003,7 @@ const ParkingSlots = () => {
 
               <div className="parking-map-road-label bottom">
                 <span>EXIT</span>
+
                 <span className="road-arrow">
                   ↓
                 </span>
@@ -1065,10 +1011,6 @@ const ParkingSlots = () => {
             </div>
           )}
       </div>
-
-      {/* ======================================================
-          SLOT MANAGEMENT MODAL
-          ====================================================== */}
 
       {selectedSlot && (
         <div
@@ -1126,9 +1068,7 @@ const ParkingSlots = () => {
               </div>
 
               <div className="parking-slot-preview-info">
-                <span>
-                  Current status
-                </span>
+                <span>Current status</span>
 
                 <strong>
                   {formatStatus(
@@ -1199,13 +1139,10 @@ const ParkingSlots = () => {
 
             <div className="parking-status-section">
               <div className="parking-status-heading">
-                <span>
-                  Change status
-                </span>
+                <span>Change status</span>
 
                 <small>
-                  Select a new operational
-                  state
+                  Select a new operational state
                 </small>
               </div>
 
@@ -1270,9 +1207,7 @@ const ParkingSlots = () => {
                   disabled={updatingStatus}
                 >
                   <span className="status-option-icon maintenance">
-                    <Settings2
-                      size={17}
-                    />
+                    <Settings2 size={17} />
                   </span>
 
                   <span>Maintenance</span>
@@ -1309,6 +1244,167 @@ const ParkingSlots = () => {
                   : "Save Changes"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showAddSlot && (
+        <div
+          className="parking-slot-modal-overlay"
+          onClick={closeAddSlotModal}
+        >
+          <div
+            className="parking-slot-modal add-slot-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="parking-slot-modal-header">
+              <div>
+                <p>FACILITY MANAGEMENT</p>
+
+                <h2>Add Parking Slot</h2>
+              </div>
+
+              <button
+                type="button"
+                className="parking-slot-modal-close"
+                onClick={closeAddSlotModal}
+                disabled={creatingSlot}
+                aria-label="Close"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSlot}>
+              <div className="add-slot-form">
+                <div className="add-slot-form-icon">
+                  <CircleParking size={25} />
+                </div>
+
+                <div className="add-slot-form-heading">
+                  <strong>
+                    Create a new parking space
+                  </strong>
+
+                  <span>
+                    The slot will be created as available
+                    and ready for vehicle assignment.
+                  </span>
+                </div>
+
+                <div className="add-slot-field">
+                  <label htmlFor="slot-number">
+                    Slot Number
+                  </label>
+
+                  <input
+                    id="slot-number"
+                    type="text"
+                    placeholder="Example: C-02"
+                    value={newSlot.slot_number}
+                    onChange={(event) =>
+                      setNewSlot({
+                        ...newSlot,
+                        slot_number:
+                          event.target.value
+                            .toUpperCase(),
+                      })
+                    }
+                    disabled={creatingSlot}
+                    autoFocus
+                    required
+                  />
+
+                  <small>
+                    Use a clear format such as C-02,
+                    C-03 or B-01.
+                  </small>
+                </div>
+
+                <div className="add-slot-field">
+                  <label htmlFor="parking-type">
+                    Vehicle Type
+                  </label>
+
+                  <select
+                    id="parking-type"
+                    value={newSlot.parking_type}
+                    onChange={(event) =>
+                      setNewSlot({
+                        ...newSlot,
+                        parking_type:
+                          event.target.value,
+                      })
+                    }
+                    disabled={creatingSlot}
+                  >
+                    <option value="car">
+                      Car
+                    </option>
+
+                    <option value="bike">
+                      Bike
+                    </option>
+
+                    <option value="truck">
+                      Truck
+                    </option>
+                  </select>
+                </div>
+
+                {createSlotError && (
+                  <div className="add-slot-message error">
+                    <X size={16} />
+                    <span>
+                      {createSlotError}
+                    </span>
+                  </div>
+                )}
+
+                {createSlotSuccess && (
+                  <div className="add-slot-message success">
+                    <CheckCircle2 size={16} />
+                    <span>
+                      {createSlotSuccess}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="parking-slot-modal-footer">
+                <button
+                  type="button"
+                  className="parking-modal-cancel"
+                  onClick={closeAddSlotModal}
+                  disabled={creatingSlot}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="parking-modal-save"
+                  disabled={creatingSlot}
+                >
+                  {creatingSlot ? (
+                    <>
+                      <Loader2
+                        size={15}
+                        className="parking-refresh-spin"
+                      />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={15} />
+                      Create Slot
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

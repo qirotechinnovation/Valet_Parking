@@ -164,10 +164,10 @@ function ReceptionSessionDetailsModal({ session, onClose }) {
 
         // KEY
         if (keyResult.status === "fulfilled") {
-          setKey(keyResult.value?.key || null);
-        } else {
-          setKey(null);
-        }
+  setKey(keyResult.value?.key || null);
+} else {
+  setKey(null);
+}
 
         // HISTORY
         if (historyResult.status === "fulfilled") {
