@@ -546,7 +546,7 @@ const ReceptionDashboard = () => {
 
       {/* Quick Actions */}
       <div className="reception-quick-actions">
-        <button className="quick-action-card" onClick={() => openModal("customer")}>
+        {/* <button className="quick-action-card" onClick={() => openModal("customer")}>
           <div className="quick-action-icon" style={{ background: "#f4eef8", color: "#5e3573" }}>
             <UserPlus size={20} />
           </div>
@@ -554,7 +554,7 @@ const ReceptionDashboard = () => {
             <strong>Register Customer</strong>
             <span>Add a new customer to the system</span>
           </div>
-        </button>
+        </button> */}
 
         <button className="quick-action-card" onClick={() => openModal("vehicle")}>
           <div className="quick-action-icon" style={{ background: "#eff6ff", color: "#1d4ed8" }}>

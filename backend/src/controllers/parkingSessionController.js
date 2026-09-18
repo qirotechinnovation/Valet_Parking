@@ -1,5 +1,7 @@
 const supabase = require("../config/supabase");
+
 const { transporter } = require("../config/email");
+
 const QRCode = require("qrcode");
 const crypto = require("crypto");
 const createAuraEmail = require("../templates/auraEmailTemplate");
@@ -51,14 +53,16 @@ const getParkingSessions = async (req, res) => {
       .order("checked_in_at", { ascending: false });
 
     if (status) {
-  const statuses = status.split(",").map((value) => value.trim()).filter(Boolean);
 
-  if (statuses.length === 1) {
-    query = query.eq("status", statuses[0]);
-  } else {
-    query = query.in("status", statuses);
-  }
-}
+      const statuses = status.split(",").map((value) => value.trim()).filter(Boolean);
+
+
+      query =
+        statuses.length > 1
+          ? query.in("status", statuses)
+          : query.eq("status", statuses[0]);
+
+    }
 
     if (parking_type) {
       query = query.eq("parking_type", parking_type);
@@ -168,7 +172,7 @@ const createParkingSession = async (req, res) => {
       });
     }
 
-        const { data: existingSessions, error: existingSessionError } =
+    const { data: existingSessions, error: existingSessionError } =
       await supabase
         .from("parking_sessions")
         .select(`

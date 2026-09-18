@@ -55,7 +55,7 @@ export const assignParkingSlot = async (sessionId, slotNumber) => {
 };
 
 export const assignValet = async (sessionId, valetId) => {
-  return apiClient(`/api/parking-admin/sessions/${sessionId}/assign-valet`, {
+  return apiClient(`/api/parking-admin/sessions/${sessionId}/valet`, {
     method: "PATCH",
     body: JSON.stringify({ valet_id: valetId }),
   });

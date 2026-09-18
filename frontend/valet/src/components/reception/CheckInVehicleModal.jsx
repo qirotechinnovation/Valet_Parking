@@ -266,16 +266,27 @@ const CheckInVehicleModal = ({
         );
       }
 
-      const inspectionResponse = await createVehicleInspection({
-        session_id: res.session.id,
+      console.log("INSPECTION PAYLOAD", {
+        session_id: res.session?.id,
         vehicle_id: vehicleId,
         inspection_stage: "initial",
         condition_status: conditionStatus,
-        damage_description:
-          damageDescription.trim() || undefined,
-        inspection_notes:
-          inspectionNotes.trim() || undefined
+        damage_description: damageDescription.trim() || undefined,
+        inspection_notes: inspectionNotes.trim() || undefined
       });
+
+      const inspectionResponse =
+        await createVehicleInspection({
+          session_id: res.session?.id,
+          vehicle_id: vehicleId,
+          inspection_stage: "initial",
+          condition_status: conditionStatus,
+          damage_description:
+            damageDescription.trim() || undefined,
+          inspection_notes:
+            inspectionNotes.trim() || undefined,
+        });
+
 
       if (
         !inspectionResponse ||
@@ -284,7 +295,7 @@ const CheckInVehicleModal = ({
       ) {
         throw new Error(
           inspectionResponse?.message ||
-            "Vehicle was checked in, but inspection could not be recorded."
+          "Vehicle was checked in, but inspection could not be recorded."
         );
       }
 
@@ -312,6 +323,9 @@ const CheckInVehicleModal = ({
           throw new Error(
             firstError?.message ||
               "Inspection photo upload failed."
+
+            `${failedUploads.length} inspection photo${failedUploads.length > 1 ? "s" : ""
+            } could not be uploaded. The session and inspection were created, but please verify the inspection photos.`
           );
         }
       }
@@ -330,7 +344,7 @@ const CheckInVehicleModal = ({
 
       setError(
         err?.message ||
-          "An error occurred while checking in the vehicle."
+        "An error occurred while checking in the vehicle."
       );
     } finally {
       setUploadingPhotos(false);
@@ -632,11 +646,10 @@ const CheckInVehicleModal = ({
               <div className="parking-type-toggle">
                 <button
                   type="button"
-                  className={`type-btn ${
-                    parkingType === "valet"
-                      ? "active"
-                      : ""
-                  }`}
+                  className={`type-btn ${parkingType === "valet"
+                    ? "active"
+                    : ""
+                    }`}
                   onClick={() =>
                     setParkingType("valet")
                   }
@@ -648,11 +661,10 @@ const CheckInVehicleModal = ({
 
                 <button
                   type="button"
-                  className={`type-btn ${
-                    parkingType === "self"
-                      ? "active"
-                      : ""
-                  }`}
+                  className={`type-btn ${parkingType === "self"
+                    ? "active"
+                    : ""
+                    }`}
                   onClick={() =>
                     setParkingType("self")
                   }
@@ -709,11 +721,10 @@ const CheckInVehicleModal = ({
               <div className="inspection-condition-toggle">
                 <button
                   type="button"
-                  className={`type-btn ${
-                    conditionStatus === "good"
-                      ? "active"
-                      : ""
-                  }`}
+                  className={`type-btn ${conditionStatus === "good"
+                    ? "active"
+                    : ""
+                    }`}
                   onClick={() =>
                     setConditionStatus("good")
                   }
@@ -724,11 +735,10 @@ const CheckInVehicleModal = ({
 
                 <button
                   type="button"
-                  className={`type-btn ${
-                    conditionStatus === "damaged"
-                      ? "active damaged"
-                      : ""
-                  }`}
+                  className={`type-btn ${conditionStatus === "damaged"
+                    ? "active damaged"
+                    : ""
+                    }`}
                   onClick={() =>
                     setConditionStatus("damaged")
                   }
@@ -798,9 +808,8 @@ const CheckInVehicleModal = ({
                       >
                         <img
                           src={previewUrl}
-                          alt={`Inspection preview ${
-                            index + 1
-                          }`}
+                          alt={`Inspection preview ${index + 1
+                            }`}
                         />
 
                         <div className="inspection-photo-info">
@@ -867,8 +876,8 @@ const CheckInVehicleModal = ({
                 {uploadingPhotos
                   ? "Uploading Photos..."
                   : loading
-                  ? "Checking In..."
-                  : "Confirm Check-In"}
+                    ? "Checking In..."
+                    : "Confirm Check-In"}
               </button>
             </div>
           </form>

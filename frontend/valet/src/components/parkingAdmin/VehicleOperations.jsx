@@ -3,6 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "./css/VehicleOperations.css";
 import apiClient from "../../api/apiClient";
 
+import { Car,
+  Check,
+  Wrench,
+  MoveUpRight
+
+ } from 'lucide-react';
+
 // ============================================================
 // STATUS HELPERS
 // ============================================================
@@ -320,51 +327,55 @@ function VehiclesOperations() {
   // ==========================================================
 
   const handleAssignValet = async () => {
-    if (!assigningVehicle) {
-      return;
-    }
+  if (!assigningVehicle) {
+    return;
+  }
 
-    if (!selectedValet) {
-      setError(
-        "Please select a valet before assigning."
-      );
-      return;
-    }
+  if (!selectedValet) {
+    setError("Please select a valet before assigning.");
+    return;
+  }
 
-    try {
-      setOperationLoading(true);
-      setError("");
+  console.log("ASSIGN VALET REQUEST", {
+    sessionId: assigningVehicle.id,
+    valetId: selectedValet,
+    vehicle: assigningVehicle
+  });
 
-      const data = await apiClient(
-        `/api/parking-admin/sessions/${assigningVehicle.id}/valet`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            valet_id: selectedValet,
-          }),
-        }
-      );
+  try {
+    setOperationLoading(true);
+    setError("");
 
-      setSuccessMessage(
-        data.message ||
-          "Valet assigned successfully."
-      );
+    const data = await apiClient(
+      `/api/parking-admin/sessions/${assigningVehicle.id}/valet`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          valet_id: selectedValet
+        })
+      }
+    );
 
-      setAssigningVehicle(null);
-      setSelectedValet("");
+    console.log("ASSIGN VALET RESPONSE", data);
 
-      await fetchVehicles();
-    } catch (err) {
-      console.error("Assign valet error:", err);
+    setSuccessMessage(
+      data.message || "Valet assigned successfully."
+    );
 
-      setError(
-        err.message ||
-          "Failed to assign valet."
-      );
-    } finally {
-      setOperationLoading(false);
-    }
-  };
+    setAssigningVehicle(null);
+    setSelectedValet("");
+
+    await fetchVehicles();
+  } catch (err) {
+    console.error("ASSIGN VALET ERROR", err);
+
+    setError(
+      err.message || "Failed to assign valet."
+    );
+  } finally {
+    setOperationLoading(false);
+  }
+};
 
   // ==========================================================
   // STATUS API ACTION
@@ -588,7 +599,7 @@ function VehiclesOperations() {
         <div className="parking-summary-card">
 
           <div className="parking-summary-icon">
-            🚗
+            <Car />
           </div>
 
           <div>
@@ -606,7 +617,7 @@ function VehiclesOperations() {
         <div className="parking-summary-card available">
 
           <div className="parking-summary-icon">
-            ✓
+            <Check />
           </div>
 
           <div>
@@ -624,7 +635,7 @@ function VehiclesOperations() {
         <div className="parking-summary-card maintenance">
 
           <div className="parking-summary-icon">
-            !
+            <Wrench />
           </div>
 
           <div>
@@ -642,7 +653,7 @@ function VehiclesOperations() {
         <div className="parking-summary-card occupied">
 
           <div className="parking-summary-icon">
-            ↗
+            <MoveUpRight />
           </div>
 
           <div>
@@ -863,7 +874,7 @@ function VehiclesOperations() {
                         <div className="vehicle-cell">
 
                           <div className="vehicle-icon">
-                            🚗
+                           <Car />
                           </div>
 
                           <div>

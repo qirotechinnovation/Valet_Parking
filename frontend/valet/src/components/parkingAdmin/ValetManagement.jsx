@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Users, UserCheck, Shield, Car, Check } from "lucide-react";
+import { RefreshCw, Search, Users, UserCheck, Shield, Car, Check, CircleDot, Clock, TriangleAlert } from "lucide-react";
 import { getParkingStaff, getParkingSessions, assignValet } from "../../api/parkingApi";
 import "./css/ValetManagement.css";
+
+
 
 const getInitials = (name) => {
   if (!name) return "NA";
@@ -47,7 +49,9 @@ function ValetManagement() {
 
       const [staffRes, sessionsRes] = await Promise.all([
         getParkingStaff(),
-        getParkingSessions({ status: "checked_in,parked,retrieving,retrieval_requested" }),
+        getParkingSessions({
+          status: "checked_in,parked,retrieval_requested,retrieving,ready_for_pickup"
+        }),
       ]);
 
       if (staffRes && staffRes.success) {
@@ -172,20 +176,20 @@ function ValetManagement() {
 
       {successMessage && (
         <div style={{ background: "#ecfdf5", color: "#047857", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px", fontWeight: "600", fontSize: "13px" }}>
-          ✓ {successMessage}
+          <Check /> {successMessage}
         </div>
       )}
 
       {error && (
         <div style={{ background: "#fef2f2", color: "#b91c1c", padding: "12px 16px", borderRadius: "10px", marginBottom: "16px", fontWeight: "600", fontSize: "13px" }}>
-          ⚠️ {error}
+          <TriangleAlert /> {error}
         </div>
       )}
 
       {/* SUMMARY CARDS */}
       <div className="parking-staff-summary">
         <div className="parking-staff-summary-card">
-          <div className="staff-summary-icon">👥</div>
+          <div className="staff-summary-icon"><Users /></div>
           <div>
             <span>Total Staff</span>
             <strong>{loading ? "--" : totalStaff}</strong>
@@ -193,7 +197,7 @@ function ValetManagement() {
         </div>
 
         <div className="parking-staff-summary-card">
-          <div className="staff-summary-icon">✓</div>
+          <div className="staff-summary-icon"><Check /></div>
           <div>
             <span>Active Staff</span>
             <strong>{loading ? "--" : activeCount}</strong>
@@ -201,7 +205,7 @@ function ValetManagement() {
         </div>
 
         <div className="parking-staff-summary-card">
-          <div className="staff-summary-icon">◉</div>
+          <div className="staff-summary-icon"><CircleDot/></div>
           <div>
             <span>Available</span>
             <strong>{loading ? "--" : availableCount}</strong>
@@ -209,7 +213,7 @@ function ValetManagement() {
         </div>
 
         <div className="parking-staff-summary-card">
-          <div className="staff-summary-icon">◷</div>
+          <div className="staff-summary-icon"><Clock /></div>
           <div>
             <span>Currently Busy</span>
             <strong>{loading ? "--" : busyCount}</strong>
@@ -277,7 +281,7 @@ function ValetManagement() {
                   <tr>
                     <td colSpan="7" className="parking-staff-empty">
                       <div>
-                        <span>👥</span>
+                        <span><Users /></span>
                         <strong>No staff members found</strong>
                         <p>Try changing your search or filters.</p>
                       </div>

@@ -1,6 +1,6 @@
 
 const supabase = require("../config/supabase");
-const transporter = require("../config/email");
+const { transporter } = require("../config/email");;
 const QRCode = require("qrcode");
 const createAuraEmail = require("../templates/auraEmailTemplate");
 
