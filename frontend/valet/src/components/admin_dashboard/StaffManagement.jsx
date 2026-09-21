@@ -8,11 +8,6 @@ import {
 
 import "./StaffManagement.css";
 
-
-// ============================================================
-// ROLE HELPERS
-// ============================================================
-
 const ROLE_LABELS = {
   parking_admin: "Parking Admin",
   reception_security: "Security / Reception",
@@ -60,94 +55,44 @@ const formatDate = (date) => {
   });
 };
 
-
-// ============================================================
-// COMPONENT
-// ============================================================
-
 function StaffManagement() {
-
-  // ----------------------------------------------------------
-  // MODALS
-  // ----------------------------------------------------------
-
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const [openAction, setOpenAction] = useState(null);
-
   const [selectedStaff, setSelectedStaff] = useState(null);
-
   const [editingStaff, setEditingStaff] = useState(null);
-
   const [statusStaff, setStatusStaff] = useState(null);
 
-
-  // ----------------------------------------------------------
-  // STAFF DATA
-  // ----------------------------------------------------------
-
   const [staff, setStaff] = useState([]);
-
   const [loading, setLoading] = useState(false);
-
   const [submitting, setSubmitting] = useState(false);
-
   const [statusUpdating, setStatusUpdating] = useState(false);
-
   const [editSubmitting, setEditSubmitting] = useState(false);
 
-
-  // ----------------------------------------------------------
-  // SEARCH / FILTER
-  // ----------------------------------------------------------
-
   const [searchTerm, setSearchTerm] = useState("");
-
   const [roleFilter, setRoleFilter] = useState("all");
-
   const [statusFilter, setStatusFilter] = useState("all");
 
-
-  // ----------------------------------------------------------
-  // MESSAGES
-  // ----------------------------------------------------------
-
   const [error, setError] = useState("");
-
   const [successMessage, setSuccessMessage] = useState("");
-
-
-  // ----------------------------------------------------------
-  // ADD STAFF FORM
-  // ----------------------------------------------------------
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     role: "",
+    phone: "",
   });
-
-
-  // ----------------------------------------------------------
-  // EDIT STAFF FORM
-  // ----------------------------------------------------------
 
   const [editFormData, setEditFormData] = useState({
     name: "",
     role: "",
+    phone: "",
   });
-
-
-  // ==========================================================
-  // LOAD STAFF
-  // ==========================================================
 
   useEffect(() => {
     loadStaff();
   }, []);
-
 
   const loadStaff = async () => {
     try {
@@ -157,27 +102,18 @@ function StaffManagement() {
       const response = await getAllStaff();
 
       setStaff(response?.users || []);
-
     } catch (error) {
-
       console.error("Failed to load staff:", error);
 
       setError(
         error?.message || "Failed to load staff members."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
-
-  // ==========================================================
-  // AUTO HIDE SUCCESS MESSAGE
-  // ==========================================================
-
   useEffect(() => {
-
     if (!successMessage) return;
 
     const timer = setTimeout(() => {
@@ -185,16 +121,9 @@ function StaffManagement() {
     }, 4000);
 
     return () => clearTimeout(timer);
-
   }, [successMessage]);
 
-
-  // ==========================================================
-  // FORM INPUT
-  // ==========================================================
-
   const handleInputChange = (e) => {
-
     const { name, value } = e.target;
 
     setFormData((previous) => ({
@@ -203,13 +132,7 @@ function StaffManagement() {
     }));
   };
 
-
-  // ==========================================================
-  // EDIT FORM INPUT
-  // ==========================================================
-
   const handleEditInputChange = (e) => {
-
     const { name, value } = e.target;
 
     setEditFormData((previous) => ({
@@ -218,15 +141,8 @@ function StaffManagement() {
     }));
   };
 
-
-  // ==========================================================
-  // OPEN ADD STAFF MODAL
-  // ==========================================================
-
   const openAddStaffModal = () => {
-
     setError("");
-
     setSuccessMessage("");
 
     setFormData({
@@ -234,24 +150,17 @@ function StaffManagement() {
       email: "",
       password: "",
       role: "",
+      phone: "",
     });
 
     setShowPassword(false);
-
     setShowAddStaff(true);
   };
 
-
-  // ==========================================================
-  // CLOSE ADD STAFF MODAL
-  // ==========================================================
-
   const closeAddStaffModal = () => {
-
     if (submitting) return;
 
     setShowAddStaff(false);
-
     setShowPassword(false);
 
     setFormData({
@@ -259,125 +168,107 @@ function StaffManagement() {
       email: "",
       password: "",
       role: "",
+      phone: "",
     });
   };
 
-
-  // ==========================================================
-  // CREATE STAFF
-  // ==========================================================
-
   const handleCreateStaff = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  console.log("CREATE STAFF BUTTON CLICKED");
+    setError("");
+    setSuccessMessage("");
 
-  setError("");
-  setSuccessMessage("");
-
-  console.log("FORM DATA:", formData);
-
-  // Validation
-  if (
-    !formData.name ||
-    !formData.email ||
-    !formData.password ||
-    !formData.role
-  ) {
-    console.log("VALIDATION FAILED");
-    console.log({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password ? "PASSWORD ENTERED" : "PASSWORD EMPTY",
-      role: formData.role,
-    });
-
-    setError("Please fill in all required fields.");
-    return;
-  }
-
-  console.log("VALIDATION PASSED");
-
-  if (formData.password.length < 8) {
-    console.log("PASSWORD VALIDATION FAILED");
-
-    setError("Password must be at least 8 characters.");
-    return;
-  }
-
-  console.log("PASSWORD VALIDATION PASSED");
-
-  try {
-    setSubmitting(true);
-
-    console.log("CALLING createStaff()");
-
-    const response = await createStaff(formData);
-
-    console.log("CREATE STAFF RESPONSE:", response);
-
-    if (!response?.success) {
-      throw new Error(
-        response?.message || "Failed to create staff."
-      );
+    if (
+      !formData.name.trim() ||
+      !formData.email.trim() ||
+      !formData.password ||
+      !formData.role
+    ) {
+      setError("Please fill in all required fields.");
+      return;
     }
 
-    console.log("STAFF CREATED SUCCESSFULLY");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
-    setSuccessMessage(
-      response.message || "Staff member created successfully."
-    );
+    if (
+      formData.role === "valet" &&
+      !formData.phone.trim()
+    ) {
+      setError("Phone number is required for Valet staff.");
+      return;
+    }
 
-    setFormData({
-      name: "",
-      email: "",
-      password: "",
-      role: "",
-    });
+    if (
+      formData.role === "valet" &&
+      !/^\d{10}$/.test(formData.phone.trim())
+    ) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
 
-    setShowAddStaff(false);
+    try {
+      setSubmitting(true);
 
-    await loadStaff();
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        role: formData.role,
+      };
 
-  } catch (error) {
-    console.error("CREATE STAFF API ERROR:", error);
+      if (formData.role === "valet") {
+        payload.phone = formData.phone.trim();
+      }
 
-    setError(
-      error.message || "Failed to create staff member."
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+      const response = await createStaff(payload);
 
+      if (!response?.success) {
+        throw new Error(
+          response?.message || "Failed to create staff."
+        );
+      }
 
-  // ==========================================================
-  // FILTERED STAFF
-  // ==========================================================
+      setSuccessMessage(
+        response.message || "Staff member created successfully."
+      );
+
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        role: "",
+        phone: "",
+      });
+
+      setShowAddStaff(false);
+
+      await loadStaff();
+    } catch (error) {
+      console.error("CREATE STAFF API ERROR:", error);
+
+      setError(
+        error?.message || "Failed to create staff member."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const filteredStaff = useMemo(() => {
-
     return staff.filter((staffMember) => {
-
-      const search = searchTerm
-        .toLowerCase()
-        .trim();
-
+      const search = searchTerm.toLowerCase().trim();
 
       const matchesSearch =
         !search ||
-        staffMember.name
-          ?.toLowerCase()
-          .includes(search) ||
-        staffMember.email
-          ?.toLowerCase()
-          .includes(search);
-
+        staffMember.name?.toLowerCase().includes(search) ||
+        staffMember.email?.toLowerCase().includes(search);
 
       const matchesRole =
         roleFilter === "all" ||
         staffMember.role === roleFilter;
-
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -386,25 +277,18 @@ function StaffManagement() {
         (statusFilter === "inactive" &&
           staffMember.is_active === false);
 
-
       return (
         matchesSearch &&
         matchesRole &&
         matchesStatus
       );
     });
-
   }, [
     staff,
     searchTerm,
     roleFilter,
     statusFilter,
   ]);
-
-
-  // ==========================================================
-  // SUMMARY COUNTS
-  // ==========================================================
 
   const totalStaff = staff.length;
 
@@ -416,176 +300,139 @@ function StaffManagement() {
     (member) => member.is_active === false
   ).length;
 
-
-  // ==========================================================
-  // OPEN VIEW MODAL
-  // ==========================================================
-
   const handleViewStaff = (staffMember) => {
-
     setSelectedStaff(staffMember);
-
     setOpenAction(null);
-
     setError("");
   };
 
-
-  // ==========================================================
-  // OPEN EDIT MODAL
-  // ==========================================================
-
   const handleOpenEdit = (staffMember) => {
-
     setEditingStaff(staffMember);
 
     setEditFormData({
       name: staffMember.name || "",
       role: staffMember.role || "",
+      phone: staffMember.phone || "",
     });
 
     setSelectedStaff(null);
-
     setOpenAction(null);
-
     setError("");
   };
 
-
-  // ==========================================================
-  // UPDATE STAFF
-  // ==========================================================
-
   const handleUpdateStaff = async (e) => {
-
     e.preventDefault();
 
     if (!editingStaff) return;
 
-
     setError("");
-
     setSuccessMessage("");
 
-
     if (!editFormData.name.trim()) {
-
       setError("Staff name is required.");
-
       return;
     }
-
 
     if (!editFormData.role) {
-
       setError("Please select a staff role.");
-
       return;
     }
 
+    if (
+      editFormData.role === "valet" &&
+      !editFormData.phone.trim()
+    ) {
+      setError("Phone number is required for Valet staff.");
+      return;
+    }
+
+    if (
+      editFormData.role === "valet" &&
+      !/^\d{10}$/.test(editFormData.phone.trim())
+    ) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
 
     try {
-
       setEditSubmitting(true);
 
+      const payload = {
+        name: editFormData.name.trim(),
+        role: editFormData.role,
+      };
+
+      if (editFormData.role === "valet") {
+        payload.phone = editFormData.phone.trim();
+      }
 
       const response = await updateStaff(
         editingStaff.id,
-        {
-          name: editFormData.name.trim(),
-          role: editFormData.role,
-        }
+        payload
       );
 
+      if (!response?.success) {
+        throw new Error(
+          response?.message || "Failed to update staff."
+        );
+      }
 
       setSuccessMessage(
-        response?.message ||
-        "Staff updated successfully."
+        response.message || "Staff updated successfully."
       );
-
 
       setEditingStaff(null);
 
-
       await loadStaff();
-
     } catch (error) {
-
-      console.error(
-        "Update staff error:",
-        error
-      );
+      console.error("Update staff error:", error);
 
       setError(
-        error?.message ||
-        "Failed to update staff."
+        error?.message || "Failed to update staff."
       );
-
     } finally {
-
       setEditSubmitting(false);
     }
   };
 
-
-  // ==========================================================
-  // OPEN STATUS CONFIRMATION
-  // ==========================================================
-
   const handleOpenStatusModal = (staffMember) => {
-
     setStatusStaff(staffMember);
-
     setOpenAction(null);
-
     setError("");
   };
 
-
-  // ==========================================================
-  // ACTIVATE / DEACTIVATE STAFF
-  // ==========================================================
-
   const handleConfirmStatusChange = async () => {
-
     if (!statusStaff) return;
 
-
     try {
-
       setStatusUpdating(true);
-
       setError("");
 
+      const newStatus = !statusStaff.is_active;
 
-      const newStatus =
-        !statusStaff.is_active;
+      const response = await updateStaffStatus(
+        statusStaff.id,
+        newStatus
+      );
 
-
-      const response =
-        await updateStaffStatus(
-          statusStaff.id,
-          newStatus
+      if (!response?.success) {
+        throw new Error(
+          response?.message ||
+          "Failed to update staff status."
         );
-
+      }
 
       setSuccessMessage(
         response?.message ||
-        `Staff ${
-          newStatus
-            ? "activated"
-            : "deactivated"
-        } successfully.`
+          `Staff ${
+            newStatus ? "activated" : "deactivated"
+          } successfully.`
       );
-
 
       setStatusStaff(null);
 
-
       await loadStaff();
-
     } catch (error) {
-
       console.error(
         "Update staff status error:",
         error
@@ -593,179 +440,94 @@ function StaffManagement() {
 
       setError(
         error?.message ||
-        "Failed to update staff status."
+          "Failed to update staff status."
       );
-
     } finally {
-
       setStatusUpdating(false);
     }
   };
 
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
-
   return (
-
     <div className="staff-page">
-
-
-      {/* ======================================================
-          SUCCESS MESSAGE
-      ====================================================== */}
-
       {successMessage && (
-
         <div className="staff-success-message">
-
           <span>✓</span>
 
-          <span>
-            {successMessage}
-          </span>
+          <span>{successMessage}</span>
 
           <button
-            onClick={() =>
-              setSuccessMessage("")
-            }
+            onClick={() => setSuccessMessage("")}
           >
             ×
           </button>
-
         </div>
-
       )}
-
-
-      {/* ======================================================
-          ERROR MESSAGE
-      ====================================================== */}
 
       {error && (
-
         <div className="staff-error-message">
-
           <span>!</span>
 
-          <span>
-            {error}
-          </span>
+          <span>{error}</span>
 
           <button
-            onClick={() =>
-              setError("")
-            }
+            onClick={() => setError("")}
           >
             ×
           </button>
-
         </div>
-
       )}
 
-
-      {/* ======================================================
-          PAGE HEADER
-      ====================================================== */}
-
       <div className="staff-page-header">
-
         <div>
-
           <p className="staff-eyebrow">
             MANAGEMENT
           </p>
 
-          <h1>
-            Staff Management
-          </h1>
+          <h1>Staff Management</h1>
 
           <p>
             Manage system staff, roles and account access.
           </p>
-
         </div>
-
 
         <button
           className="add-staff-btn"
           onClick={openAddStaffModal}
         >
-
           <span>+</span>
-
           Add Staff
-
         </button>
-
       </div>
 
-
-      {/* ======================================================
-          STAFF SUMMARY
-      ====================================================== */}
-
       <div className="staff-summary">
-
         <div className="staff-summary-item">
-
-          <span>
-            Total Staff
-          </span>
+          <span>Total Staff</span>
 
           <strong>
             {loading ? "--" : totalStaff}
           </strong>
-
         </div>
 
-
         <div className="staff-summary-item">
-
-          <span>
-            Active
-          </span>
+          <span>Active</span>
 
           <strong className="active-count">
             {loading ? "--" : activeStaff}
           </strong>
-
         </div>
 
-
         <div className="staff-summary-item">
-
-          <span>
-            Inactive
-          </span>
+          <span>Inactive</span>
 
           <strong className="inactive-count">
             {loading ? "--" : inactiveStaff}
           </strong>
-
         </div>
-
       </div>
 
-
-      {/* ======================================================
-          TABLE CARD
-      ====================================================== */}
-
       <section className="staff-table-card">
-
-
-        {/* ====================================================
-            TOOLBAR
-        ==================================================== */}
-
         <div className="staff-toolbar">
-
-
           <div className="staff-search">
-
             <span className="search-icon">
               ⌕
             </span>
@@ -778,15 +540,9 @@ function StaffManagement() {
                 setSearchTerm(e.target.value)
               }
             />
-
           </div>
 
-
           <div className="staff-filters">
-
-
-            {/* ROLE FILTER */}
-
             <select
               className="filter-button"
               value={roleFilter}
@@ -794,7 +550,6 @@ function StaffManagement() {
                 setRoleFilter(e.target.value)
               }
             >
-
               <option value="all">
                 All Roles
               </option>
@@ -814,11 +569,7 @@ function StaffManagement() {
               <option value="cashier">
                 Cashier
               </option>
-
             </select>
-
-
-            {/* STATUS FILTER */}
 
             <select
               className="filter-button"
@@ -827,7 +578,6 @@ function StaffManagement() {
                 setStatusFilter(e.target.value)
               }
             >
-
               <option value="all">
                 All Status
               </option>
@@ -839,92 +589,48 @@ function StaffManagement() {
               <option value="inactive">
                 Inactive
               </option>
-
             </select>
-
           </div>
-
         </div>
 
-
-        {/* ====================================================
-            TABLE
-        ==================================================== */}
-
         <div className="staff-table-wrapper">
-
           <table className="staff-table">
-
             <thead>
-
               <tr>
-
-                <th>
-                  STAFF MEMBER
-                </th>
-
-                <th>
-                  ROLE
-                </th>
-
-                <th>
-                  STATUS
-                </th>
-
-                <th>
-                  CREATED
-                </th>
-
+                <th>STAFF MEMBER</th>
+                <th>ROLE</th>
+                <th>STATUS</th>
+                <th>CREATED</th>
                 <th className="actions-column">
                   ACTIONS
                 </th>
-
               </tr>
-
             </thead>
 
-
             <tbody>
-
-
-              {/* LOADING */}
-
               {loading && (
-
                 <tr>
-
                   <td
                     colSpan="5"
                     className="table-loading"
                   >
-
                     <div className="loading-spinner"></div>
 
                     <span>
                       Loading staff...
                     </span>
-
                   </td>
-
                 </tr>
-
               )}
-
-
-              {/* EMPTY */}
 
               {!loading &&
                 filteredStaff.length === 0 && (
-
                   <tr>
-
                     <td
                       colSpan="5"
                       className="table-empty"
                     >
-
                       <div className="empty-staff-state">
-
                         <div className="empty-staff-icon">
                           👥
                         </div>
@@ -940,44 +646,26 @@ function StaffManagement() {
                             ? "Try changing your search or filters."
                             : "Add your first staff member to get started."}
                         </span>
-
                       </div>
-
                     </td>
-
                   </tr>
-
                 )}
-
-
-              {/* STAFF ROWS */}
 
               {!loading &&
                 filteredStaff.map(
                   (staffMember) => (
-
                     <tr
                       key={staffMember.id}
                     >
-
-
-                      {/* STAFF */}
-
                       <td>
-
                         <div className="staff-member">
-
                           <div className="staff-avatar">
-
                             {getInitials(
                               staffMember.name
                             )}
-
                           </div>
 
-
                           <div className="staff-member-info">
-
                             <strong>
                               {staffMember.name}
                             </strong>
@@ -985,18 +673,11 @@ function StaffManagement() {
                             <span>
                               {staffMember.email}
                             </span>
-
                           </div>
-
                         </div>
-
                       </td>
 
-
-                      {/* ROLE */}
-
                       <td>
-
                         <span
                           className={`role-badge ${getRoleClass(
                             staffMember.role
@@ -1006,14 +687,9 @@ function StaffManagement() {
                             staffMember.role
                           )}
                         </span>
-
                       </td>
 
-
-                      {/* STATUS */}
-
                       <td>
-
                         <span
                           className={`status-badge ${
                             staffMember.is_active
@@ -1021,40 +697,24 @@ function StaffManagement() {
                               : "status-inactive"
                           }`}
                         >
-
                           <span className="status-dot"></span>
 
                           {staffMember.is_active
                             ? "Active"
                             : "Inactive"}
-
                         </span>
-
                       </td>
 
-
-                      {/* CREATED */}
-
                       <td>
-
                         <span className="created-date">
-
                           {formatDate(
                             staffMember.created_at
                           )}
-
                         </span>
-
                       </td>
 
-
-                      {/* ACTIONS */}
-
                       <td>
-
                         <div className="staff-actions">
-
-
                           <button
                             className="table-action view"
                             onClick={() =>
@@ -1066,7 +726,6 @@ function StaffManagement() {
                             View
                           </button>
 
-
                           <button
                             className="table-action edit"
                             onClick={() =>
@@ -1077,7 +736,6 @@ function StaffManagement() {
                           >
                             Edit
                           </button>
-
 
                           <button
                             className="more-action"
@@ -1093,13 +751,9 @@ function StaffManagement() {
                             ⋮
                           </button>
 
-
                           {openAction ===
                             staffMember.id && (
-
                             <div className="action-menu">
-
-
                               <button
                                 onClick={() =>
                                   handleViewStaff(
@@ -1109,7 +763,6 @@ function StaffManagement() {
                               >
                                 View Details
                               </button>
-
 
                               <button
                                 onClick={() =>
@@ -1121,9 +774,7 @@ function StaffManagement() {
                                 Edit Staff
                               </button>
 
-
                               <div className="action-divider"></div>
-
 
                               <button
                                 className={
@@ -1137,118 +788,69 @@ function StaffManagement() {
                                   )
                                 }
                               >
-
                                 {staffMember.is_active
                                   ? "Deactivate"
                                   : "Activate"}
-
                               </button>
-
                             </div>
-
                           )}
-
                         </div>
-
                       </td>
-
                     </tr>
-
                   )
                 )}
-
             </tbody>
-
           </table>
-
         </div>
 
-
-        {/* ====================================================
-            TABLE FOOTER
-        ==================================================== */}
-
         <div className="staff-table-footer">
-
           <span>
-
             Showing{" "}
-
             <strong>
               {filteredStaff.length}
             </strong>{" "}
-
             of{" "}
-
             <strong>
               {staff.length}
             </strong>{" "}
-
             staff members
-
           </span>
 
-
           <div className="pagination">
-
-            <button disabled>
-              ‹
-            </button>
+            <button disabled>‹</button>
 
             <span className="current-page">
               1
             </span>
 
-            <button disabled>
-              ›
-            </button>
-
+            <button disabled>›</button>
           </div>
-
         </div>
-
       </section>
 
-
-      {/* ======================================================
-          ADD STAFF MODAL
-      ====================================================== */}
-
       {showAddStaff && (
-
         <div
           className="modal-overlay"
           onClick={closeAddStaffModal}
         >
-
           <div
             className="add-staff-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
-
-            {/* HEADER */}
-
             <div className="modal-header">
-
               <div>
-
                 <p className="modal-eyebrow">
                   STAFF MANAGEMENT
                 </p>
 
-                <h2>
-                  Add New Staff
-                </h2>
+                <h2>Add New Staff</h2>
 
                 <p>
                   Create an account and assign a system role.
                 </p>
-
               </div>
-
 
               <button
                 className="modal-close"
@@ -1257,25 +859,14 @@ function StaffManagement() {
               >
                 ×
               </button>
-
             </div>
-
-
-            {/* FORM */}
 
             <form
               className="staff-form"
               onSubmit={handleCreateStaff}
             >
-
-
-              {/* NAME */}
-
               <div className="form-group">
-
-                <label>
-                  Full Name
-                </label>
+                <label>Full Name</label>
 
                 <input
                   type="text"
@@ -1285,17 +876,10 @@ function StaffManagement() {
                   placeholder="Enter staff name"
                   disabled={submitting}
                 />
-
               </div>
 
-
-              {/* EMAIL */}
-
               <div className="form-group">
-
-                <label>
-                  Email Address
-                </label>
+                <label>Email Address</label>
 
                 <input
                   type="email"
@@ -1305,21 +889,12 @@ function StaffManagement() {
                   placeholder="staff@example.com"
                   disabled={submitting}
                 />
-
               </div>
 
-
-              {/* PASSWORD */}
-
               <div className="form-group">
-
-                <label>
-                  Password
-                </label>
-
+                <label>Password</label>
 
                 <div className="password-input">
-
                   <input
                     type={
                       showPassword
@@ -1332,7 +907,6 @@ function StaffManagement() {
                     placeholder="Create a secure password"
                     disabled={submitting}
                   />
-
 
                   <button
                     type="button"
@@ -1347,25 +921,15 @@ function StaffManagement() {
                       ? "Hide"
                       : "Show"}
                   </button>
-
                 </div>
-
 
                 <span className="field-hint">
                   Use at least 8 characters.
                 </span>
-
               </div>
 
-
-              {/* ROLE */}
-
               <div className="form-group">
-
-                <label>
-                  Staff Role
-                </label>
-
+                <label>Staff Role</label>
 
                 <select
                   name="role"
@@ -1373,7 +937,6 @@ function StaffManagement() {
                   onChange={handleInputChange}
                   disabled={submitting}
                 >
-
                   <option
                     value=""
                     disabled
@@ -1381,53 +944,60 @@ function StaffManagement() {
                     Select a role
                   </option>
 
-
                   <option value="parking_admin">
                     Parking Admin
                   </option>
-
 
                   <option value="reception_security">
                     Security / Reception
                   </option>
 
-
                   <option value="valet">
                     Valet
                   </option>
 
-
                   <option value="cashier">
                     Cashier
                   </option>
-
                 </select>
-
               </div>
 
+              {formData.role === "valet" && (
+                <div className="form-group">
+                  <label>
+                    Phone Number
+                  </label>
 
-              {/* INFO */}
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="10-digit phone number"
+                    maxLength="10"
+                    inputMode="numeric"
+                    disabled={submitting}
+                  />
+
+                  <span className="field-hint">
+                    Required for Valet staff management and assignment.
+                  </span>
+                </div>
+              )}
 
               <div className="role-info">
-
                 <div className="role-info-icon">
                   i
                 </div>
-
 
                 <p>
                   Parking Admin accounts will have
                   access to the separate Parking Admin
                   Dashboard.
                 </p>
-
               </div>
 
-
-              {/* ACTIONS */}
-
               <div className="modal-actions">
-
                 <button
                   type="button"
                   className="cancel-btn"
@@ -1437,71 +1007,46 @@ function StaffManagement() {
                   Cancel
                 </button>
 
-
                 <button
                   type="submit"
                   className="create-staff-btn"
                   disabled={submitting}
                 >
-
                   {submitting
                     ? "Creating..."
                     : "Create Staff"}
-
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
 
-
-      {/* ======================================================
-          VIEW STAFF DETAILS MODAL
-      ====================================================== */}
-
       {selectedStaff && (
-
         <div
           className="modal-overlay"
           onClick={() =>
             setSelectedStaff(null)
           }
         >
-
           <div
             className="staff-details-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
-
-            {/* HEADER */}
-
             <div className="details-header">
-
               <div>
-
                 <p className="modal-eyebrow">
                   STAFF PROFILE
                 </p>
 
-                <h2>
-                  Staff Details
-                </h2>
+                <h2>Staff Details</h2>
 
                 <p>
                   View account and role information.
                 </p>
-
               </div>
-
 
               <button
                 className="modal-close"
@@ -1511,23 +1056,16 @@ function StaffManagement() {
               >
                 ×
               </button>
-
             </div>
 
-
-            {/* PROFILE */}
-
             <div className="staff-profile">
-
               <div className="large-staff-avatar">
                 {getInitials(
                   selectedStaff.name
                 )}
               </div>
 
-
               <div className="staff-profile-info">
-
                 <h3>
                   {selectedStaff.name}
                 </h3>
@@ -1536,7 +1074,6 @@ function StaffManagement() {
                   {selectedStaff.email}
                 </p>
 
-
                 <span
                   className={`status-badge ${
                     selectedStaff.is_active
@@ -1544,34 +1081,22 @@ function StaffManagement() {
                       : "status-inactive"
                   }`}
                 >
-
                   <span className="status-dot"></span>
 
                   {selectedStaff.is_active
                     ? "Active"
                     : "Inactive"}
-
                 </span>
-
               </div>
-
             </div>
 
-
-            {/* ACCOUNT INFORMATION */}
-
             <div className="details-section">
-
               <div className="details-section-title">
                 Account Information
               </div>
 
-
               <div className="details-grid">
-
-
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Full Name
                   </span>
@@ -1579,12 +1104,9 @@ function StaffManagement() {
                   <strong>
                     {selectedStaff.name}
                   </strong>
-
                 </div>
 
-
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Email Address
                   </span>
@@ -1592,12 +1114,9 @@ function StaffManagement() {
                   <strong>
                     {selectedStaff.email}
                   </strong>
-
                 </div>
 
-
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Assigned Role
                   </span>
@@ -1611,16 +1130,26 @@ function StaffManagement() {
                       selectedStaff.role
                     )}
                   </span>
-
                 </div>
 
+                {selectedStaff.role ===
+                  "valet" && (
+                  <div className="detail-item">
+                    <span className="detail-label">
+                      Phone Number
+                    </span>
+
+                    <strong>
+                      {selectedStaff.phone ||
+                        "Not available"}
+                    </strong>
+                  </div>
+                )}
 
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Account Status
                   </span>
-
 
                   <span
                     className={`status-badge ${
@@ -1629,20 +1158,15 @@ function StaffManagement() {
                         : "status-inactive"
                     }`}
                   >
-
                     <span className="status-dot"></span>
 
                     {selectedStaff.is_active
                       ? "Active"
                       : "Inactive"}
-
                   </span>
-
                 </div>
 
-
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Created Date
                   </span>
@@ -1652,46 +1176,34 @@ function StaffManagement() {
                       selectedStaff.created_at
                     )}
                   </strong>
-
                 </div>
 
-
                 <div className="detail-item">
-
                   <span className="detail-label">
                     Staff ID
                   </span>
 
                   <strong className="staff-id">
-                    #{String(
+                    #
+                    {String(
                       selectedStaff.id
                     ).padStart(5, "0")}
                   </strong>
-
                 </div>
-
               </div>
-
             </div>
 
-
-            {/* ROLE DESCRIPTION */}
-
             <div className="role-description">
-
               <div className="role-description-icon">
                 ✓
               </div>
 
-
               <div>
-
                 <strong>
                   {getRoleLabel(
                     selectedStaff.role
                   )}
                 </strong>
-
 
                 <p>
                   This account is assigned the{" "}
@@ -1703,16 +1215,10 @@ function StaffManagement() {
                   role within the Valet Parking
                   Management System.
                 </p>
-
               </div>
-
             </div>
 
-
-            {/* FOOTER */}
-
             <div className="details-footer">
-
               <button
                 className="details-secondary-btn"
                 onClick={() =>
@@ -1721,7 +1227,6 @@ function StaffManagement() {
               >
                 Close
               </button>
-
 
               <button
                 className="details-edit-btn"
@@ -1733,22 +1238,12 @@ function StaffManagement() {
               >
                 Edit Staff
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
 
-
-      {/* ======================================================
-          EDIT STAFF MODAL
-      ====================================================== */}
-
       {editingStaff && (
-
         <div
           className="modal-overlay"
           onClick={() =>
@@ -1756,35 +1251,24 @@ function StaffManagement() {
             setEditingStaff(null)
           }
         >
-
           <div
             className="edit-staff-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
-
-            {/* HEADER */}
-
             <div className="modal-header">
-
               <div>
-
                 <p className="modal-eyebrow">
                   STAFF MANAGEMENT
                 </p>
 
-                <h2>
-                  Edit Staff
-                </h2>
+                <h2>Edit Staff</h2>
 
                 <p>
-                  Update staff name and role information.
+                  Update staff name, role and contact information.
                 </p>
-
               </div>
-
 
               <button
                 className="modal-close"
@@ -1795,25 +1279,14 @@ function StaffManagement() {
               >
                 ×
               </button>
-
             </div>
-
-
-            {/* FORM */}
 
             <form
               className="staff-form"
               onSubmit={handleUpdateStaff}
             >
-
-
-              {/* NAME */}
-
               <div className="form-group">
-
-                <label>
-                  Full Name
-                </label>
+                <label>Full Name</label>
 
                 <input
                   type="text"
@@ -1825,17 +1298,10 @@ function StaffManagement() {
                   placeholder="Enter staff name"
                   disabled={editSubmitting}
                 />
-
               </div>
 
-
-              {/* EMAIL - READ ONLY */}
-
               <div className="form-group">
-
-                <label>
-                  Email Address
-                </label>
+                <label>Email Address</label>
 
                 <input
                   type="email"
@@ -1847,21 +1313,12 @@ function StaffManagement() {
                 />
 
                 <span className="field-hint">
-                  Email cannot be changed using the current
-                  staff update API.
+                  Email cannot be changed using the current staff update API.
                 </span>
-
               </div>
 
-
-              {/* ROLE */}
-
               <div className="form-group">
-
-                <label>
-                  Staff Role
-                </label>
-
+                <label>Staff Role</label>
 
                 <select
                   name="role"
@@ -1871,39 +1328,52 @@ function StaffManagement() {
                   }
                   disabled={editSubmitting}
                 >
-
                   <option value="parking_admin">
                     Parking Admin
                   </option>
-
 
                   <option value="reception_security">
                     Security / Reception
                   </option>
 
-
                   <option value="valet">
                     Valet
                   </option>
 
-
                   <option value="cashier">
                     Cashier
                   </option>
-
                 </select>
-
               </div>
 
+              {editFormData.role ===
+                "valet" && (
+                <div className="form-group">
+                  <label>
+                    Phone Number
+                  </label>
 
-              {/* STATUS - READ ONLY */}
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editFormData.phone}
+                    onChange={
+                      handleEditInputChange
+                    }
+                    placeholder="10-digit phone number"
+                    maxLength="10"
+                    inputMode="numeric"
+                    disabled={editSubmitting}
+                  />
+
+                  <span className="field-hint">
+                    Required for Valet staff management and assignment.
+                  </span>
+                </div>
+              )}
 
               <div className="form-group">
-
-                <label>
-                  Account Status
-                </label>
-
+                <label>Account Status</label>
 
                 <input
                   type="text"
@@ -1916,37 +1386,25 @@ function StaffManagement() {
                   disabled
                 />
 
-
                 <span className="field-hint">
                   Use the Activate / Deactivate action
                   to change account status.
                 </span>
-
               </div>
 
-
-              {/* INFO */}
-
               <div className="edit-role-warning">
-
                 <div className="role-info-icon">
                   !
                 </div>
-
 
                 <p>
                   Changing the staff role may change
                   the dashboards and permissions
                   available to this account.
                 </p>
-
               </div>
 
-
-              {/* FOOTER */}
-
               <div className="modal-actions">
-
                 <button
                   type="button"
                   className="cancel-btn"
@@ -1958,36 +1416,22 @@ function StaffManagement() {
                   Cancel
                 </button>
 
-
                 <button
                   type="submit"
                   className="create-staff-btn"
                   disabled={editSubmitting}
                 >
-
                   {editSubmitting
                     ? "Saving..."
                     : "Save Changes"}
-
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
 
-
-      {/* ======================================================
-          ACTIVATE / DEACTIVATE CONFIRMATION
-      ====================================================== */}
-
       {statusStaff && (
-
         <div
           className="modal-overlay"
           onClick={() =>
@@ -1995,17 +1439,12 @@ function StaffManagement() {
             setStatusStaff(null)
           }
         >
-
           <div
             className="status-confirm-modal"
             onClick={(e) =>
               e.stopPropagation()
             }
           >
-
-
-            {/* ICON */}
-
             <div
               className={`status-confirm-icon ${
                 statusStaff.is_active
@@ -2013,55 +1452,33 @@ function StaffManagement() {
                   : "activate-icon"
               }`}
             >
-
               {statusStaff.is_active
                 ? "!"
                 : "✓"}
-
             </div>
 
-
-            {/* CONTENT */}
-
             <div className="status-confirm-content">
-
               <h2>
-
                 {statusStaff.is_active
                   ? "Deactivate Staff?"
                   : "Activate Staff?"}
-
               </h2>
 
-
               <p>
-
                 {statusStaff.is_active
-
                   ? `Are you sure you want to deactivate ${statusStaff.name}? They will no longer be able to access their account until it is activated again.`
-
                   : `Are you sure you want to activate ${statusStaff.name}? They will regain access to their account.`}
-
               </p>
-
             </div>
 
-
-            {/* STAFF PREVIEW */}
-
             <div className="status-staff-preview">
-
               <div className="status-preview-avatar">
-
                 {getInitials(
                   statusStaff.name
                 )}
-
               </div>
 
-
               <div>
-
                 <strong>
                   {statusStaff.name}
                 </strong>
@@ -2069,16 +1486,10 @@ function StaffManagement() {
                 <span>
                   {statusStaff.email}
                 </span>
-
               </div>
-
             </div>
 
-
-            {/* ACTIONS */}
-
             <div className="status-confirm-actions">
-
               <button
                 className="status-cancel-btn"
                 onClick={() =>
@@ -2088,7 +1499,6 @@ function StaffManagement() {
               >
                 Cancel
               </button>
-
 
               <button
                 className={
@@ -2101,25 +1511,16 @@ function StaffManagement() {
                 }
                 disabled={statusUpdating}
               >
-
                 {statusUpdating
-
                   ? "Updating..."
-
                   : statusStaff.is_active
                     ? "Deactivate Staff"
                     : "Activate Staff"}
-
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }
