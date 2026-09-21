@@ -798,6 +798,277 @@
   font-style: italic;
 }
 
+/* =========================================================
+   ASSIGN PARKING SLOT
+   ========================================================= */
+
+.assign-slot-section {
+  width: 100%;
+  margin-top: 20px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e9d5ff;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.06);
+}
+
+/* Header */
+
+.assign-slot-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.assign-slot-header h3 {
+  margin: 0 0 5px;
+  color: #1f2937;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.assign-slot-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Refresh button */
+
+.slot-refresh-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+
+  padding: 0;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+
+  background: #faf5ff;
+  color: #7c3aed;
+
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.slot-refresh-button:hover:not(:disabled) {
+  background: #f3e8ff;
+  border-color: #c4b5fd;
+  color: #6d28d9;
+}
+
+.slot-refresh-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.slot-refresh-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Loading state */
+
+.slots-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 100px;
+  padding: 20px;
+
+  border: 1px dashed #ddd6fe;
+  border-radius: 10px;
+
+  background: #faf5ff;
+  color: #6b7280;
+
+  font-size: 13px;
+}
+
+/* No slots */
+
+.no-slots-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  min-height: 100px;
+  padding: 20px;
+
+  border: 1px dashed #ddd6fe;
+  border-radius: 10px;
+
+  background: #faf5ff;
+  color: #6b7280;
+
+  font-size: 13px;
+  text-align: center;
+}
+
+.no-slots-message svg {
+  flex-shrink: 0;
+  color: #8b5cf6;
+}
+
+/* Available slots grid */
+
+.available-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  gap: 10px;
+}
+
+/* Individual slot */
+
+.available-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+
+  min-height: 88px;
+  padding: 12px 10px;
+
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #6b7280;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.available-slot:hover {
+  border-color: #a78bfa;
+  background: #faf5ff;
+  color: #7c3aed;
+  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.08);
+  transform: translateY(-1px);
+}
+
+.available-slot:active {
+  transform: translateY(0);
+}
+
+/* Slot icon */
+
+.available-slot svg {
+  color: #8b5cf6;
+  transition: color 0.2s ease;
+}
+
+.available-slot strong {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.available-slot span {
+  color: #9ca3af;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+/* Selected slot */
+
+.available-slot.selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  color: #7c3aed;
+  box-shadow:
+    0 0 0 2px rgba(124, 58, 237, 0.10),
+    0 4px 12px rgba(124, 58, 237, 0.10);
+}
+
+.available-slot.selected svg {
+  color: #7c3aed;
+}
+
+.available-slot.selected strong {
+  color: #6d28d9;
+}
+
+.available-slot.selected span {
+  color: #8b5cf6;
+}
+
+/* Keyboard accessibility */
+
+.available-slot:focus-visible,
+.slot-refresh-button:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Loading animation */
+
+.spin-icon {
+  animation: slot-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes slot-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 640px) {
+  .assign-slot-section {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .assign-slot-header {
+    align-items: center;
+  }
+
+  .assign-slot-header h3 {
+    font-size: 15px;
+  }
+
+  .assign-slot-header p {
+    font-size: 12px;
+  }
+
+  .available-slots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .available-slot {
+    min-height: 82px;
+  }
+}
+
 /* ============================================================
    SESSION STATUS
 ============================================================ */

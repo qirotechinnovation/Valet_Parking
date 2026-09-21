@@ -35,6 +35,12 @@ export const getCustomers = async (search = "") => {
   return apiClient(`/api/customers${query}`);
 };
 
+export const deleteCustomer = async (customerId) => {
+  return apiClient(`/api/customers/${customerId}`, {
+    method: "DELETE",
+  });
+};
+
 export const createVehicle = async (vehicleData) => {
   return apiClient("/api/vehicles", {
     method: "POST",

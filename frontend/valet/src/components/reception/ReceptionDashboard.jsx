@@ -29,6 +29,7 @@ import {
   getReceptionSessions,
   requestReceptionRetrieval,
   getCustomers,
+  deleteCustomer,
   getVehicles,
   getReceptionNotifications,
 } from "../../api/receptionApi";
@@ -56,6 +57,7 @@ const CustomersView = () => {
   const [customers, setCustomers] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +70,37 @@ const CustomersView = () => {
   }, [search]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleDeleteCustomer = async (customer) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${customer.name}"?`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(customer.id);
+
+    try {
+      await deleteCustomer(customer.id);
+
+      setCustomers((currentCustomers) =>
+        currentCustomers.filter(
+          (item) => item.id !== customer.id
+        )
+      );
+
+      alert(`Customer "${customer.name}" deleted successfully.`);
+    } catch (error) {
+      console.error("Delete customer error:", error);
+
+      alert(
+        error.message ||
+        "Unable to delete customer."
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="reception-view-wrapper">
@@ -95,6 +128,8 @@ const CustomersView = () => {
               <th>EMAIL</th>
               <th>VEHICLES</th>
               <th>REGISTERED</th>
+              <th></th>
+
             </tr>
           </thead>
           <tbody>
@@ -109,6 +144,16 @@ const CustomersView = () => {
                 <td>{c.email || "—"}</td>
                 <td>{c.vehicles?.length ?? 0}</td>
                 <td style={{ fontSize: "12px", color: "#7b7389" }}>{c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : "—"}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="reception-delete-btn"
+                    onClick={() => handleDeleteCustomer(c)}
+                    disabled={deletingId === c.id}
+                  >
+                    {deletingId === c.id ? "Deleting..." : "Delete"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -704,6 +749,7 @@ const ReceptionDashboard = () => {
       default: return renderDashboardHome();
     }
   };
+
 
   return (
     <div className={`reception-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>

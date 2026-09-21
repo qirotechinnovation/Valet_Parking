@@ -1,5 +1,6 @@
 .retrievals-container {
-  width: 100%;
+  max-width: 1600px;
+  padding: 30px 34px 48px;
 }
 
 .retrievals-header h2 {

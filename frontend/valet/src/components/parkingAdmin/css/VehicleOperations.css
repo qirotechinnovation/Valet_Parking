@@ -51,8 +51,8 @@
   color: #a83d3d;
 }
 
-.parking-success-message > span:first-child,
-.parking-error-message > span:first-child {
+.parking-success-message>span:first-child,
+.parking-error-message>span:first-child {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -146,12 +146,10 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 11px;
 
-  background: linear-gradient(
-    135deg,
-    #6a3d80 0%,
-    #5e3573 55%,
-    #4b295f 100%
-  );
+  background: linear-gradient(135deg,
+      #6a3d80 0%,
+      #5e3573 55%,
+      #4b295f 100%);
 
   color: #ffffff;
 
@@ -310,7 +308,7 @@
    INLINE STATUS SUMMARY
    ============================================================ */
 
-.parking-page > div[style] {
+.parking-page>div[style] {
   display: flex !important;
   align-items: center;
   flex-wrap: wrap;
@@ -328,13 +326,13 @@
   font-size: 12px;
 }
 
-.parking-page > div[style] span {
+.parking-page>div[style] span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.parking-page > div[style] strong {
+.parking-page>div[style] strong {
   color: #4f315e;
   font-weight: 800;
 }
@@ -377,7 +375,7 @@
   max-width: 370px;
 }
 
-.parking-search > span {
+.parking-search>span {
   position: absolute;
   left: 13px;
   top: 50%;
@@ -707,11 +705,9 @@
 
   border-radius: 9px;
 
-  background: linear-gradient(
-    145deg,
-    #efe1f5,
-    #e3cdea
-  );
+  background: linear-gradient(145deg,
+      #efe1f5,
+      #e3cdea);
 
   color: #5e3573;
 
@@ -719,7 +715,7 @@
   font-weight: 800;
 }
 
-.valet-cell > span {
+.valet-cell>span {
   color: #56495e;
 
   font-size: 11px;
@@ -738,26 +734,17 @@
 }
 
 .parking-action {
-  width: 32px;
-  height: 32px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border: 1px solid #e5dce9;
-  border-radius: 8px;
-
+  height: 29px;
+  padding: 0 10px;
+  border: 1px solid #ddd2e3;
+  border-radius: 7px;
   background: #ffffff;
-  color: #76677e;
-
+  color: #5c4a66;
+  font-size: 9px;
+  font-weight: 750;
   cursor: pointer;
-
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .parking-action:hover {
@@ -769,7 +756,18 @@
 }
 
 .parking-action.edit {
-  color: #6a3e7c;
+  background: rgb(244, 238, 248);
+  color: rgb(94, 53, 115);
+  border-color: rgb(232, 220, 240);
+  border-radius: 7px;
+  height: 29px;
+  width: 74px;
+  padding: 0 10px;
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .parking-action.edit:hover {
@@ -983,11 +981,9 @@
   border-radius: 13px;
 
   background:
-    linear-gradient(
-      135deg,
+    linear-gradient(135deg,
       #fbf8fc 0%,
-      #f6eef9 100%
-    );
+      #f6eef9 100%);
 }
 
 .large-vehicle-icon {
@@ -1056,7 +1052,7 @@
   background: #faf7fb;
 }
 
-.vehicle-detail-item > span:first-child {
+.vehicle-detail-item>span:first-child {
   margin-bottom: 5px;
 
   color: #918494;
@@ -1173,7 +1169,7 @@
   margin: 0;
 }
 
-.assignment-preview > :last-child {
+.assignment-preview> :last-child {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1200,7 +1196,7 @@
   margin: 0 25px 18px;
 }
 
-.parking-role-info > div {
+.parking-role-info>div {
   padding: 12px 14px;
 
   border-left: 3px solid #a36abd;
@@ -1421,7 +1417,7 @@
     min-height: 120px;
   }
 
-  .parking-page > div[style] {
+  .parking-page>div[style] {
     align-items: flex-start;
     flex-direction: column;
     gap: 7px;
@@ -1503,6 +1499,7 @@ input:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .parking-summary-card,
   .create-staff-btn,
   .parking-action,

@@ -4,6 +4,7 @@ const {
   createCustomer,
   getCustomers,
   getCustomerById,
+  deleteCustomer,
   getCustomerDashboard,
   getCustomerParkingHistory,
   requestCustomerRetrieval,
@@ -62,6 +63,18 @@ router.get(
     "super_admin"
   ),
   getCustomerById
+);
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
+  deleteCustomer
 );
 
 /*

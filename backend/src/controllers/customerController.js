@@ -568,10 +568,152 @@ const getCustomerProfile = async (req, res) => {
   }
 };
 
+// ============================================================
+// DELETE CUSTOMER
+// ============================================================
+
+const deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // --------------------------------------------------------
+    // 1. Find customer
+    // --------------------------------------------------------
+
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id, name, email")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (customerError) {
+      console.error("Find customer before delete error:", customerError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify customer."
+      });
+    }
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found."
+      });
+    }
+
+    // --------------------------------------------------------
+    // 2. Find customer's vehicles
+    // --------------------------------------------------------
+
+    const { data: vehicles, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select("id, license_plate")
+      .eq("customer_id", id);
+
+    if (vehicleError) {
+      console.error("Find customer vehicles error:", vehicleError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to check customer's vehicles."
+      });
+    }
+
+    const vehicleIds = (vehicles || []).map((vehicle) => vehicle.id);
+
+    // --------------------------------------------------------
+    // 3. Check active parking sessions
+    // --------------------------------------------------------
+
+    if (vehicleIds.length > 0) {
+      const { data: activeSessions, error: sessionError } =
+        await supabase
+          .from("parking_sessions")
+          .select("id, status, ticket_code, vehicle_id")
+          .in("vehicle_id", vehicleIds)
+          .in("status", [
+            "checked_in",
+            "parked",
+            "retrieval_requested",
+            "retrieving",
+            "ready_for_pickup"
+          ]);
+
+      if (sessionError) {
+        console.error(
+          "Check active customer sessions error:",
+          sessionError
+        );
+
+        return res.status(500).json({
+          success: false,
+          message: "Unable to verify customer's parking sessions."
+        });
+      }
+
+      if (activeSessions && activeSessions.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message:
+            "Customer cannot be deleted because they have an active parking session.",
+          active_sessions: activeSessions
+        });
+      }
+    }
+
+    // --------------------------------------------------------
+    // 4. IMPORTANT:
+    // Do not delete customer if vehicles/history exist.
+    // --------------------------------------------------------
+
+    if (vehicleIds.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "Customer cannot be deleted because vehicles are associated with this customer. Remove or archive the associated records first."
+      });
+    }
+
+    // --------------------------------------------------------
+    // 5. Delete customer
+    // --------------------------------------------------------
+
+    const { error: deleteError } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) {
+      console.error("Delete customer error:", deleteError);
+
+      return res.status(400).json({
+        success: false,
+        message: deleteError.message
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Customer "${customer.name}" deleted successfully.`,
+      customer_id: id
+    });
+
+  } catch (error) {
+    console.error("DELETE CUSTOMER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete customer."
+    });
+  }
+};
+
 module.exports = {
   createCustomer,
   getCustomers,
   getCustomerById,
+  deleteCustomer,
   getCustomerDashboard,
   getCustomerParkingHistory,
   requestCustomerRetrieval,

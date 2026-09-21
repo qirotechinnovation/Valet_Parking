@@ -86,7 +86,7 @@
 }
 
 .help {
-  background: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.83), rgba(255, 255, 255, 0.68));;
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   color: #ffffff;

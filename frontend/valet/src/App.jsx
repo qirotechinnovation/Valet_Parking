@@ -20,9 +20,9 @@ function LoginPage() {
   return (
     <main className="app-shell">
       <section className="hero-section">
-        <div className="theme-switcher-inline">
+        {/* <div className="theme-switcher-inline">
           <ThemeToggle />
-        </div>
+        </div> */}
         <Hero />
       </section>
 

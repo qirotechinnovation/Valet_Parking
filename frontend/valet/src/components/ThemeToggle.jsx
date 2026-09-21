@@ -8,7 +8,7 @@ function ThemeToggle() {
     <div className="theme-toggle" aria-label="Theme preference">
       <button
         type="button"
-        className={preference === "light" ? "active" : ""}
+        className={preference === "light" ? "active" : ""} 
         onClick={() => setPreference("light")}
         title="Light mode"
       >
@@ -17,7 +17,7 @@ function ThemeToggle() {
       </button>
       <button
         type="button"
-        className={preference === "dark" ? "active" : ""}
+        className={preference === "dark" ? "active" : ""} 
         onClick={() => setPreference("dark")}
         title="Dark mode"
       >
