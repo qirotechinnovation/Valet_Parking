@@ -1,5 +1,25 @@
-
 const supabase = require("../config/supabase");
+const crypto = require("crypto");
+
+const generateBookingCode = async () => {
+  let bookingCode;
+  let exists = true;
+
+  while (exists) {
+    const randomCode = crypto.randomBytes(3).toString("hex").toUpperCase();
+    bookingCode = `BK-${randomCode}`;
+
+    const { data } = await supabase
+      .from("parking_bookings")
+      .select("id")
+      .eq("booking_code", bookingCode)
+      .maybeSingle();
+
+    exists = !!data;
+  }
+
+  return bookingCode;
+};
 
 const createCustomer = async (req, res) => {
   try {
@@ -174,6 +194,328 @@ const getPortalCustomer = async (req) => {
     .single();
 
   return customer;
+};
+
+const createCustomerBooking = async (req, res) => {
+  try {
+    const customer = await getPortalCustomer(req);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
+    }
+
+    const {
+      vehicle_id,
+      parking_type,
+      expected_arrival_at,
+      notes,
+    } = req.body;
+
+    if (!vehicle_id || !parking_type || !expected_arrival_at) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "vehicle_id, parking_type and expected_arrival_at are required.",
+      });
+    }
+
+    if (!["valet", "self"].includes(parking_type)) {
+      return res.status(400).json({
+        success: false,
+        message: "parking_type must be either valet or self.",
+      });
+    }
+
+    const arrivalDate = new Date(expected_arrival_at);
+
+    if (isNaN(arrivalDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid expected_arrival_at.",
+      });
+    }
+
+    if (arrivalDate <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Expected arrival must be in the future.",
+      });
+    }
+
+    const { data: vehicle, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select(
+        "id, customer_id, license_plate, make, model, color"
+      )
+      .eq("id", vehicle_id)
+      .eq("customer_id", customer.id)
+      .single();
+
+    if (vehicleError || !vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Vehicle not found for this customer.",
+      });
+    }
+
+    const { data: activeSession } = await supabase
+      .from("parking_sessions")
+      .select("id, status")
+      .eq("vehicle_id", vehicle_id)
+      .in("status", [
+        "checked_in",
+        "parked",
+        "retrieval_requested",
+        "retrieving",
+        "ready_for_pickup",
+      ])
+      .maybeSingle();
+
+    if (activeSession) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This vehicle currently has an active parking session and cannot be pre-booked.",
+      });
+    }
+
+    const arrivalStart = new Date(arrivalDate.getTime() - 60 * 60 * 1000);
+    const arrivalEnd = new Date(arrivalDate.getTime() + 60 * 60 * 1000);
+
+    const { data: existingBookings, error: bookingCheckError } =
+      await supabase
+        .from("parking_bookings")
+        .select("id, booking_code, expected_arrival_at, status")
+        .eq("vehicle_id", vehicle_id)
+        .in("status", ["booked", "expected"])
+        .gte("expected_arrival_at", arrivalStart.toISOString())
+        .lte("expected_arrival_at", arrivalEnd.toISOString());
+
+    if (bookingCheckError) {
+      return res.status(400).json({
+        success: false,
+        message: bookingCheckError.message,
+      });
+    }
+
+    if (existingBookings?.length) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This vehicle already has a pre-booking around the selected arrival time.",
+        booking: existingBookings[0],
+      });
+    }
+
+    const bookingCode = await generateBookingCode();
+
+    const { data: booking, error: bookingError } = await supabase
+      .from("parking_bookings")
+      .insert({
+        customer_id: customer.id,
+        vehicle_id: vehicle.id,
+        parking_type,
+        booking_code: bookingCode,
+        expected_arrival_at: arrivalDate.toISOString(),
+        status: "booked",
+        contact_phone: customer.phone,
+        notes: notes?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (bookingError) {
+      return res.status(400).json({
+        success: false,
+        message: bookingError.message,
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Parking pre-booking created successfully.",
+      booking: {
+        ...booking,
+        customer,
+        vehicle,
+      },
+    });
+  } catch (error) {
+    console.error("Create customer booking error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create parking pre-booking.",
+    });
+  }
+};
+
+const getCustomerBookings = async (req, res) => {
+  try {
+    const customer = await getPortalCustomer(req);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
+    }
+
+    const { data: bookings, error } = await supabase
+      .from("parking_bookings")
+      .select(`
+        id,
+        booking_code,
+        parking_type,
+        expected_arrival_at,
+        status,
+        contact_phone,
+        notes,
+        created_at,
+        vehicle:vehicles (
+          id,
+          license_plate,
+          make,
+          model,
+          color
+        )
+      `)
+      .eq("customer_id", customer.id)
+      .order("expected_arrival_at", { ascending: true });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      success: true,
+      count: bookings?.length || 0,
+      bookings: bookings || [],
+    });
+  } catch (error) {
+    console.error("Get customer bookings error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer bookings.",
+    });
+  }
+};
+
+const getCustomerBookingById = async (req, res) => {
+  try {
+    const customer = await getPortalCustomer(req);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
+    }
+
+    const { data: booking, error } = await supabase
+      .from("parking_bookings")
+      .select(`
+        id,
+        booking_code,
+        parking_type,
+        expected_arrival_at,
+        status,
+        contact_phone,
+        notes,
+        created_at,
+        vehicle:vehicles (
+          id,
+          license_plate,
+          make,
+          model,
+          color
+        )
+      `)
+      .eq("id", req.params.id)
+      .eq("customer_id", customer.id)
+      .single();
+
+    if (error || !booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      booking,
+    });
+  } catch (error) {
+    console.error("Get customer booking error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch booking.",
+    });
+  }
+};
+
+const cancelCustomerBooking = async (req, res) => {
+  try {
+    const customer = await getPortalCustomer(req);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
+    }
+
+    const { data: booking, error: bookingError } = await supabase
+      .from("parking_bookings")
+      .select("*")
+      .eq("id", req.params.id)
+      .eq("customer_id", customer.id)
+      .single();
+
+    if (bookingError || !booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+    }
+
+    if (!["booked", "expected"].includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This booking cannot be cancelled because it has already been processed.",
+      });
+    }
+
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from("parking_bookings")
+      .update({
+        status: "cancelled",
+      })
+      .eq("id", booking.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return res.status(400).json({
+        success: false,
+        message: updateError.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Parking pre-booking cancelled successfully.",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    console.error("Cancel customer booking error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel parking booking.",
+    });
+  }
 };
 
 const getCustomerDashboard = async (req, res) => {
@@ -720,4 +1062,8 @@ module.exports = {
   getCustomerVehicles,
   cancelCustomerRetrieval,
   getCustomerProfile,
+  createCustomerBooking,
+  getCustomerBookings,
+  getCustomerBookingById,
+  cancelCustomerBooking,
 };

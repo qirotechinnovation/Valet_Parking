@@ -10,7 +10,11 @@ const {
   requestCustomerRetrieval,
   getCustomerVehicles,
   cancelCustomerRetrieval,
-  getCustomerProfile
+  getCustomerProfile,
+  createCustomerBooking,
+  getCustomerBookings,
+  getCustomerBookingById,
+  cancelCustomerBooking
 } = require("../controllers/customerController");
 
 const {
@@ -22,12 +26,6 @@ const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
-
-/*
-|--------------------------------------------------------------------------
-| STAFF CUSTOMER MANAGEMENT
-|--------------------------------------------------------------------------
-*/
 
 router.post(
   "/",
@@ -77,30 +75,12 @@ router.delete(
   deleteCustomer
 );
 
-/*
-|--------------------------------------------------------------------------
-| CUSTOMER PORTAL
-|--------------------------------------------------------------------------
-*/
-
-/*
-|--------------------------------------------------------------------------
-| Dashboard
-|--------------------------------------------------------------------------
-*/
-
 router.get(
   "/portal/dashboard",
   authenticate,
   authorizeRoles("customer"),
   getCustomerDashboard
 );
-
-/*
-|--------------------------------------------------------------------------
-| Vehicles
-|--------------------------------------------------------------------------
-*/
 
 router.get(
   "/portal/vehicles",
@@ -109,24 +89,12 @@ router.get(
   getCustomerVehicles
 );
 
-/*
-|--------------------------------------------------------------------------
-| Parking History
-|--------------------------------------------------------------------------
-*/
-
 router.get(
   "/portal/history",
   authenticate,
   authorizeRoles("customer"),
   getCustomerParkingHistory
 );
-
-/*
-|--------------------------------------------------------------------------
-| Payments
-|--------------------------------------------------------------------------
-*/
 
 router.get(
   "/portal/payments",
@@ -142,12 +110,6 @@ router.get(
   downloadCustomerInvoice
 );
 
-/*
-|--------------------------------------------------------------------------
-| Profile
-|--------------------------------------------------------------------------
-*/
-
 router.get(
   "/portal/profile",
   authenticate,
@@ -155,11 +117,33 @@ router.get(
   getCustomerProfile
 );
 
-/*
-|--------------------------------------------------------------------------
-| Request Vehicle Retrieval
-|--------------------------------------------------------------------------
-*/
+router.post(
+  "/portal/bookings",
+  authenticate,
+  authorizeRoles("customer"),
+  createCustomerBooking
+);
+
+router.get(
+  "/portal/bookings",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerBookings
+);
+
+router.get(
+  "/portal/bookings/:id",
+  authenticate,
+  authorizeRoles("customer"),
+  getCustomerBookingById
+);
+
+router.patch(
+  "/portal/bookings/:id/cancel",
+  authenticate,
+  authorizeRoles("customer"),
+  cancelCustomerBooking
+);
 
 router.patch(
   "/portal/retrieval/:id",
@@ -167,12 +151,6 @@ router.patch(
   authorizeRoles("customer"),
   requestCustomerRetrieval
 );
-
-/*
-|--------------------------------------------------------------------------
-| Cancel Vehicle Retrieval
-|--------------------------------------------------------------------------
-*/
 
 router.patch(
   "/portal/retrieval/:id/cancel",
