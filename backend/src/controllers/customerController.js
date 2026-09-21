@@ -1,8 +1,5 @@
-const supabase = require("../config/supabase");
 
-// ============================================================
-// CREATE CUSTOMER
-// ============================================================
+const supabase = require("../config/supabase");
 
 const createCustomer = async (req, res) => {
   try {
@@ -15,7 +12,6 @@ const createCustomer = async (req, res) => {
       });
     }
 
-    // Check for existing customer by phone
     const { data: existingCustomer, error: existingError } = await supabase
       .from("customers")
       .select("*")
@@ -72,10 +68,6 @@ const createCustomer = async (req, res) => {
   }
 };
 
-// ============================================================
-// GET ALL CUSTOMERS (with search)
-// ============================================================
-
 const getCustomers = async (req, res) => {
   try {
     const { search } = req.query;
@@ -128,10 +120,6 @@ const getCustomers = async (req, res) => {
     });
   }
 };
-
-// ============================================================
-// GET CUSTOMER BY ID
-// ============================================================
 
 const getCustomerById = async (req, res) => {
   try {
@@ -193,7 +181,10 @@ const getCustomerDashboard = async (req, res) => {
     const customer = await getPortalCustomer(req);
 
     if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer account not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
     }
 
     const { data: vehicles, error: vehicleError } = await supabase
@@ -210,16 +201,40 @@ const getCustomerDashboard = async (req, res) => {
       const { data, error } = await supabase
         .from("parking_sessions")
         .select(`
-          id, ticket_code, parking_type, status, parking_slot,
-          checked_in_at, parked_at, completed_at,
-          vehicle:vehicles (id, license_plate, make, model, color),
-          valet:users (id, name, phone, email)
+          id,
+          ticket_code,
+          parking_type,
+          status,
+          parking_slot,
+          checked_in_at,
+          parked_at,
+          completed_at,
+          vehicle:vehicles (
+            id,
+            license_plate,
+            make,
+            model,
+            color
+          ),
+          valet:employees (
+            id,
+            name,
+            phone,
+            email
+          )
         `)
         .in("vehicle_id", vehicleIds)
-        .in("status", ["checked_in", "parked", "retrieval_requested", "retrieving", "ready_for_pickup"])
+        .in("status", [
+          "checked_in",
+          "parked",
+          "retrieval_requested",
+          "retrieving",
+          "ready_for_pickup",
+        ])
         .order("checked_in_at", { ascending: false });
 
       if (error) throw error;
+
       activeSessions = data || [];
     }
 
@@ -228,11 +243,14 @@ const getCustomerDashboard = async (req, res) => {
       customer,
       vehicles: vehicles || [],
       active_sessions: activeSessions,
-      current_session: activeSessions[0] || null
+      current_session: activeSessions[0] || null,
     });
   } catch (error) {
     console.error("Get customer dashboard error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch customer dashboard." });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer dashboard.",
+    });
   }
 };
 
@@ -241,7 +259,10 @@ const getCustomerVehicles = async (req, res) => {
     const customer = await getPortalCustomer(req);
 
     if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer account not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
     }
 
     const { data: vehicles, error } = await supabase
@@ -258,29 +279,46 @@ const getCustomerVehicles = async (req, res) => {
     if (vehicleIds.length) {
       const result = await supabase
         .from("parking_sessions")
-        .select("id, vehicle_id, ticket_code, parking_type, status, parking_slot, checked_in_at, parked_at, completed_at")
+        .select(
+          "id, vehicle_id, ticket_code, parking_type, status, parking_slot, checked_in_at, parked_at, completed_at"
+        )
         .in("vehicle_id", vehicleIds)
-        .in("status", ["checked_in", "parked", "retrieval_requested", "retrieving", "ready_for_pickup"])
+        .in("status", [
+          "checked_in",
+          "parked",
+          "retrieval_requested",
+          "retrieving",
+          "ready_for_pickup",
+        ])
         .order("checked_in_at", { ascending: false });
 
       if (result.error) throw result.error;
+
       sessions = result.data || [];
     }
 
     const result = (vehicles || []).map((vehicle) => ({
       ...vehicle,
-      current_session: sessions.find((session) => session.vehicle_id === vehicle.id) || null
+      current_session:
+        sessions.find((session) => session.vehicle_id === vehicle.id) || null,
     }));
 
     return res.status(200).json({
       success: true,
-      customer: { id: customer.id, name: customer.name, email: customer.email },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+      },
       count: result.length,
-      vehicles: result
+      vehicles: result,
     });
   } catch (error) {
     console.error("Get customer vehicles error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch customer vehicles." });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer vehicles.",
+    });
   }
 };
 
@@ -289,7 +327,10 @@ const getCustomerParkingHistory = async (req, res) => {
     const customer = await getPortalCustomer(req);
 
     if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer account not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
     }
 
     const { data: vehicles, error: vehicleError } = await supabase
@@ -298,19 +339,41 @@ const getCustomerParkingHistory = async (req, res) => {
       .eq("customer_id", customer.id);
 
     if (vehicleError) throw vehicleError;
+
     const vehicleIds = (vehicles || []).map((vehicle) => vehicle.id);
 
     if (!vehicleIds.length) {
-      return res.status(200).json({ success: true, count: 0, history: [] });
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        history: [],
+      });
     }
 
     const { data: history, error } = await supabase
       .from("parking_sessions")
       .select(`
-        id, ticket_code, parking_type, status, parking_slot,
-        checked_in_at, parked_at, completed_at,
-        vehicle:vehicles (id, license_plate, make, model, color),
-        valet:users (id, name, phone, email)
+        id,
+        ticket_code,
+        parking_type,
+        status,
+        parking_slot,
+        checked_in_at,
+        parked_at,
+        completed_at,
+        vehicle:vehicles (
+          id,
+          license_plate,
+          make,
+          model,
+          color
+        ),
+        valet:employees (
+          id,
+          name,
+          phone,
+          email
+        )
       `)
       .in("vehicle_id", vehicleIds)
       .eq("status", "returned_completed")
@@ -319,21 +382,40 @@ const getCustomerParkingHistory = async (req, res) => {
     if (error) throw error;
 
     const result = (history || []).map((session) => {
-      const duration = session.checked_in_at && session.completed_at
-        ? Math.max(0, Math.round((new Date(session.completed_at) - new Date(session.checked_in_at)) / 60000))
-        : null;
+      const duration =
+        session.checked_in_at && session.completed_at
+          ? Math.max(
+              0,
+              Math.round(
+                (new Date(session.completed_at) -
+                  new Date(session.checked_in_at)) /
+                  60000
+              )
+            )
+          : null;
+
       return {
         ...session,
-        parking_duration: duration === null ? null : duration >= 60
-          ? `${Math.floor(duration / 60)}h ${duration % 60}m`
-          : `${duration}m`
+        parking_duration:
+          duration === null
+            ? null
+            : duration >= 60
+              ? `${Math.floor(duration / 60)}h ${duration % 60}m`
+              : `${duration}m`,
       };
     });
 
-    return res.status(200).json({ success: true, count: result.length, history: result });
+    return res.status(200).json({
+      success: true,
+      count: result.length,
+      history: result,
+    });
   } catch (error) {
     console.error("Get customer parking history error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch customer parking history." });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer parking history.",
+    });
   }
 };
 
@@ -341,58 +423,148 @@ const updateCustomerRetrieval = async (req, res, nextStatus, message) => {
   const customer = await getPortalCustomer(req);
 
   if (!customer) {
-    return res.status(404).json({ success: false, message: "Customer account not found." });
+    return res.status(404).json({
+      success: false,
+      message: "Customer account not found.",
+    });
   }
 
   const { data: session, error } = await supabase
     .from("parking_sessions")
-    .select("id, ticket_code, parking_type, status, parking_slot, vehicle:vehicles (id, customer_id, license_plate, make, model, color), valet:users (id, name, phone, email)")
+    .select(`
+      id,
+      ticket_code,
+      parking_type,
+      status,
+      parking_slot,
+      vehicle:vehicles (
+        id,
+        customer_id,
+        license_plate,
+        make,
+        model,
+        color
+      ),
+      valet:employees (
+        id,
+        name,
+        phone,
+        email
+      )
+    `)
     .eq("id", req.params.id)
     .single();
 
   if (error || !session) {
-    return res.status(404).json({ success: false, message: "Parking session not found." });
+    return res.status(404).json({
+      success: false,
+      message: "Parking session not found.",
+    });
   }
 
   if (session.vehicle?.customer_id !== customer.id) {
-    return res.status(403).json({ success: false, message: "You are not authorized to modify this parking session." });
+    return res.status(403).json({
+      success: false,
+      message: "You are not authorized to modify this parking session.",
+    });
   }
 
-  const expectedStatus = nextStatus === "retrieval_requested" ? "parked" : "retrieval_requested";
+  const expectedStatus =
+    nextStatus === "retrieval_requested"
+      ? "parked"
+      : "retrieval_requested";
 
-  if (session.parking_type !== "valet" || session.status !== expectedStatus) {
-    return res.status(400).json({ success: false, message: `Retrieval action is unavailable from the current status: ${session.status}.` });
+  if (
+    session.parking_type !== "valet" ||
+    session.status !== expectedStatus
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: `Retrieval action is unavailable from the current status: ${session.status}.`,
+    });
   }
 
   const { data: updatedSession, error: updateError } = await supabase
     .from("parking_sessions")
     .update({ status: nextStatus })
     .eq("id", session.id)
-    .select("id, ticket_code, parking_type, status, parking_slot, checked_in_at, parked_at, completed_at, vehicle:vehicles (id, license_plate, make, model, color), valet:users (id, name, phone, email)")
+    .select(`
+      id,
+      ticket_code,
+      parking_type,
+      status,
+      parking_slot,
+      checked_in_at,
+      parked_at,
+      completed_at,
+      vehicle:vehicles (
+        id,
+        customer_id,
+        license_plate,
+        make,
+        model,
+        color
+      ),
+      valet:employees (
+        id,
+        name,
+        phone,
+        email
+      )
+    `)
     .single();
 
   if (updateError) {
-    return res.status(400).json({ success: false, message: updateError.message });
+    return res.status(400).json({
+      success: false,
+      message: updateError.message,
+    });
   }
 
-  return res.status(200).json({ success: true, message, session: updatedSession });
+  return res.status(200).json({
+    success: true,
+    message,
+    session: updatedSession,
+  });
 };
 
-const requestCustomerRetrieval = (req, res) => updateCustomerRetrieval(req, res, "retrieval_requested", "Vehicle retrieval requested successfully.");
-const cancelCustomerRetrieval = (req, res) => updateCustomerRetrieval(req, res, "parked", "Vehicle retrieval request cancelled successfully.");
+const requestCustomerRetrieval = (req, res) =>
+  updateCustomerRetrieval(
+    req,
+    res,
+    "retrieval_requested",
+    "Vehicle retrieval requested successfully."
+  );
+
+const cancelCustomerRetrieval = (req, res) =>
+  updateCustomerRetrieval(
+    req,
+    res,
+    "parked",
+    "Vehicle retrieval request cancelled successfully."
+  );
 
 const getCustomerProfile = async (req, res) => {
   try {
     const customer = await getPortalCustomer(req);
 
     if (!customer) {
-      return res.status(404).json({ success: false, message: "Customer account not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found.",
+      });
     }
 
-    return res.status(200).json({ success: true, customer });
+    return res.status(200).json({
+      success: true,
+      customer,
+    });
   } catch (error) {
     console.error("Get customer profile error:", error);
-    return res.status(500).json({ success: false, message: "Failed to fetch customer profile." });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer profile.",
+    });
   }
 };
 
