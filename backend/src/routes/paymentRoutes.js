@@ -7,16 +7,27 @@ const {
 } = require("../controllers/paymentController");
 
 const authenticate = require("../middleware/authMiddleware");
+const authorizeRoles = require("../middleware/roleMiddleware");
 
 router.post(
   "/",
   authenticate,
+  authorizeRoles(
+    "cashier",
+    "parking_admin",
+    "super_admin"
+  ),
   createPayment
 );
 
 router.get(
   "/:id/invoice",
   authenticate,
+  authorizeRoles(
+    "cashier",
+    "parking_admin",
+    "super_admin"
+  ),
   downloadInvoice
 );
 

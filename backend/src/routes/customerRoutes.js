@@ -34,7 +34,8 @@ router.post(
     "cashier",
     "reception_security",
     "parking_admin",
-    "super_admin"
+    "super_admin",
+    "valet_attendant"
   ),
   createCustomer
 );
@@ -46,7 +47,8 @@ router.get(
     "cashier",
     "reception_security",
     "parking_admin",
-    "super_admin"
+    "super_admin",
+    "valet_attendant"
   ),
   getCustomers
 );
@@ -58,7 +60,8 @@ router.get(
     "cashier",
     "reception_security",
     "parking_admin",
-    "super_admin"
+    "super_admin",
+    "valet_attendant"
   ),
   getCustomerById
 );

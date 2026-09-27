@@ -17,6 +17,10 @@ const keyRoutes = require("./routes/keyRoutes");
 const incidentRoutes = require("./routes/incidentRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const parkingFloorRoutes = require("./routes/parkingFloorRoutes");
+const parkingSystemRoutes = require("./routes/parkingSystemRoutes");
+const parkingPositionRoutes = require("./routes/parkingPositionRoutes");
+console.log("PARKING FLOOR ROUTE LOADED");
 const app = express();
 
 app.use(cors());
@@ -43,9 +47,13 @@ app.use("/api/admin", adminRoutes);
 |--------------------------------------------------------------------------
 */
 app.use("/api/parking-slots", parkingSlotRoutes);
+app.use("/api/parking-floors", parkingFloorRoutes);
+app.use("/api/parking-systems", parkingSystemRoutes);
+app.use("/api/parking-positions", parkingPositionRoutes);
 app.use("/api/parking-admin", parkingAdminRoutes);
 app.use("/api/parking-admin/sessions", parkingSessionRoutes);
 app.use("/api/parking-bookings", parkingBookingRoutes);
+
 
 /*
 |--------------------------------------------------------------------------

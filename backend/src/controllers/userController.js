@@ -1,7 +1,9 @@
+
 const supabase = require("../config/supabase");
 
 const allowedRoles = [
   "parking_admin",
+  "valet_attendant",
   "reception_security",
   "valet",
   "cashier"
@@ -344,6 +346,7 @@ const getAllStaff = async (req, res) => {
       .in("role", [
         "super_admin",
         "parking_admin",
+        "valet_attendant",
         "reception_security",
         "valet",
         "cashier"

@@ -252,27 +252,55 @@ const updateIncidentStatus = async (req, res) => {
       });
     }
 
+    const allowedTransitions = {
+      open: ["in_review"],
+      in_review: ["resolved"],
+      resolved: ["closed"],
+      closed: []
+    };
+
+    if (existingIncident.status === status) {
+      return res.status(400).json({
+        success: false,
+        message: `Incident is already ${status}.`
+      });
+    }
+
+    if (!allowedTransitions[existingIncident.status]?.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          `Incident cannot be moved from ${existingIncident.status} to ${status}.`
+      });
+    }
+
     const updates = {
       status
     };
 
     if (status === "resolved" || status === "closed") {
       updates.resolved_at = new Date().toISOString();
-    } else {
-      updates.resolved_at = null;
     }
 
     const { data: incident, error } = await supabase
       .from("incidents")
       .update(updates)
       .eq("id", id)
+      .eq("status", existingIncident.status)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return res.status(400).json({
         success: false,
         message: error.message
+      });
+    }
+
+    if (!incident) {
+      return res.status(409).json({
+        success: false,
+        message: "Incident status changed before this update could be completed."
       });
     }
 

@@ -25,22 +25,43 @@ router.post(
   ),
   createIncident
 );
+
 router.get(
   "/",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "reception_security",
+    "valet",
+    "cashier",
+    "parking_admin",
+    "super_admin"
+  ),
   getIncidents
 );
+
 router.get(
   "/session/:parking_session_id",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "reception_security",
+    "valet",
+    "cashier",
+    "parking_admin",
+    "super_admin"
+  ),
   getIncidentsByParkingSession
 );
+
 router.get(
   "/:id",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
+  authorizeRoles(
+    "reception_security",
+    "valet",
+    "cashier",
+    "parking_admin",
+    "super_admin"
+  ),
   getIncidentById
 );
 
@@ -50,4 +71,5 @@ router.patch(
   authorizeRoles("parking_admin", "super_admin"),
   updateIncidentStatus
 );
+
 module.exports = router;

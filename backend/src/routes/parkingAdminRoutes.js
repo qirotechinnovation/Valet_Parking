@@ -8,11 +8,16 @@ const {
 } = require("../controllers/parkingAdminController");
 
 const {
+  createStaffAssignment,
+  getStaffAssignments,
+  deactivateStaffAssignment
+} = require("../controllers/staffAssignmentController");
+
+const {
   getParkingSessions,
   getRetrievalRequests,
   getParkingHistory,
   createParkingSession,
-  completeSelfParking,
   assignParkingSlot,
   assignValet,
   requestRetrieval,
@@ -20,6 +25,7 @@ const {
   markReadyForPickup,
   completeReturn
 } = require("../controllers/parkingSessionController");
+
 const authenticate = require("../middleware/authMiddleware");
 const authorizeRoles = require("../middleware/roleMiddleware");
 
@@ -35,72 +41,74 @@ router.get(
 router.get(
   "/sessions",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin"),
   getParkingSessions
 );
 
 router.post(
   "/sessions",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet_attendant"
+  ),
   createParkingSession
 );
 
 router.patch(
   "/sessions/:id/slot",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin"),
   assignParkingSlot
 );
 
 router.patch(
   "/sessions/:id/valet",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "valet_attendant"),
   assignValet
 );
-
 
 router.patch(
   "/sessions/:id/request-retrieval",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin"),
   requestRetrieval
 );
-
 
 router.patch(
   "/sessions/:id/start-retrieval",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin", "valet"),
   startRetrieval
 );
-
 
 router.patch(
   "/sessions/:id/ready",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin", "valet"),
   markReadyForPickup
 );
-
 
 router.patch(
   "/sessions/:id/complete",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin", "valet"),
   completeReturn
 );
+
 router.get(
   "/retrieval-requests",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin"),
   getRetrievalRequests
 );
+
 router.get(
   "/history",
   authenticate,
-  authorizeRoles("parking_admin"),
+  authorizeRoles("parking_admin", "super_admin"),
   getParkingHistory
 );
 
@@ -117,6 +125,7 @@ router.get(
   authorizeRoles("parking_admin"),
   getParkingReports
 );
+
 router.get(
   "/profile",
   authenticate,
@@ -124,10 +133,25 @@ router.get(
   getParkingAdminProfile
 );
 
-router.patch(
-  "/sessions/:id/self-checkout",
+router.post(
+  "/staff-assignments",
   authenticate,
-  authorizeRoles("cashier", "parking_admin", "super_admin"),
-  completeSelfParking
+  authorizeRoles("parking_admin"),
+  createStaffAssignment
 );
+
+router.get(
+  "/staff-assignments",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  getStaffAssignments
+);
+
+router.patch(
+  "/staff-assignments/:id/deactivate",
+  authenticate,
+  authorizeRoles("parking_admin"),
+  deactivateStaffAssignment
+);
+
 module.exports = router;

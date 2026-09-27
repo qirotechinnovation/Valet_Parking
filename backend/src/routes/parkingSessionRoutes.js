@@ -3,12 +3,14 @@ const express = require("express");
 const {
   getParkingSessions,
   createParkingSession,
+  quickCheckIn,
   assignParkingSlot,
   assignValet,
   requestRetrieval,
   startRetrieval,
   markReadyForPickup,
   completeReturn,
+  verifyExit,
   getRetrievalRequests,
   getParkingHistory,
   getValetDashboard
@@ -29,10 +31,36 @@ router.get(
 router.post(
   "/",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet_attendant"
+  ),
   createParkingSession
 );
 
+router.post(
+  "/quick-check-in",
+  authenticate,
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet_attendant"
+  ),
+  quickCheckIn
+);
+
+router.post(
+  "/verify-exit",
+  authenticate,
+  authorizeRoles(
+    "cashier",
+    "reception_security",
+    "parking_admin",
+    "super_admin"
+  ),
+  verifyExit
+);
 router.patch(
   "/:id/assign-slot",
   authenticate,
@@ -50,14 +78,22 @@ router.patch(
 router.patch(
   "/:id/assign-valet",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet_attendant"
+  ),
   assignValet
 );
 
 router.patch(
   "/:id/valet",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet_attendant"
+  ),
   assignValet
 );
 
@@ -71,56 +107,85 @@ router.patch(
 router.patch(
   "/:id/start-retrieval",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin", "valet"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
   startRetrieval
 );
 
 router.patch(
   "/:id/ready",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin", "valet"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
   markReadyForPickup
 );
 
 router.patch(
   "/:id/ready-for-pickup",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin", "valet"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
   markReadyForPickup
 );
 
 router.patch(
   "/:id/complete",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin", "valet"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
   completeReturn
 );
 
 router.patch(
   "/:id/complete-return",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin", "valet"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin",
+    "valet"
+  ),
   completeReturn
 );
 
 router.get(
   "/retrievals",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin"
+  ),
   getRetrievalRequests
 );
 
 router.get(
   "/retrieval-requests",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin"
+  ),
   getRetrievalRequests
 );
 
 router.get(
   "/history",
   authenticate,
-  authorizeRoles("parking_admin", "super_admin"),
+  authorizeRoles(
+    "parking_admin",
+    "super_admin"
+  ),
   getParkingHistory
 );
 
