@@ -2,11 +2,9 @@
 const supabase = require("../config/supabase");
 
 const allowedRoles = [
-  "parking_admin",
-  "valet_attendant",
-  "reception_security",
+  "super_admin",
+  "manager",
   "valet",
-  "cashier"
 ];
 
 const findEmployeeByEmail = async (email) => {
@@ -345,6 +343,7 @@ const getAllStaff = async (req, res) => {
       )
       .in("role", [
         "super_admin",
+        "manager",
         "parking_admin",
         "valet_attendant",
         "reception_security",

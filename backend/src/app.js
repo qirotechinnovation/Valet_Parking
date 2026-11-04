@@ -20,6 +20,9 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const parkingFloorRoutes = require("./routes/parkingFloorRoutes");
 const parkingSystemRoutes = require("./routes/parkingSystemRoutes");
 const parkingPositionRoutes = require("./routes/parkingPositionRoutes");
+const areaRoutes = require("./routes/areaRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const revenueRoutes = require("./routes/revenueRoutes");
 console.log("PARKING FLOOR ROUTE LOADED");
 const app = express();
 
@@ -50,6 +53,7 @@ app.use("/api/parking-slots", parkingSlotRoutes);
 app.use("/api/parking-floors", parkingFloorRoutes);
 app.use("/api/parking-systems", parkingSystemRoutes);
 app.use("/api/parking-positions", parkingPositionRoutes);
+app.use("/api/areas", areaRoutes);
 app.use("/api/parking-admin", parkingAdminRoutes);
 app.use("/api/parking-admin/sessions", parkingSessionRoutes);
 app.use("/api/parking-bookings", parkingBookingRoutes);
@@ -94,6 +98,8 @@ app.use("/api/incidents", incidentRoutes);
 app.use("/api/feedback", feedbackRoutes);
 
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/revenue", revenueRoutes);
 
 /*
 |--------------------------------------------------------------------------
@@ -103,7 +109,7 @@ app.use("/api/payments", paymentRoutes);
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Aura Valet Parking API is running."
+    message: "Valet Parking API is running."
   });
 });
 

@@ -254,7 +254,7 @@ const assignKey = async (req, res) => {
 
     const { data: valet, error: valetError } = await supabase
       .from("users")
-      .select("id, name, role, is_active")
+      .select("id, name, email, role, is_active")
       .eq("id", assigned_to)
       .eq("role", "valet")
       .single();
@@ -292,6 +292,31 @@ const assignKey = async (req, res) => {
         success: false,
         message: "Key not found."
       });
+    }
+
+    if (key.parking_session_id && valet.email) {
+      const { data: employee, error: employeeError } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("email", valet.email)
+        .eq("role", "valet")
+        .maybeSingle();
+
+      if (employeeError) {
+        console.error("Find valet employee error:", employeeError);
+      } else if (employee) {
+        const { error: sessionValetError } = await supabase
+          .from("parking_sessions")
+          .update({ valet_id: employee.id })
+          .eq("id", key.parking_session_id);
+
+        if (sessionValetError) {
+          console.error(
+            "Sync session valet error:",
+            sessionValetError
+          );
+        }
+      }
     }
 
     return res.status(200).json({

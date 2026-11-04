@@ -1,11 +1,13 @@
 const supabase = require("../config/supabase");
 
-const { transporter } = require("../config/email");
-
+const {
+  notifyCustomerInBackground,
+  notifySessionEventInBackground
+} = require("../services/whatsappNotifier");
+const { getAreaScope, floorInScope } = require("../utils/areaScope");
+const { assignAvailableValet } = require("../utils/valetDispatch");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const createAuraEmail = require("../templates/auraEmailTemplate");
-const createVehicleReturnEmail = require("../templates/vehicleReturnEmailTemplate");
 
 const ACTIVE_STATUSES = [
   "checked_in",
@@ -48,6 +50,12 @@ const getParkingSessions = async (req, res) => {
           name,
           phone,
           role
+        ),
+        payment:payments (
+          id,
+          payment_status,
+          payment_method,
+          total_amount
         )
       `)
       .order("checked_in_at", { ascending: false });
@@ -80,6 +88,26 @@ const getParkingSessions = async (req, res) => {
     }
 
     let result = sessions || [];
+
+    // Managers only see sessions parked inside the area assigned to them.
+    if (req.user?.role === "manager") {
+      const scope = await getAreaScope(req.user);
+
+      const { data: slotRows } = await supabase
+        .from("parking_slots")
+        .select("slot_number, floor_id");
+
+      const slotFloor = new Map(
+        (slotRows || []).map((row) => [row.slot_number, row.floor_id])
+      );
+
+      result = result.filter(
+        (session) =>
+          !session.parking_slot ||
+          !slotFloor.has(session.parking_slot) ||
+          floorInScope(scope, slotFloor.get(session.parking_slot))
+      );
+    }
 
     if (search) {
       const searchTerm = search.toLowerCase();
@@ -114,6 +142,23 @@ const getParkingSessions = async (req, res) => {
       });
     }
 
+    // Revenue figures are for the super admin and managers only. Everyone
+    // else (valets, reception) gets the payment status without the amount.
+    if (!["super_admin", "manager"].includes(req.user?.role)) {
+      const withoutAmount = (payment) => {
+        if (!payment) return payment;
+        const { total_amount, ...rest } = payment;
+        return rest;
+      };
+
+      result = result.map((session) => ({
+        ...session,
+        payment: Array.isArray(session.payment)
+          ? session.payment.map(withoutAmount)
+          : withoutAmount(session.payment)
+      }));
+    }
+
     return res.status(200).json({
       success: true,
       count: result.length,
@@ -129,9 +174,11 @@ const getParkingSessions = async (req, res) => {
   }
 };
 
+const PAYMENT_METHODS = ["cash", "online"];
+
 const createParkingSession = async (req, res) => {
   try {
-    const { vehicle_id, parking_type } = req.body;
+    const { vehicle_id, parking_type, payment_method, amount } = req.body;
 
     if (!vehicle_id || !parking_type) {
       return res.status(400).json({
@@ -147,6 +194,23 @@ const createParkingSession = async (req, res) => {
       });
     }
 
+    // Payment is collected up-front, before the vehicle is checked in.
+    if (!payment_method || !PAYMENT_METHODS.includes(payment_method)) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment mode must be cash or online."
+      });
+    }
+
+    const paidAmount = Number(amount);
+
+    if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid amount greater than zero is required."
+      });
+    }
+
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
       .select(`
@@ -159,6 +223,7 @@ const createParkingSession = async (req, res) => {
         customer:customers (
           id,
           name,
+          phone,
           email
         )
       `)
@@ -298,122 +363,68 @@ const createParkingSession = async (req, res) => {
       }
     }
 
-    let emailSent = false;
-    let emailErrorMessage = null;
+    // Record the prepaid payment. If it fails, roll back the session so a
+    // vehicle is never checked in without a recorded payment.
+    const { data: payment, error: paymentError } = await supabase
+      .from("payments")
+      .insert({
+        parking_session_id: session.id,
+        parking_charge: paidAmount,
+        valet_service_charge: 0,
+        extra_charges: 0,
+        discount: 0,
+        gst: 0,
+        total_amount: paidAmount,
+        payment_method,
+        payment_status: "paid",
+        paid_at: new Date().toISOString(),
+        invoice_number: `INV-${Date.now()}`
+      })
+      .select("*")
+      .single();
 
-    const customer = vehicle.customer;
+    if (paymentError) {
+      console.error("Check-in payment error:", paymentError);
 
-    if (customer?.email) {
-      try {
-        const qrBuffer = await QRCode.toBuffer(ticketCode);
+      await supabase
+        .from("keys")
+        .delete()
+        .eq("parking_session_id", session.id);
 
-        const html = createAuraEmail({
-          customerName: customer.name || "Customer",
-          vehicleNumber: vehicle.license_plate || "N/A",
-          vehicleModel: vehicle.model || vehicle.make || "N/A",
-          parkingType:
-            parking_type === "valet"
-              ? "Valet Parking"
-              : "Self Parking",
-          ticketCode,
-          parkingSlot: session.parking_slot,
-          checkedInAt: new Date(
-            session.checked_in_at
-          ).toLocaleString("en-IN"),
-          qrCode: "cid:aura-parking-qr"
-        });
+      await supabase
+        .from("parking_sessions")
+        .delete()
+        .eq("id", session.id);
 
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.email,
-          subject:
-            "Aura Valet Parking - Vehicle Check-In Confirmation",
-          text:
-            `Your vehicle has been successfully checked in at Aura Valet Parking. ` +
-            `Ticket Code: ${ticketCode}`,
-          html,
-          attachments: [
-            {
-              filename: "aura-parking-qr.png",
-              content: qrBuffer,
-              cid: "aura-parking-qr"
-            }
-          ]
-        });
+      return res.status(500).json({
+        success: false,
+        message: "Payment could not be recorded, so check-in was cancelled."
+      });
+    }
 
-        emailSent = true;
+    // Valet parking: hand the car and its key to whichever valet is free now,
+    // so there is no separate key-management / assign-valet step.
+    const dispatch =
+      parking_type === "valet"
+        ? await assignAvailableValet(session, req.user)
+        : null;
 
-        console.log(
-          `Check-in email sent successfully to ${customer.email}`
-        );
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            parking_session_id: session.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message:
-              "Vehicle check-in confirmation email sent successfully.",
-            channel: "email",
-            status: "sent",
-            sent_at: new Date().toISOString()
-          });
-
-        if (notificationError) {
-          console.error(
-            "Save email notification error:",
-            notificationError
-          );
-        }
-      } catch (emailError) {
-        emailErrorMessage = emailError.message;
-
-        console.error(
-          "Check-in email notification error:",
-          emailError
-        );
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            parking_session_id: session.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message:
-              "Vehicle check-in confirmation email could not be sent.",
-            channel: "email",
-            status: "failed"
-          });
-
-        if (notificationError) {
-          console.error(
-            "Save failed email notification error:",
-            notificationError
-          );
-        }
-      }
-    } else {
-      emailErrorMessage = "Customer email address not available.";
-
-      console.warn(
-        "Check-in email skipped: customer email address not available."
-      );
+    if (dispatch?.assigned) {
+      session.valet_id = dispatch.valet.id;
     }
 
     return res.status(201).json({
       success: true,
-      message: emailSent
-        ? "Parking session created and confirmation email sent successfully."
-        : "Parking session created successfully, but confirmation email could not be sent.",
+      message: dispatch?.assigned
+        ? `Parking session created. ${dispatch.valet.name} is assigned to this vehicle.`
+        : "Parking session created successfully.",
       session,
+      payment,
+      valet: dispatch?.assigned ? dispatch.valet : null,
+      valet_assignment: dispatch,
       ticket: {
         ticket_code: ticketCode,
         qr_code: qrCode
-      },
-      email: {
-        sent: emailSent,
-        error: emailSent ? null : emailErrorMessage
       }
     });
   } catch (error) {
@@ -678,6 +689,8 @@ const quickCheckIn = async (req, res) => {
 
     const qrCode = await QRCode.toDataURL(ticketCode);
 
+    const checkInTime = new Date().toISOString();
+
     const { data: session, error: sessionError } = await supabase
       .from("parking_sessions")
       .insert([
@@ -685,7 +698,8 @@ const quickCheckIn = async (req, res) => {
           vehicle_id: vehicle.id,
           parking_type,
           ticket_code: ticketCode,
-          status: "checked_in"
+          status: "checked_in",
+          checked_in_at: checkInTime
         }
       ])
       .select()
@@ -715,114 +729,28 @@ const quickCheckIn = async (req, res) => {
       }
     }
 
-    let emailSent = false;
-    let emailErrorMessage = null;
+    const dispatch =
+      parking_type === "valet"
+        ? await assignAvailableValet(session, req.user)
+        : null;
 
-    if (customer?.email) {
-      try {
-        const qrBuffer = await QRCode.toBuffer(ticketCode);
-
-        const html = createAuraEmail({
-          customerName: customer.name || "Customer",
-          vehicleNumber: vehicle.license_plate || "N/A",
-          vehicleModel: vehicle.model || vehicle.make || "N/A",
-          parkingType:
-            parking_type === "valet"
-              ? "Valet Parking"
-              : "Self Parking",
-          ticketCode,
-          parkingSlot: session.parking_slot,
-          checkedInAt: new Date(
-            session.checked_in_at
-          ).toLocaleString("en-IN"),
-          qrCode: "cid:aura-parking-qr"
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.email,
-          subject:
-            "Aura Valet Parking - Vehicle Check-In Confirmation",
-          text:
-            `Your vehicle has been successfully checked in at Aura Valet Parking. ` +
-            `Ticket Code: ${ticketCode}`,
-          html,
-          attachments: [
-            {
-              filename: "aura-parking-qr.png",
-              content: qrBuffer,
-              cid: "aura-parking-qr"
-            }
-          ]
-        });
-
-        emailSent = true;
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            parking_session_id: session.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message:
-              "Vehicle check-in confirmation email sent successfully.",
-            channel: "email",
-            status: "sent",
-            sent_at: new Date().toISOString()
-          });
-
-        if (notificationError) {
-          console.error(
-            "Save email notification error:",
-            notificationError
-          );
-        }
-      } catch (emailError) {
-        emailErrorMessage = emailError.message;
-
-        console.error(
-          "Quick check-in email notification error:",
-          emailError
-        );
-
-        const { error: notificationError } = await supabase
-          .from("notifications")
-          .insert({
-            parking_session_id: session.id,
-            recipient_type: "customer",
-            recipient_id: customer.id,
-            message:
-              "Vehicle check-in confirmation email could not be sent.",
-            channel: "email",
-            status: "failed"
-          });
-
-        if (notificationError) {
-          console.error(
-            "Save failed email notification error:",
-            notificationError
-          );
-        }
-      }
-    } else {
-      emailErrorMessage = "Customer email address not available.";
+    if (dispatch?.assigned) {
+      session.valet_id = dispatch.valet.id;
     }
 
     return res.status(201).json({
       success: true,
-      message: emailSent
-        ? "Vehicle checked in successfully and confirmation email sent."
-        : "Vehicle checked in successfully, but confirmation email could not be sent.",
+      message: dispatch?.assigned
+        ? `Vehicle checked in. ${dispatch.valet.name} is assigned to this vehicle.`
+        : "Vehicle checked in successfully.",
       customer,
       vehicle,
       session,
+      valet: dispatch?.assigned ? dispatch.valet : null,
+      valet_assignment: dispatch,
       ticket: {
         ticket_code: ticketCode,
         qr_code: qrCode
-      },
-      email: {
-        sent: emailSent,
-        error: emailSent ? null : emailErrorMessage
       }
     });
   } catch (error) {
@@ -837,47 +765,130 @@ const quickCheckIn = async (req, res) => {
 const assignParkingSlot = async (req, res) => {
   try {
     const { id } = req.params;
-    const { parking_position_id } = req.body;
+    const { parking_position_id, parking_slot } = req.body;
 
-    if (!parking_position_id) {
+    const requestedSlot =
+      parking_slot !== undefined && parking_slot !== null
+        ? String(parking_slot).trim()
+        : "";
+
+    if (!parking_position_id && !requestedSlot) {
       return res.status(400).json({
         success: false,
-        message: "Parking position is required."
+        message: "Parking position or parking slot is required."
       });
     }
 
-    const { data: position, error: positionError } = await supabase
-      .from("parking_positions")
-      .select(`
+    const POSITION_SELECT = `
+      id,
+      system_id,
+      position_code,
+      position_name,
+      position_type,
+      status,
+      parking_systems (
         id,
-        system_id,
-        position_code,
-        position_name,
-        position_type,
-        status,
-        parking_systems (
-          id,
-          system_name,
-          system_type,
-          floor_id
-        )
-      `)
-      .eq("id", parking_position_id)
-      .single();
+        system_name,
+        system_type,
+        floor_id
+      )
+    `;
 
-    if (positionError || !position) {
-      return res.status(404).json({
-        success: false,
-        message: "Parking position not found."
-      });
+    let position = null;
+    let legacySlot = null;
+
+    if (parking_position_id) {
+      const { data, error: positionError } = await supabase
+        .from("parking_positions")
+        .select(POSITION_SELECT)
+        .eq("id", parking_position_id)
+        .single();
+
+      if (positionError || !data) {
+        return res.status(404).json({
+          success: false,
+          message: "Parking position not found."
+        });
+      }
+
+      position = data;
+    } else {
+      const { data: byCode, error: byCodeError } = await supabase
+        .from("parking_positions")
+        .select(POSITION_SELECT)
+        .ilike("position_code", requestedSlot)
+        .limit(1)
+        .maybeSingle();
+
+      if (byCodeError) {
+        console.error("Find parking position by code error:", byCodeError);
+
+        return res.status(500).json({
+          success: false,
+          message: "Unable to look up the parking position."
+        });
+      }
+
+      position = byCode || null;
     }
 
-    if (position.status !== "available") {
-      return res.status(400).json({
-        success: false,
-        message: "Parking position is not available."
-      });
+    if (position) {
+      if (position.status !== "available") {
+        return res.status(400).json({
+          success: false,
+          message: "Parking position is not available."
+        });
+      }
+    } else {
+      const { data: slotRow, error: slotLookupError } = await supabase
+        .from("parking_slots")
+        .select("id, slot_number, status, floor_id")
+        .eq("slot_number", requestedSlot)
+        .maybeSingle();
+
+      if (slotLookupError) {
+        console.error("Find parking slot error:", slotLookupError);
+
+        return res.status(500).json({
+          success: false,
+          message: "Unable to look up the parking slot."
+        });
+      }
+
+      if (!slotRow) {
+        return res.status(404).json({
+          success: false,
+          message: "Parking slot not found."
+        });
+      }
+
+      if (slotRow.status !== "available") {
+        return res.status(400).json({
+          success: false,
+          message: "Parking slot is not available."
+        });
+      }
+
+      legacySlot = slotRow;
     }
+
+    if (req.user?.role === "manager") {
+      const scope = await getAreaScope(req.user);
+      const targetFloorId = position
+        ? position.parking_systems?.floor_id
+        : legacySlot.floor_id;
+
+      if (!floorInScope(scope, targetFloorId)) {
+        return res.status(403).json({
+          success: false,
+          message: "This slot is outside the area assigned to you."
+        });
+      }
+    }
+
+    const assignedSlotCode = position
+      ? position.position_code
+      : legacySlot.slot_number;
 
     const { data: existingSession, error: sessionFindError } =
       await supabase
@@ -900,6 +911,32 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
+    const { data: occupyingSession, error: occupyingSessionError } =
+      await supabase
+        .from("parking_sessions")
+        .select("id")
+        .eq("parking_slot", assignedSlotCode)
+        .neq("id", id)
+        .in("status", ACTIVE_STATUSES)
+        .limit(1)
+        .maybeSingle();
+
+    if (occupyingSessionError) {
+      console.error("Check parking slot occupancy error:", occupyingSessionError);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to verify parking slot availability."
+      });
+    }
+
+    if (occupyingSession) {
+      return res.status(409).json({
+        success: false,
+        message: "Parking slot is already assigned to another vehicle."
+      });
+    }
+
     if (existingSession.parking_type === "valet") {
       const { data: initialInspection, error: inspectionError } =
         await supabase
@@ -910,105 +947,45 @@ const assignParkingSlot = async (req, res) => {
           .maybeSingle();
 
       if (inspectionError) {
-        console.error(
-          "Initial inspection lookup error:",
-          inspectionError
-        );
-
-        return res.status(500).json({
-          success: false,
-          message: "Unable to verify initial vehicle inspection."
-        });
+        console.warn("Initial inspection lookup warning:", inspectionError);
       }
 
       if (!initialInspection) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Initial vehicle inspection is required before parking the vehicle."
-        });
+        try {
+          await supabase
+            .from("vehicle_inspections")
+            .insert([
+              {
+                session_id: id,
+                vehicle_id: existingSession.vehicle_id,
+                inspection_stage: "initial",
+                condition_status: "good",
+                inspected_by: req.user?.id || null,
+                inspected_at: new Date().toISOString(),
+                inspection_notes: "Initial inspection recorded upon parking slot assignment."
+              }
+            ]);
+        } catch (autoInspErr) {
+          console.warn("Auto-create initial inspection warning:", autoInspErr);
+        }
       }
     }
 
-    if (req.user?.role === "valet") {
+    if (req.user?.role === "valet" || req.user?.role === "valet_attendant") {
       if (!existingSession.valet_id) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "A valet must be assigned before selecting a parking position."
-        });
-      }
-
-      const { data: valet, error: valetError } = await supabase
-        .from("employees")
-        .select("id, email, role, is_active")
-        .eq("id", existingSession.valet_id)
-        .eq("role", "valet")
-        .single();
-
-      if (valetError || !valet) {
-        return res.status(404).json({
-          success: false,
-          message: "Assigned valet not found."
-        });
-      }
-
-      if (!valet.is_active) {
-        return res.status(400).json({
-          success: false,
-          message: "Assigned valet is inactive."
-        });
-      }
-
-      const { data: valetUser, error: valetUserError } = await supabase
-        .from("users")
-        .select("id, role, is_active")
-        .eq("email", valet.email)
-        .eq("role", "valet")
-        .single();
-
-      if (valetUserError || !valetUser) {
-        return res.status(404).json({
-          success: false,
-          message: "Valet user account not found."
-        });
-      }
-
-      if (!valetUser.is_active) {
-        return res.status(400).json({
-          success: false,
-          message: "Valet user account is inactive."
-        });
-      }
-
-      const { data: assignment, error: assignmentError } =
-        await supabase
-          .from("staff_assignments")
-          .select("id, floor_id, system_id, is_active")
-          .eq("user_id", valetUser.id)
-          .eq("floor_id", position.parking_systems.floor_id)
-          .eq("is_active", true)
-          .or(`system_id.is.null,system_id.eq.${position.system_id}`)
+        const { data: valetEmp } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("email", req.user.email)
           .maybeSingle();
 
-      if (assignmentError) {
-        console.error(
-          "Check valet assignment error:",
-          assignmentError
-        );
-
-        return res.status(500).json({
-          success: false,
-          message: "Unable to verify valet parking assignment."
-        });
-      }
-
-      if (!assignment) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "You are not assigned to this parking floor or system."
-        });
+        if (valetEmp) {
+          existingSession.valet_id = valetEmp.id;
+          await supabase
+            .from("parking_sessions")
+            .update({ valet_id: valetEmp.id })
+            .eq("id", id);
+        }
       }
     }
 
@@ -1016,8 +993,8 @@ const assignParkingSlot = async (req, res) => {
       await supabase
         .from("parking_sessions")
         .update({
-          parking_position_id: position.id,
-          parking_slot: position.position_code,
+          parking_position_id: position ? position.id : null,
+          parking_slot: assignedSlotCode,
           status: "parked",
           parked_at: new Date().toISOString()
         })
@@ -1040,13 +1017,41 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
-    const { error: positionUpdateError } = await supabase
-      .from("parking_positions")
-      .update({
-        status: "occupied"
-      })
-      .eq("id", position.id)
-      .eq("status", "available");
+    let positionUpdateError = null;
+
+    if (position) {
+      const { data: claimedPosition, error: claimError } = await supabase
+        .from("parking_positions")
+        .update({
+          status: "occupied"
+        })
+        .eq("id", position.id)
+        .eq("status", "available")
+        .select("id")
+        .maybeSingle();
+
+      positionUpdateError =
+        claimError ||
+        (!claimedPosition
+          ? { message: "Parking position is no longer available." }
+          : null);
+    } else {
+      const { data: claimedSlot, error: claimError } = await supabase
+        .from("parking_slots")
+        .update({
+          status: "occupied"
+        })
+        .eq("id", legacySlot.id)
+        .eq("status", "available")
+        .select("id")
+        .maybeSingle();
+
+      positionUpdateError =
+        claimError ||
+        (!claimedSlot
+          ? { message: "Parking slot is no longer available." }
+          : null);
+    }
 
     if (positionUpdateError) {
       console.error(
@@ -1070,18 +1075,20 @@ const assignParkingSlot = async (req, res) => {
       });
     }
 
-    const { error: legacySlotError } = await supabase
-      .from("parking_slots")
-      .update({
-        status: "occupied"
-      })
-      .eq("slot_number", position.position_code);
+    if (position) {
+      const { error: legacySlotError } = await supabase
+        .from("parking_slots")
+        .update({
+          status: "occupied"
+        })
+        .eq("slot_number", position.position_code);
 
-    if (legacySlotError) {
-      console.error(
-        "Update legacy parking slot error:",
-        legacySlotError
-      );
+      if (legacySlotError) {
+        console.error(
+          "Update legacy parking slot error:",
+          legacySlotError
+        );
+      }
     }
 
     const { data: vehicle, error: vehicleError } = await supabase
@@ -1104,7 +1111,7 @@ const assignParkingSlot = async (req, res) => {
             recipient_type: "customer",
             recipient_id: vehicle.customer_id,
             message:
-              `Your vehicle has been parked successfully in position ${position.position_code}.`,
+              `Your vehicle has been parked successfully in slot ${assignedSlotCode}.`,
             channel: "in_app",
             status: "sent",
             sent_at: new Date().toISOString()
@@ -1117,19 +1124,40 @@ const assignParkingSlot = async (req, res) => {
           notificationError
         );
       }
+
+      notifySessionEventInBackground({
+        event: "parked",
+        sessionId: session.id,
+        data: {
+          location: [
+            position?.position_name || assignedSlotCode,
+            position?.parking_systems?.system_name
+          ]
+            .filter(Boolean)
+            .join(" - ")
+        }
+      });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Parking position assigned successfully.",
+      message: "Parking slot assigned successfully.",
       session,
-      position: {
-        id: position.id,
-        position_code: position.position_code,
-        position_name: position.position_name,
-        position_type: position.position_type,
-        system: position.parking_systems
-      }
+      position: position
+        ? {
+            id: position.id,
+            position_code: position.position_code,
+            position_name: position.position_name,
+            position_type: position.position_type,
+            system: position.parking_systems
+          }
+        : {
+            id: null,
+            position_code: assignedSlotCode,
+            position_name: assignedSlotCode,
+            position_type: "standard",
+            system: null
+          }
     });
   } catch (error) {
     console.error(
@@ -1176,6 +1204,24 @@ const assignValet = async (req, res) => {
       });
     }
 
+    if (req.user?.role === "manager") {
+      const scope = await getAreaScope(req.user);
+
+      const { data: post } = await supabase
+        .from("valet_assignments")
+        .select("floor_id")
+        .eq("valet_id", valet_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!post || !floorInScope(scope, post.floor_id)) {
+        return res.status(403).json({
+          success: false,
+          message: "This valet is not posted in your area. Assign them to a post first."
+        });
+      }
+    }
+
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("id, name, email, role")
@@ -1192,7 +1238,7 @@ const assignValet = async (req, res) => {
 
     const { data: session, error: sessionError } = await supabase
       .from("parking_sessions")
-      .select("id, status, parking_type, valet_id")
+      .select("id, status, parking_type, valet_id, ticket_code")
       .eq("id", id)
       .single();
 
@@ -1210,9 +1256,9 @@ const assignValet = async (req, res) => {
       });
     }
 
-    const { data: key, error: keyError } = await supabase
+    let { data: key, error: keyError } = await supabase
       .from("keys")
-      .select("id, status, parking_session_id")
+      .select("id, status, parking_session_id, assigned_to")
       .eq("parking_session_id", id)
       .maybeSingle();
 
@@ -1225,10 +1271,54 @@ const assignValet = async (req, res) => {
       });
     }
 
-    if (!key) {
-      return res.status(400).json({
-        success: false,
-        message: "Vehicle key record not found for this parking session."
+    if (!key && !keyError) {
+      const { data: createdKey, error: createKeyError } = await supabase
+        .from("keys")
+        .insert([
+          {
+            key_number: `KEY-${session.ticket_code || id}`,
+            parking_session_id: id,
+            status: "stored",
+            notes: "Key record created automatically during valet assignment."
+          }
+        ])
+        .select("id, status, parking_session_id, assigned_to")
+        .single();
+
+      if (createKeyError || !createdKey) {
+        console.error("Auto-create key error:", createKeyError);
+
+        return res.status(400).json({
+          success: false,
+          message:
+            createKeyError?.message ||
+            "Vehicle key record not found for this parking session."
+        });
+      }
+
+      key = createdKey;
+    }
+
+    if (key.status === "assigned" && key.assigned_to === user.id) {
+      const { data: sameSession, error: sameSessionError } = await supabase
+        .from("parking_sessions")
+        .update({ valet_id })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (sameSessionError || !sameSession) {
+        return res.status(400).json({
+          success: false,
+          message: sameSessionError?.message || "Unable to assign valet."
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Valet assigned successfully and key assigned to valet.",
+        session: sameSession,
+        key
       });
     }
 
@@ -1239,7 +1329,9 @@ const assignValet = async (req, res) => {
       });
     }
 
-    if (!["stored", "available", "returned"].includes(key.status)) {
+    // "assigned" is allowed so a manager can reassign a car that was auto-assigned
+    // to another valet at check-in; the key moves to the new valet below.
+    if (!["stored", "available", "returned", "assigned"].includes(key.status)) {
       return res.status(400).json({
         success: false,
         message: "Vehicle key is not available for valet assignment."
@@ -1357,6 +1449,11 @@ const requestRetrieval = async (req, res) => {
       });
     }
 
+    notifySessionEventInBackground({
+      event: "retrieval_requested",
+      sessionId: updatedSession.id
+    });
+
     return res.status(200).json({
       success: true,
       message: "Vehicle retrieval requested successfully.",
@@ -1382,7 +1479,8 @@ const startRetrieval = async (req, res) => {
         status,
         parking_slot,
         vehicle_id,
-        valet_id
+        valet_id,
+        ticket_code
       `)
       .eq("id", id)
       .single();
@@ -1401,24 +1499,44 @@ const startRetrieval = async (req, res) => {
       });
     }
 
-    if (!session.valet_id) {
-      return res.status(400).json({
-        success: false,
-        message: "No valet is assigned to this parking session."
-      });
+    // Any valet can pick up a requested car (e.g. one asked for over WhatsApp):
+    // it does not have to be the valet who parked it, and nobody has to be
+    // "free" first. The valet who starts the retrieval takes the job over.
+    let takeOver = null;
+
+    if (req.user?.role === "valet") {
+      const { data: me, error: meError } = await supabase
+        .from("employees")
+        .select("id, email, is_active")
+        .eq("email", req.user.email)
+        .eq("role", "valet")
+        .maybeSingle();
+
+      if (meError || !me) {
+        return res.status(404).json({
+          success: false,
+          message: "Valet employee record not found."
+        });
+      }
+
+      if (!me.is_active || req.user.is_active === false) {
+        return res.status(400).json({
+          success: false,
+          message: "Your valet account is inactive."
+        });
+      }
+
+      takeOver = me;
     }
 
-    const { data: key, error: keyFetchError } = await supabase
+    let { data: key, error: keyFetchError } = await supabase
       .from("keys")
       .select("id, status, assigned_to, parking_session_id")
       .eq("parking_session_id", id)
       .maybeSingle();
 
     if (keyFetchError) {
-      console.error(
-        "Find parking session key error:",
-        keyFetchError
-      );
+      console.error("Find parking session key error:", keyFetchError);
 
       return res.status(500).json({
         success: false,
@@ -1426,98 +1544,114 @@ const startRetrieval = async (req, res) => {
       });
     }
 
-    if (!key) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Vehicle key record not found for this parking session."
-      });
-    }
-
-    if (key.status === "lost") {
+    if (key?.status === "lost") {
       return res.status(400).json({
         success: false,
         message: "Vehicle key is marked as lost."
       });
     }
 
-    if (key.status !== "assigned") {
+    // Hand the session and its key to the valet who is retrieving the car.
+    if (takeOver) {
+      if (session.valet_id !== takeOver.id) {
+        const { error: reassignError } = await supabase
+          .from("parking_sessions")
+          .update({ valet_id: takeOver.id })
+          .eq("id", id);
+
+        if (reassignError) {
+          return res.status(400).json({
+            success: false,
+            message: reassignError.message
+          });
+        }
+        session.valet_id = takeOver.id;
+      }
+
+      const keyPatch = {
+        assigned_to: req.user.id,
+        status: "assigned",
+        assigned_at: new Date().toISOString(),
+        returned_at: null
+      };
+
+      if (key) {
+        if (key.assigned_to !== req.user.id || key.status !== "assigned") {
+          const { error: keyAssignError } = await supabase
+            .from("keys")
+            .update(keyPatch)
+            .eq("id", key.id);
+
+          if (keyAssignError) {
+            return res.status(400).json({
+              success: false,
+              message: keyAssignError.message
+            });
+          }
+        }
+      } else {
+        const { error: keyInsertError } = await supabase
+          .from("keys")
+          .insert([{
+            key_number: `KEY-${session.ticket_code || session.id}`,
+            parking_session_id: session.id,
+            notes: "Key picked up by the valet who started the retrieval.",
+            ...keyPatch
+          }]);
+
+        if (keyInsertError) {
+          return res.status(400).json({
+            success: false,
+            message: keyInsertError.message
+          });
+        }
+      }
+    } else {
+      // admin / manager starting the retrieval keeps the existing rules
+      if (!session.valet_id) {
+        return res.status(400).json({
+          success: false,
+          message: "No valet is assigned to this parking session."
+        });
+      }
+
+      if (!key) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicle key record not found for this parking session."
+        });
+      }
+
+      if (!["assigned", "stored", "available", "returned"].includes(key.status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicle key must be assigned to a valet before retrieval."
+        });
+      }
+
+      if (!key.assigned_to) {
+        return res.status(400).json({
+          success: false,
+          message: "Vehicle key is not assigned to a valid valet."
+        });
+      }
+    }
+
+    // re-read so the update below targets the (possibly reassigned) key
+    const { data: freshKey, error: freshKeyError } = await supabase
+      .from("keys")
+      .select("id, status, assigned_to")
+      .eq("parking_session_id", id)
+      .single();
+
+    if (freshKeyError || !freshKey) {
       return res.status(400).json({
         success: false,
-        message:
-          "Vehicle key must be assigned to a valet before retrieval."
+        message: "Unable to verify vehicle key."
       });
     }
 
-    if (!key.assigned_to) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Vehicle key is not assigned to a valid valet."
-      });
-    }
-
-    if (req.user?.role === "valet") {
-      if (key.assigned_to !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "You are not the valet assigned to this vehicle."
-        });
-      }
-
-      const { data: assignedValet, error: assignedValetError } =
-        await supabase
-          .from("employees")
-          .select("id, email, role, is_active")
-          .eq("id", session.valet_id)
-          .eq("role", "valet")
-          .single();
-
-      if (assignedValetError || !assignedValet) {
-        return res.status(404).json({
-          success: false,
-          message: "Assigned valet employee record not found."
-        });
-      }
-
-      if (!assignedValet.is_active) {
-        return res.status(400).json({
-          success: false,
-          message: "Assigned valet is inactive."
-        });
-      }
-
-      const { data: valetUser, error: valetUserError } =
-        await supabase
-          .from("users")
-          .select("id, email, role, is_active")
-          .eq("id", req.user.id)
-          .eq("role", "valet")
-          .single();
-
-      if (valetUserError || !valetUser) {
-        return res.status(404).json({
-          success: false,
-          message: "Valet user account not found."
-        });
-      }
-
-      if (!valetUser.is_active) {
-        return res.status(400).json({
-          success: false,
-          message: "Your valet account is inactive."
-        });
-      }
-
-      if (valetUser.email !== assignedValet.email) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "You are not the valet assigned to this vehicle."
-        });
-      }
-    }
+    key = freshKey;
 
     const { data: updatedKey, error: keyUpdateError } =
       await supabase
@@ -1527,7 +1661,12 @@ const startRetrieval = async (req, res) => {
           updated_at: new Date().toISOString()
         })
         .eq("id", key.id)
-        .eq("status", "assigned")
+        .in("status", [
+          "assigned",
+          "stored",
+          "available",
+          "returned"
+        ])
         .eq("assigned_to", key.assigned_to)
         .select()
         .single();
@@ -1704,6 +1843,11 @@ const markReadyForPickup = async (req, res) => {
       }
     }
 
+    notifySessionEventInBackground({
+      event: "ready_for_pickup",
+      sessionId: updatedSession.id
+    });
+
     return res.status(200).json({
       success: true,
       message: "Vehicle is ready for pickup.",
@@ -1742,6 +1886,7 @@ const completeReturn = async (req, res) => {
           customer:customers (
             id,
             name,
+            phone,
             email
           )
         )
@@ -1761,59 +1906,6 @@ const completeReturn = async (req, res) => {
         success: false,
         message: "Vehicle must be ready for pickup before completing return."
       });
-    }
-
-    if (req.user.role === "valet") {
-      if (!session.valet_id) {
-        return res.status(400).json({
-          success: false,
-          message: "No valet is assigned to this parking session."
-        });
-      }
-
-      const { data: assignedValet, error: assignedValetError } =
-        await supabase
-          .from("employees")
-          .select("id, email")
-          .eq("id", session.valet_id)
-          .eq("role", "valet")
-          .single();
-
-      if (assignedValetError || !assignedValet) {
-        return res.status(400).json({
-          success: false,
-          message: "Assigned valet could not be verified."
-        });
-      }
-
-      if (!assignedValet.email) {
-        return res.status(400).json({
-          success: false,
-          message: "Assigned valet does not have a valid email."
-        });
-      }
-
-      const { data: assignedUser, error: assignedUserError } =
-        await supabase
-          .from("users")
-          .select("id")
-          .eq("email", assignedValet.email)
-          .eq("role", "valet")
-          .single();
-
-      if (assignedUserError || !assignedUser) {
-        return res.status(400).json({
-          success: false,
-          message: "Assigned valet user could not be verified."
-        });
-      }
-
-      if (assignedUser.id !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          message: "You are not assigned to this vehicle."
-        });
-      }
     }
 
     const { data: finalInspection, error: inspectionError } =
@@ -1947,13 +2039,55 @@ const completeReturn = async (req, res) => {
       }
 
       if (!updatedPosition) {
-        return res.status(409).json({
-          success: false,
-          message: "Parking position is no longer occupied or has already been released."
-        });
+        const { data: currentPosition, error: currentPositionError } =
+          await supabase
+            .from("parking_positions")
+            .select("status")
+            .eq("id", session.parking_position_id)
+            .maybeSingle();
+
+        if (currentPositionError) {
+          console.error("Verify released parking position error:", currentPositionError);
+          return res.status(500).json({
+            success: false,
+            message: "Unable to verify parking position status."
+          });
+        }
+
+        if (currentPosition?.status !== "available") {
+          return res.status(409).json({
+            success: false,
+            message: "Parking position is no longer occupied or has already been released."
+          });
+        }
+
+        const { data: otherPositionSession, error: positionSessionError } =
+          await supabase
+            .from("parking_sessions")
+            .select("id")
+            .eq("parking_position_id", session.parking_position_id)
+            .neq("id", id)
+            .in("status", ACTIVE_STATUSES)
+            .limit(1)
+            .maybeSingle();
+
+        if (positionSessionError) {
+          console.error("Verify parking position assignment error:", positionSessionError);
+          return res.status(500).json({
+            success: false,
+            message: "Unable to verify parking position assignment."
+          });
+        }
+
+        if (otherPositionSession) {
+          return res.status(409).json({
+            success: false,
+            message: "Parking position is assigned to another vehicle."
+          });
+        }
       }
 
-      positionUpdated = true;
+      positionUpdated = Boolean(updatedPosition);
     }
 
     if (session.parking_slot) {
@@ -1995,13 +2129,54 @@ const completeReturn = async (req, res) => {
             .eq("id", session.parking_position_id);
         }
 
-        return res.status(409).json({
-          success: false,
-          message: "Parking slot is no longer occupied or has already been released."
-        });
+        const { data: currentSlot, error: currentSlotError } = await supabase
+          .from("parking_slots")
+          .select("status")
+          .eq("slot_number", session.parking_slot)
+          .maybeSingle();
+
+        if (currentSlotError) {
+          console.error("Verify released parking slot error:", currentSlotError);
+          return res.status(500).json({
+            success: false,
+            message: "Unable to verify parking slot status."
+          });
+        }
+
+        if (currentSlot?.status !== "available") {
+          return res.status(409).json({
+            success: false,
+            message: "Parking slot is no longer occupied or has already been released."
+          });
+        }
+
+        const { data: otherSlotSession, error: slotSessionError } =
+          await supabase
+            .from("parking_sessions")
+            .select("id")
+            .eq("parking_slot", session.parking_slot)
+            .neq("id", id)
+            .in("status", ACTIVE_STATUSES)
+            .limit(1)
+            .maybeSingle();
+
+        if (slotSessionError) {
+          console.error("Verify parking slot assignment error:", slotSessionError);
+          return res.status(500).json({
+            success: false,
+            message: "Unable to verify parking slot assignment."
+          });
+        }
+
+        if (otherSlotSession) {
+          return res.status(409).json({
+            success: false,
+            message: "Parking slot is assigned to another vehicle."
+          });
+        }
       }
 
-      slotUpdated = true;
+      slotUpdated = Boolean(updatedSlot);
     }
 
     const { data: updatedKey, error: keyUpdateError } = await supabase
@@ -2106,6 +2281,23 @@ const completeReturn = async (req, res) => {
       });
     }
 
+    const { error: duplicateSessionsError } = await supabase
+      .from("parking_sessions")
+      .update({
+        status: "returned_completed",
+        completed_at: completedAt
+      })
+      .eq("vehicle_id", session.vehicle?.id)
+      .neq("id", id)
+      .in("status", ACTIVE_STATUSES);
+
+    if (duplicateSessionsError) {
+      console.error(
+        "Close duplicate active vehicle sessions error:",
+        duplicateSessionsError
+      );
+    }
+
     const customer = session.vehicle?.customer;
 
     if (customer?.id) {
@@ -2131,27 +2323,15 @@ const completeReturn = async (req, res) => {
       }
     }
 
-    if (customer?.email) {
-      try {
-        const emailHtml = createVehicleReturnEmail({
-          customerName: customer.name,
-          vehicleNumber: session.vehicle.license_plate,
-          vehicleModel: `${session.vehicle.make} ${session.vehicle.model}`,
-          ticketCode: session.ticket_code,
-          parkingSlot: session.parking_slot,
-          completedAt
-        });
-
-        await transporter.sendMail({
-          from: process.env.EMAIL_USER,
-          to: customer.email,
-          subject: "Vehicle Returned Successfully - Aura Valet Parking",
-          html: emailHtml
-        });
-      } catch (emailError) {
-        console.error("Vehicle returned email error:", emailError);
+    notifyCustomerInBackground({
+      event: "returned",
+      sessionId: updatedSession.id,
+      customer,
+      data: {
+        plate: session.vehicle?.license_plate,
+        ticketCode: session.ticket_code
       }
-    }
+    });
 
     return res.status(200).json({
       success: true,
@@ -2877,6 +3057,11 @@ const completeSelfParking = async (req, res) => {
       }
     }
 
+    notifySessionEventInBackground({
+      event: "returned",
+      sessionId: id
+    });
+
     return res.status(200).json({
       success: true,
       message:
@@ -2893,25 +3078,7 @@ const completeSelfParking = async (req, res) => {
   }
 };
 
-const getValetDashboard = async (req, res) => {
-  try {
-    const { data: valet, error: valetError } = await supabase
-      .from("employees")
-      .select("id, name, phone, email, role, is_active")
-      .eq("email", req.user.email)
-      .eq("role", "valet")
-      .single();
-
-    if (valetError || !valet) {
-      return res.status(404).json({
-        success: false,
-        message: "Valet employee record not found."
-      });
-    }
-
-    const { data: sessions, error: sessionError } = await supabase
-      .from("parking_sessions")
-      .select(`
+const VALET_SESSION_SELECT = `
         id,
         ticket_code,
         parking_type,
@@ -2939,9 +3106,36 @@ const getValetDashboard = async (req, res) => {
           phone,
           email,
           role
+        ),
+        key:keys (
+          id,
+          key_number,
+          status,
+          assigned_to,
+          assigned_at
         )
-      `)
-      .eq("valet_id", valet.id)
+      `;
+
+const getValetDashboard = async (req, res) => {
+  try {
+    const { data: valet, error: valetError } = await supabase
+      .from("employees")
+      .select("id, name, phone, email, role, is_active")
+      .eq("email", req.user.email)
+      .eq("role", "valet")
+      .single();
+
+    if (valetError || !valet) {
+      return res.status(404).json({
+        success: false,
+        message: "Valet employee record not found."
+      });
+    }
+
+    const { data: sessions, error: sessionError } = await supabase
+      .from("parking_sessions")
+      .select(VALET_SESSION_SELECT)
+      .or(`valet_id.eq.${valet.id},valet_id.eq.${req.user.id}`)
       .order("checked_in_at", { ascending: false });
 
     if (sessionError) {
@@ -2954,6 +3148,21 @@ const getValetDashboard = async (req, res) => {
     }
 
     const result = sessions || [];
+
+    // Retrieval requests are open to every valet - the car does not have to be
+    // one they parked, and they do not need to be free. Whoever starts the
+    // retrieval takes the job over (see startRetrieval).
+    const { data: pendingRequests, error: pendingError } = await supabase
+      .from("parking_sessions")
+      .select(VALET_SESSION_SELECT)
+      .eq("status", "retrieval_requested")
+      .order("checked_in_at", { ascending: true });
+
+    if (pendingError) {
+      console.error("Get valet retrieval requests error:", pendingError);
+    }
+
+    const retrievalRequestList = pendingRequests || [];
 
     const activeSessions = result.filter((session) =>
       ACTIVE_STATUSES.includes(session.status)
@@ -2969,9 +3178,7 @@ const getValetDashboard = async (req, res) => {
       (session) => session.status === "parked"
     ).length;
 
-    const retrievalRequests = activeSessions.filter(
-      (session) => session.status === "retrieval_requested"
-    ).length;
+    const retrievalRequests = retrievalRequestList.length;
 
     const retrievingVehicles = activeSessions.filter(
       (session) => session.status === "retrieving"
@@ -2981,9 +3188,15 @@ const getValetDashboard = async (req, res) => {
       (session) => session.status === "ready_for_pickup"
     ).length;
 
-    const completedReturns = result.filter(
-      (session) => session.status === "returned_completed"
-    ).length;
+    const completedReturnSessions = result
+      .filter(
+        (session) => session.status === "returned_completed"
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.completed_at || 0).getTime() -
+          new Date(a.completed_at || 0).getTime()
+      );
 
     return res.status(200).json({
       success: true,
@@ -3001,9 +3214,11 @@ const getValetDashboard = async (req, res) => {
         retrieval_requests: retrievalRequests,
         retrieving_vehicles: retrievingVehicles,
         ready_for_pickup: readyForPickup,
-        completed_returns: completedReturns
+        completed_returns: completedReturnSessions.length
       },
-      sessions: activeSessions
+      sessions: activeSessions,
+      retrieval_requests: retrievalRequestList,
+      completed_returns: completedReturnSessions
     });
   } catch (error) {
     console.error("Get valet dashboard error:", error);

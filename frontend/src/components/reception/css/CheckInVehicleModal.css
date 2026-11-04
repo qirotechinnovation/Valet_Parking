@@ -1,0 +1,1352 @@
+ /* ============================================================
+    CHECK-IN VEHICLE MODAL
+    ============================================================ */
+
+.modal-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+
+  max-height: 220px;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #e7dee0;
+  border-radius: 10px;
+
+  box-shadow:
+    0 10px 28px rgba(53, 20, 28, 0.12),
+    0 2px 8px rgba(53, 20, 28, 0.05);
+
+  animation: dropdownIn 0.15s ease;
+}
+
+
+/* ============================================================
+   VEHICLE DROPDOWN ITEM
+   ============================================================ */
+
+.modal-dropdown-item {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  gap: 3px;
+
+  padding: 11px 13px;
+
+  border: 0;
+  border-bottom: 1px solid #f2eeef;
+
+  background: #ffffff;
+
+  color: #35141c;
+
+  font-family: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.16s ease,
+    padding-left 0.16s ease;
+}
+
+.modal-dropdown-item:last-child {
+  border-bottom: 0;
+}
+
+.modal-dropdown-item:hover {
+  background: #faf3f5;
+  padding-left: 16px;
+}
+
+.modal-dropdown-item strong {
+  color: #35141c;
+
+  font-family: monospace;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  letter-spacing: 0.02em;
+}
+
+.modal-dropdown-item strong em {
+  margin-left: 8px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #fff1e7;
+  color: #b45d20;
+  font-family: inherit;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.modal-dropdown-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.modal-dropdown-item:disabled:hover {
+  background: #ffffff;
+  padding-left: 13px;
+}
+
+.modal-dropdown-item span {
+  color: #998489;
+
+  font-size: 10px;
+  font-weight: 500;
+}
+
+
+/* ============================================================
+   EMPTY DROPDOWN
+   ============================================================ */
+
+.modal-dropdown-empty {
+  padding: 16px 13px;
+
+  color: #998489;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  line-height: 1.5;
+
+  text-align: center;
+}
+
+
+/* ============================================================
+   SELECTED VEHICLE
+   ============================================================ */
+
+.modal-selected-vehicle {
+  margin-top: 8px;
+
+  padding: 9px 11px;
+
+  border: 1px solid #dceee7;
+  border-radius: 8px;
+
+  background: #f1faf6;
+
+  color: #5f7169;
+
+  font-size: 10px;
+  font-weight: 500;
+
+  line-height: 1.5;
+}
+
+.modal-selected-vehicle strong {
+  color: #047857;
+
+  font-family: monospace;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+/* ============================================================
+   PARKING TYPE TOGGLE
+   ============================================================ */
+
+.parking-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 8px;
+}
+
+.type-btn {
+  height: 43px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  border: 1px solid #e5dbde;
+  border-radius: 9px;
+
+  background: #fbf9fa;
+
+  color: #7d6a6f;
+
+  font-family: inherit;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.type-btn:hover {
+  background: #f8eef0;
+  border-color: #e2c8ce;
+  color: #7a2e41;
+}
+
+.type-btn.active {
+  background: #f8eef0;
+
+  border-color: #a73b56;
+
+  color: #7a2e41;
+
+  box-shadow: 0 0 0 2px rgba(167, 59, 86, 0.07);
+}
+
+
+/* ============================================================
+   TICKET CODE REFRESH BUTTON
+   ============================================================ */
+
+.modal-input-wrap > button {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.modal-input-wrap > button:hover {
+  color: #7e273d !important;
+
+  transform: rotate(35deg);
+}
+
+.modal-input-wrap > button:active {
+  transform: rotate(90deg);
+}
+
+
+/* ============================================================
+   DROPDOWN SCROLLBAR
+   ============================================================ */
+
+.modal-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-dropdown::-webkit-scrollbar-thumb {
+  background: #ddd1d4;
+  border-radius: 10px;
+}
+
+
+/* ============================================================
+   DROPDOWN ANIMATION
+   ============================================================ */
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE CHECK-IN MODAL
+   ============================================================ */
+
+@media (max-width: 450px) {
+  .parking-type-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .type-btn {
+    height: 40px;
+  }
+
+  .modal-dropdown {
+    max-height: 180px;
+  }
+}
+
+/* =========================================================
+   VEHICLE FIELD
+   ========================================================= */
+
+.modal-field {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.modal-field > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #50383e;
+}
+
+.required {
+  color: #db9e35;
+  margin-left: 2px;
+}
+
+/* Search input wrapper */
+.modal-input-wrap {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+
+  background: #ffffff;
+  border: 1px solid #eedbe0;
+  border-radius: 8px;
+
+  color: #856a71;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.modal-input-wrap:focus-within {
+  border-color: #e0ac51;
+  box-shadow: 0 0 0 3px rgba(224, 172, 81, 0.10);
+}
+
+.modal-input-wrap svg {
+  flex-shrink: 0;
+  color: #856a71;
+}
+
+.modal-input-wrap input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  font-size: 13px;
+  color: #411822;
+}
+
+.modal-input-wrap input::placeholder {
+  color: #b399a0;
+}
+
+
+/* =========================================================
+   VEHICLE DROPDOWN
+   ========================================================= */
+
+.modal-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+
+  z-index: 100;
+  overflow: hidden;
+
+  background: #ffffff;
+  border: 1px solid #f0e2e5;
+  border-radius: 9px;
+
+  box-shadow:
+    0 10px 25px rgba(42, 15, 22, 0.10),
+    0 3px 8px rgba(42, 15, 22, 0.05);
+
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* Individual vehicle */
+.modal-dropdown-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  padding: 11px 13px;
+
+  background: #ffffff;
+  border: none;
+  border-bottom: 1px solid #f9f1f3;
+
+  text-align: left;
+  cursor: pointer;
+
+  transition: background 0.15s ease;
+}
+
+.modal-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.modal-dropdown-item:hover {
+  background: #fcf8f9;
+}
+
+.modal-dropdown-item strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #411822;
+}
+
+.modal-dropdown-item span {
+  font-size: 12px;
+  color: #856a71;
+  line-height: 1.4;
+}
+
+/* Empty dropdown */
+.modal-dropdown-empty {
+  padding: 14px;
+
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+
+  color: #856a71;
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   SELECTED VEHICLE
+   ========================================================= */
+
+.modal-selected-vehicle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  margin-top: 8px;
+  padding: 9px 11px;
+
+  background: #fdf8f1;
+  border: 1px solid #f9f0e0;
+  border-radius: 7px;
+
+  font-size: 12px;
+  line-height: 1.5;
+  color: #644c52;
+}
+
+.modal-selected-vehicle strong {
+  color: #d09125;
+  font-weight: 700;
+  margin-right: 3px;
+}
+
+
+/* =========================================================
+   PARKING TYPE
+   ========================================================= */
+
+.parking-type-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+  width: 100%;
+}
+
+.type-btn {
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  border: 1px solid #eedbe0;
+  border-radius: 8px;
+
+  background: #ffffff;
+  color: #644c52;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.type-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2;
+}
+
+.type-btn:hover {
+  border-color: #efd2a1;
+  background: #fefcf9;
+  color: #db9e35;
+}
+
+.type-btn.active {
+  border-color: #db9e35;
+  background: #fdf8f1;
+  color: #db9e35;
+  box-shadow: 0 0 0 1px rgba(219, 158, 53, 0.08);
+}
+
+.type-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* =========================================================
+   DROPDOWN SCROLLBAR
+   ========================================================= */
+
+.modal-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-dropdown::-webkit-scrollbar-thumb {
+  background: #e1cbd0;
+  border-radius: 10px;
+}
+
+.modal-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #b399a0;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 520px) {
+  .parking-type-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-input-wrap,
+  .type-btn {
+    height: 44px;
+  }
+}
+
+/* =========================================================
+   VEHICLE INSPECTION
+   ========================================================= */
+
+.inspection-fields {
+  margin-top: 4px;
+}
+
+/* Inspection section label */
+.inspection-fields > label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ---------------------------------------------------------
+   CONDITION SELECTOR
+   --------------------------------------------------------- */
+
+.inspection-condition-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.inspection-condition-toggle .type-btn {
+  position: relative;
+  height: 46px;
+  border: 1px solid #eddce0;
+  border-radius: 10px;
+  background: #fdfbfb;
+  color: #7f6d71;
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.inspection-condition-toggle .type-btn:hover {
+  border-color: #e0bbc4;
+  background: #fbf3f5;
+  color: #a73b56;
+}
+
+.inspection-condition-toggle .type-btn.active {
+  border-color: #8b1230;
+  background: #fbf1f3;
+  color: #d92854;
+  box-shadow:
+    0 0 0 2px rgba(139, 18, 48, 0.08),
+    0 4px 12px rgba(139, 18, 48, 0.06);
+}
+
+.inspection-condition-toggle .type-btn.active.damaged {
+  border-color: #e49a9a;
+  background: #fff5f5;
+  color: #b42318;
+  box-shadow:
+    0 0 0 2px rgba(220, 107, 107, 0.07),
+    0 4px 12px rgba(185, 28, 28, 0.04);
+}
+
+.inspection-condition-toggle .type-btn:active {
+  transform: translateY(1px);
+}
+
+
+/* ---------------------------------------------------------
+   INSPECTION TEXT AREAS
+   --------------------------------------------------------- */
+
+.inspection-fields textarea {
+  width: 100%;
+  min-height: 78px;
+  margin-top: 9px;
+  padding: 11px 13px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #eddce0;
+  border-radius: 10px;
+
+  outline: none;
+  resize: vertical;
+
+  background: #ffffff;
+  color: #35141c;
+
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.inspection-fields textarea::placeholder {
+  color: #ab9a9e;
+}
+
+.inspection-fields textarea:focus {
+  border-color: #d36b85;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 3px rgba(139, 18, 48, 0.08);
+}
+
+.inspection-fields textarea:first-of-type {
+  min-height: 82px;
+}
+
+.inspection-fields textarea + textarea {
+  min-height: 68px;
+}
+
+
+/* ---------------------------------------------------------
+   PHOTO UPLOAD AREA
+   --------------------------------------------------------- */
+
+.inspection-upload-label {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 76px;
+  margin-top: 12px;
+  padding: 12px 14px;
+
+  box-sizing: border-box;
+
+  border: 1px dashed #e0bdc6;
+  border-radius: 11px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #fefcfc 0%,
+      #fdf7f8 100%
+    );
+
+  color: #a73b56;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.inspection-upload-label::before {
+  content: "＋";
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 27px;
+  height: 27px;
+
+  margin-right: 8px;
+
+  border-radius: 8px;
+
+  background: #f9e8ec;
+  color: #8b1230;
+
+  font-size: 18px;
+  font-weight: 500;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.inspection-upload-label:hover {
+  border-color: #d2798f;
+  background: #fdf7f8;
+  box-shadow:
+    0 5px 15px rgba(139, 18, 48, 0.07);
+}
+
+.inspection-upload-label:hover::before {
+  background: #f6dbe2;
+  transform: translateY(-1px);
+}
+
+.inspection-upload-label:active {
+  transform: translateY(1px);
+}
+
+.inspection-upload-label input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* ---------------------------------------------------------
+   PHOTO PREVIEW GRID
+   --------------------------------------------------------- */
+
+.inspection-photo-previews {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+
+  gap: 9px;
+
+  margin-top: 11px;
+}
+
+.inspection-photo-preview {
+  position: relative;
+
+  overflow: hidden;
+
+  aspect-ratio: 1;
+
+  border: 1px solid #eddce0;
+  border-radius: 10px;
+
+  background: #faf1f3;
+
+  box-shadow:
+    0 3px 10px rgba(53, 20, 28, 0.05);
+
+  animation: inspectionPhotoIn 0.2s ease;
+}
+
+.inspection-photo-preview::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  border-radius: inherit;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.inspection-photo-preview img {
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  object-fit: cover;
+
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease;
+}
+
+.inspection-photo-preview:hover img {
+  transform: scale(1.04);
+  filter: brightness(0.88);
+}
+
+
+/* ---------------------------------------------------------
+   REMOVE PHOTO BUTTON
+   --------------------------------------------------------- */
+
+.inspection-photo-preview button {
+  position: absolute;
+
+  right: 5px;
+  bottom: 5px;
+
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 24px;
+
+  padding: 4px 7px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: rgba(53, 20, 28, 0.78);
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(5px);
+
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.inspection-photo-preview button:hover {
+  background: #b42318;
+  transform: translateY(-1px);
+}
+
+.inspection-photo-preview button:active {
+  transform: translateY(0);
+}
+
+
+/* ---------------------------------------------------------
+   PHOTO COUNT / HELPER TEXT
+   --------------------------------------------------------- */
+
+.inspection-fields .photo-helper {
+  margin-top: 6px;
+
+  color: #a19195;
+
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* Keep the check-in context and primary action visible while the form scrolls. */
+.check-in-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(640px, 100%);
+  max-width: 640px;
+  height: min(760px, calc(100vh - 48px));
+  overflow: hidden;
+}
+
+.check-in-modal .reception-modal-header {
+  flex: 0 0 auto;
+  background: #ffffff;
+}
+
+.check-in-modal .modal-form-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 0 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.check-in-modal .modal-form-body > .modal-error,
+.check-in-modal .inspection-fields,
+.check-in-modal .modal-footer {
+  grid-column: 1 / -1;
+}
+
+.check-in-modal .modal-field {
+  margin-bottom: 16px;
+}
+
+.check-in-modal .vehicle-field {
+  grid-column: 1 / -1;
+}
+
+.check-in-modal .payment-fields {
+  grid-column: 1 / -1;
+}
+
+.check-in-modal .parking-type-field {
+  grid-column: 1 / -1;
+}
+
+.check-in-modal .payment-fields .modal-input-wrap {
+  margin-top: 12px;
+}
+
+.check-in-modal .modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 2px;
+  padding: 14px 0 4px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    #ffffff 24%
+  );
+}
+
+.check-in-modal .modal-success-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.check-in-modal .inspection-upload-help,
+.check-in-modal .inspection-photo-count {
+  display: block;
+  color: #806f74;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.check-in-modal .inspection-upload-label {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  min-height: 76px;
+  margin-top: 12px;
+  align-items: center;
+  justify-content: initial;
+  justify-items: start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed #d9b8c0;
+  border-radius: 12px;
+  background: #fdf9fa;
+  color: #7a2e41;
+  text-align: left;
+}
+
+.check-in-modal .inspection-upload-label::before {
+  display: none;
+}
+
+.check-in-modal .inspection-upload-icon {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f6e8eb;
+  color: #8b1230;
+}
+
+.check-in-modal .inspection-upload-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.check-in-modal .inspection-upload-copy {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  min-width: 0;
+  gap: 3px;
+}
+
+.check-in-modal .inspection-upload-copy strong {
+  color: #5a2533;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.check-in-modal .inspection-upload-copy small {
+  color: #8c7c80;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.check-in-modal .inspection-upload-label:focus-within {
+  outline: 3px solid rgba(139, 18, 48, 0.12);
+  outline-offset: 2px;
+}
+
+.check-in-modal .inspection-photo-previews {
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
+}
+
+.check-in-modal .inspection-photo-preview {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: auto;
+}
+
+.check-in-modal .inspection-photo-preview img {
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+}
+
+.check-in-modal .inspection-photo-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 7px 8px 34px;
+}
+
+.check-in-modal .inspection-photo-info span {
+  overflow: hidden;
+  color: #514044;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check-in-modal .inspection-photo-info small {
+  color: #8c7c80;
+  font-size: 9px;
+}
+
+.check-in-modal .inspection-photo-preview button {
+  right: 7px;
+  bottom: 7px;
+}
+
+@media (max-width: 700px) {
+  .check-in-modal .modal-form-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .check-in-modal .modal-form-body > .modal-field,
+  .check-in-modal .modal-form-body > .modal-error,
+  .check-in-modal .inspection-fields,
+  .check-in-modal .modal-footer {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 650px) {
+  .check-in-modal {
+    height: calc(100vh - 28px);
+  }
+}
+
+@media (max-width: 450px) {
+  .check-in-modal {
+    height: calc(100vh - 16px);
+  }
+}
+
+
+/* ---------------------------------------------------------
+   INSPECTION ERROR
+   --------------------------------------------------------- */
+
+.inspection-fields .error-message {
+  margin-top: 8px;
+  padding: 8px 10px;
+
+  border: 1px solid #f1caca;
+  border-radius: 8px;
+
+  background: #fff5f5;
+  color: #b42318;
+
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+
+/* ---------------------------------------------------------
+   INSPECTION PHOTO ANIMATION
+   --------------------------------------------------------- */
+
+@keyframes inspectionPhotoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+
+/* ---------------------------------------------------------
+   RESPONSIVE INSPECTION
+   --------------------------------------------------------- */
+
+@media (max-width: 520px) {
+  .inspection-condition-toggle {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .inspection-condition-toggle .type-btn {
+    height: 43px;
+  }
+
+  .inspection-photo-previews {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .inspection-photo-previews {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ============================================================
+   PAYMENT AT CHECK-IN + PARKING RECEIPT
+   ============================================================ */
+
+.payment-fields .payment-currency {
+  font-weight: 700;
+  color: #887479;
+}
+
+.payment-fields .payment-help {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #887479;
+}
+
+.parking-receipt {
+  width: 100%;
+  max-width: 300px;
+  margin: 16px auto 12px;
+  padding: 18px 16px;
+  background: #ffffff;
+  color: #35141c;
+  border: 1px solid #e7dee0;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(53, 20, 28, 0.08);
+  text-align: center;
+}
+
+.parking-receipt-head {
+  padding-bottom: 10px;
+  border-bottom: 2px solid #35141c;
+}
+
+.parking-receipt-head h5 {
+  margin: 6px 0 2px;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
+
+.parking-receipt-head p {
+  margin: 0;
+  font-size: 11px;
+  color: #887479;
+}
+
+.parking-receipt-ticket {
+  margin: 12px 0;
+  font-size: 12px;
+  color: #887479;
+}
+
+.parking-receipt-ticket strong {
+  color: #35141c;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.parking-receipt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px dashed #d5cacd;
+  border-bottom: 1px dashed #d5cacd;
+  text-align: left;
+}
+
+.parking-receipt-grid span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: #887479;
+  text-transform: uppercase;
+}
+
+.parking-receipt-grid strong {
+  display: block;
+  font-size: 14px;
+}
+
+.parking-receipt-grid small {
+  display: block;
+  font-size: 10px;
+  color: #887479;
+}
+
+.parking-receipt-qr {
+  display: block;
+  width: 120px;
+  height: 120px;
+  margin: 14px auto 6px;
+}
+
+.parking-receipt-thanks {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.receipt-print-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto 8px;
+}
+
+@media print {
+  body.printing-receipt * {
+    visibility: hidden !important;
+  }
+
+  body.printing-receipt #parking-receipt,
+  body.printing-receipt #parking-receipt * {
+    visibility: visible !important;
+  }
+
+  body.printing-receipt #parking-receipt {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: none;
+    border: 0;
+  }
+}
+
+
+/* Valet picked automatically at check-in */
+.valet-assigned-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px auto 4px;
+  max-width: 420px;
+  padding: 12px 16px;
+  border: 1px solid rgba(34, 139, 94, 0.35);
+  border-radius: 12px;
+  background: rgba(34, 139, 94, 0.1);
+  color: #1f7a54;
+  text-align: left;
+}
+
+.valet-assigned-banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.valet-assigned-banner span {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.valet-assigned-banner strong {
+  font-size: 16px;
+}
+
+.valet-assigned-banner small {
+  opacity: 0.85;
+}
+
+.valet-assigned-banner--none {
+  border-color: rgba(200, 130, 20, 0.4);
+  background: rgba(200, 130, 20, 0.1);
+  color: #9a6208;
+}

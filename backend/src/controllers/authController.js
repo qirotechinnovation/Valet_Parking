@@ -1,4 +1,6 @@
 const supabase = require("../config/supabase");
+const { createAuthClient } = supabase;
+const { normalizeRole } = require("../middleware/roleMiddleware");
 
 /*
 |--------------------------------------------------------------------------
@@ -18,8 +20,9 @@ const login = async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
+    // separate client: signing in must not turn the shared admin client into this user
     const { data, error } =
-      await supabase.auth.signInWithPassword({
+      await createAuthClient().auth.signInWithPassword({
         email: normalizedEmail,
         password
       });
@@ -54,7 +57,10 @@ const login = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Login successful.",
-      user,
+      user: {
+        ...user,
+        role: normalizeRole(user.role)
+      },
       session: data.session
     });
 
@@ -64,6 +70,42 @@ const login = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error."
+    });
+  }
+};
+
+const refreshSession = async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+
+    if (!refresh_token) {
+      return res.status(400).json({
+        success: false,
+        message: "Refresh token is required."
+      });
+    }
+
+    const { data, error } = await createAuthClient().auth.refreshSession({
+      refresh_token
+    });
+
+    if (error || !data?.session) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please log in again."
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      session: data.session
+    });
+  } catch (error) {
+    console.error("Session refresh error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to refresh session."
     });
   }
 };
@@ -356,7 +398,115 @@ const registerCustomer = async (req, res) => {
   }
 };
 
+/*
+|--------------------------------------------------------------------------
+| CUSTOMER PHONE LOGIN (no password – used from WhatsApp dashboard link)
+|--------------------------------------------------------------------------
+*/
+const { generateCustomerToken } = require("../utils/customerToken");
+
+const customerPhoneLogin = async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required."
+      });
+    }
+
+    const raw = String(phone).trim();
+    const digits = raw.replace(/\D/g, "");
+    const last10 = digits.slice(-10);
+
+    const candidatePhones = [
+      raw,
+      digits,
+      last10,
+      `+91${last10}`,
+      `91${last10}`,
+      `0${last10}`,
+      `+${digits}`
+    ].filter(Boolean);
+
+    const uniqueCandidates = [...new Set(candidatePhones)];
+
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .select("id, name, phone, email, created_at")
+      .in("phone", uniqueCandidates)
+      .limit(1)
+      .maybeSingle();
+
+    let foundCustomer = customer;
+
+    // Fallback: search by last 10 digits in case formatted with dashes/spaces
+    if (!foundCustomer && last10.length === 10) {
+      const { data: allCust } = await supabase
+        .from("customers")
+        .select("id, name, phone, email, created_at");
+
+      foundCustomer = (allCust || []).find((c) => {
+        const cDigits = String(c.phone || "").replace(/\D/g, "");
+        return cDigits === digits || (last10 && cDigits.slice(-10) === last10);
+      });
+    }
+
+    // If still not found, auto-create customer record so any newly arrived customer gets access
+    if (!foundCustomer) {
+      const { data: newCust, error: newCustErr } = await supabase
+        .from("customers")
+        .insert([{
+          name: "Customer",
+          phone: last10 || raw
+        }])
+        .select("id, name, phone, email, created_at")
+        .single();
+
+      if (!newCustErr && newCust) {
+        foundCustomer = newCust;
+      }
+    }
+
+    if (!foundCustomer) {
+      return res.status(404).json({
+        success: false,
+        message: "No customer found with this phone number."
+      });
+    }
+
+    const token = generateCustomerToken(foundCustomer);
+
+    return res.status(200).json({
+      success: true,
+      message: "Customer mobile login successful.",
+      user: {
+        id: foundCustomer.id,
+        name: foundCustomer.name,
+        email: foundCustomer.email,
+        phone: foundCustomer.phone,
+        role: "customer"
+      },
+      customer: foundCustomer,
+      session: {
+        access_token: token,
+        refresh_token: token
+      }
+    });
+  } catch (error) {
+    console.error("Customer phone login error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error."
+    });
+  }
+};
+
 module.exports = {
   login,
-  registerCustomer
+  refreshSession,
+  registerCustomer,
+  customerPhoneLogin
 };

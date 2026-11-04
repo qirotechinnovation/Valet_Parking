@@ -17,6 +17,12 @@ const authorizeRoles = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+const KEY_MANAGE_ROLES = [
+  "super_admin",
+  "parking_admin",
+  "reception_security"
+];
+
 const KEY_VIEW_ROLES = [
   "super_admin",
   "parking_admin",
@@ -49,35 +55,35 @@ router.get(
 router.post(
   "/",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin"),
+  authorizeRoles(...KEY_MANAGE_ROLES),
   createKey
 );
 
 router.put(
   "/:id",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin"),
+  authorizeRoles(...KEY_MANAGE_ROLES),
   updateKey
 );
 
 router.patch(
   "/:id/assign",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin"),
+  authorizeRoles(...KEY_MANAGE_ROLES),
   assignKey
 );
 
 router.patch(
   "/:id/return",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin", "valet"),
+  authorizeRoles(...KEY_MANAGE_ROLES, "valet"),
   returnKey
 );
 
 router.patch(
   "/:id/lost",
   authenticate,
-  authorizeRoles("super_admin", "parking_admin"),
+  authorizeRoles(...KEY_MANAGE_ROLES),
   markKeyLost
 );
 

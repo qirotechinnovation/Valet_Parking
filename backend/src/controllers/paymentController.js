@@ -1,7 +1,6 @@
 const supabase = require("../config/supabase");
 const PDFDocument = require("pdfkit");
 const { PassThrough } = require("stream");
-const { sendInvoiceEmail } = require("../config/email");
 
 const formatDate = (date) => {
   if (!date) return "-";
@@ -157,7 +156,7 @@ const generateInvoicePDF = async ({
     doc
       .fontSize(11)
       .font("Helvetica-Bold")
-      .text("Aura Valet Parking System", left, 82);
+      .text("Valet Parking System", left, 82);
 
     doc
       .fontSize(9)
@@ -419,263 +418,6 @@ const generateInvoicePDF = async ({
 };
 
 
-const createPayment = async (req, res) => {
-  try {
-    const {
-      parking_session_id,
-      parking_charge = 0,
-      valet_service_charge = 0,
-      extra_charges = 0,
-      discount = 0,
-      gst = 0,
-      payment_method
-    } = req.body;
-
-    if (!parking_session_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Parking session ID is required."
-      });
-    }
-
-    if (!payment_method || !["cash", "online"].includes(payment_method)) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment method must be cash or online."
-      });
-    }
-
-    const { data: session, error: sessionError } = await supabase
-      .from("parking_sessions")
-      .select(`
-        id,
-        ticket_code,
-        status,
-        parking_type,
-        parking_slot,
-        checked_in_at,
-        parked_at,
-        completed_at,
-        vehicle_id,
-        valet_id
-      `)
-      .eq("id", parking_session_id)
-      .single();
-
-    if (sessionError || !session) {
-      console.error("Session fetch error:", sessionError);
-
-      return res.status(404).json({
-        success: false,
-        message: "Parking session not found."
-      });
-    }
-
-    if (session.status !== "ready_for_pickup") {
-      return res.status(400).json({
-        success: false,
-        message: "Payment can only be created when the vehicle is ready for pickup."
-      });
-    }
-
-    const parkingCharge = Number(parking_charge);
-    const valetServiceCharge = Number(valet_service_charge);
-    const extraCharges = Number(extra_charges);
-    const discountAmount = Number(discount);
-    const gstAmount = Number(gst);
-
-    const amounts = [
-      parkingCharge,
-      valetServiceCharge,
-      extraCharges,
-      discountAmount,
-      gstAmount
-    ];
-
-    if (amounts.some((amount) => !Number.isFinite(amount))) {
-      return res.status(400).json({
-        success: false,
-        message: "All payment amounts must be valid numbers."
-      });
-    }
-
-    if (amounts.some((amount) => amount < 0)) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment amounts cannot be negative."
-      });
-    }
-
-    const subtotal =
-      parkingCharge +
-      valetServiceCharge +
-      extraCharges;
-
-    if (discountAmount > subtotal) {
-      return res.status(400).json({
-        success: false,
-        message: "Discount cannot exceed the subtotal."
-      });
-    }
-
-    const totalAmount =
-      subtotal -
-      discountAmount +
-      gstAmount;
-
-    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Total amount is invalid."
-      });
-    }
-
-    let vehicle = null;
-    let customer = null;
-
-    if (session.vehicle_id) {
-      const { data: vehicleData, error: vehicleError } = await supabase
-        .from("vehicles")
-        .select("*")
-        .eq("id", session.vehicle_id)
-        .single();
-
-      if (vehicleError) {
-        console.error("Vehicle fetch error:", vehicleError);
-      } else {
-        vehicle = vehicleData;
-      }
-    }
-
-    if (vehicle?.customer_id) {
-      const { data: customerData, error: customerError } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("id", vehicle.customer_id)
-        .single();
-
-      if (customerError) {
-        console.error("Customer fetch error:", customerError);
-      } else {
-        customer = customerData;
-      }
-    }
-
-    const { data: existingPayment, error: existingPaymentError } =
-      await supabase
-        .from("payments")
-        .select("id")
-        .eq("parking_session_id", parking_session_id)
-        .maybeSingle();
-
-    if (existingPaymentError) {
-      console.error("Existing payment check error:", existingPaymentError);
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to check existing payment."
-      });
-    }
-
-    if (existingPayment) {
-      return res.status(409).json({
-        success: false,
-        message: "Payment already exists for this parking session."
-      });
-    }
-
-    const invoiceNumber = `INV-${Date.now()}`;
-    const paymentStatus = "paid";
-    const paidAt = new Date().toISOString();
-
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .insert({
-        parking_session_id,
-        parking_charge: parkingCharge,
-        valet_service_charge: valetServiceCharge,
-        extra_charges: extraCharges,
-        discount: discountAmount,
-        gst: gstAmount,
-        total_amount: totalAmount,
-        payment_method,
-        payment_status: paymentStatus,
-        paid_at: paidAt,
-        invoice_number: invoiceNumber
-      })
-      .select("*")
-      .single();
-
-    if (paymentError) {
-      console.error("Payment creation error:", paymentError);
-
-      if (paymentError.code === "23505") {
-        return res.status(409).json({
-          success: false,
-          message: "Payment already exists for this parking session."
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: "Failed to create payment.",
-        error: paymentError.message
-      });
-    }
-
-    let emailSent = false;
-
-    if (customer?.email) {
-      try {
-        const invoicePDF = await generateInvoicePDF({
-          payment,
-          session,
-          vehicle,
-          customer,
-          valet: null
-        });
-
-        await sendInvoiceEmail({
-          customerEmail: customer.email,
-          customerName:
-            customer.full_name ||
-            customer.name ||
-            "Customer",
-          invoiceNumber,
-          pdfBuffer: invoicePDF
-        });
-
-        emailSent = true;
-      } catch (emailError) {
-        console.error("Invoice email error:", emailError);
-      }
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: emailSent
-        ? "Payment created successfully and invoice emailed."
-        : "Payment created successfully.",
-      data: {
-        payment,
-        ticket_code: session.ticket_code,
-        vehicle,
-        customer,
-        email_sent: emailSent
-      }
-    });
-  } catch (error) {
-    console.error("Create payment error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create payment.",
-      error: error.message
-    });
-  }
-};
-
-
 const downloadInvoice = async (req, res) => {
   try {
     const { id } = req.params;
@@ -840,6 +582,7 @@ const getCustomerPayments = async (req, res) => {
         created_at
       `)
       .in("parking_session_id", sessionIds)
+      .eq("payment_status", "paid")
       .order("created_at", { ascending: false });
 
     if (paymentError) {
@@ -1011,7 +754,6 @@ const downloadCustomerInvoice = async (req, res) => {
 };
 
 module.exports = {
-  createPayment,
   downloadInvoice,
   getCustomerPayments,
   downloadCustomerInvoice

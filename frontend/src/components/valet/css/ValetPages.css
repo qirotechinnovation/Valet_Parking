@@ -1,0 +1,625 @@
+.page-eyebrow {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #8b1230;
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.14em;
+}
+
+
+.my-vehicles-header,
+.retrieval-header,
+.parking-slots-header,
+.completed-header,
+.profile-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+
+.my-vehicles-header h1,
+.retrieval-header h1,
+.parking-slots-header h1,
+.completed-header h1,
+.profile-header h1 {
+  margin: 0;
+
+  font-size: clamp(24px, 3vw, 32px);
+
+  letter-spacing: -0.025em;
+}
+
+
+.my-vehicles-header p,
+.retrieval-header p,
+.parking-slots-header p,
+.completed-header p,
+.profile-header p {
+  margin: 7px 0 0;
+
+  color: var(--text-muted, #78676b);
+
+  font-size: 13px;
+}
+
+
+.page-refresh-btn {
+  height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 0 14px;
+
+  border: 1px solid var(--border-color, #edd8dc);
+
+  border-radius: 10px;
+
+  background: var(--bg-card, #ffffff);
+
+  color: var(--text-main, #280f15);
+
+  font-family: inherit;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+
+.page-refresh-btn:hover {
+  border-color: #f4e0be;
+
+  color: #8b1230;
+}
+
+
+.page-refresh-btn:disabled {
+  opacity: 0.6;
+
+  cursor: not-allowed;
+}
+
+
+.page-error {
+  padding: 13px 15px;
+
+  margin-bottom: 18px;
+
+  border: 1px solid #fecaca;
+
+  border-radius: 11px;
+
+  background: #fef2f2;
+
+  color: #b91c1c;
+
+  font-size: 13px;
+}
+
+
+.page-loading {
+  padding: 60px 20px;
+
+  text-align: center;
+
+  color: var(--text-muted, #78676b);
+
+  font-size: 13px;
+}
+
+
+.page-empty {
+  min-height: 260px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 30px;
+
+  background: var(--bg-card, #ffffff);
+
+  border: 1px solid var(--border-color, #edd8dc);
+
+  border-radius: 16px;
+
+  text-align: center;
+
+  color: #a1828a;
+}
+
+
+.page-empty h3 {
+  margin: 12px 0 5px;
+
+  color: var(--text-main, #280f15);
+
+  font-size: 16px;
+}
+
+
+.page-empty p {
+  margin: 0;
+
+  color: var(--text-muted, #78676b);
+
+  font-size: 12px;
+}
+
+
+@media (max-width: 650px) {
+  .my-vehicles-header,
+  .retrieval-header,
+  .parking-slots-header,
+  .completed-header,
+  .profile-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+}
+
+/* Reception-aligned operational page surfaces */
+.my-vehicles-page,
+.retrieval-page,
+.parking-slots-page,
+.completed-page,
+.valet-profile-page {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 30px 34px 48px;
+  color: var(--text-main, #280f15);
+  box-sizing: border-box;
+}
+
+.my-vehicles-header h1,
+.retrieval-header h1,
+.parking-slots-header h1,
+.completed-header h1,
+.profile-header h1 {
+  color: var(--text-main, #280f15);
+  font-size: clamp(1.8rem, 2.5vw, 2.35rem);
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.page-refresh-btn,
+.start-retrieval-btn {
+  border-radius: 9999px;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.page-refresh-btn {
+  min-height: 40px;
+  border-color: #8b1230;
+  background: #8b1230;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(139, 18, 48, 0.16);
+}
+
+.page-refresh-btn:hover:not(:disabled),
+.start-retrieval-btn:hover:not(:disabled) {
+  border-color: #730c26;
+  background: #730c26;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(139, 18, 48, 0.2);
+}
+
+.vehicle-search,
+.slot-search {
+  width: min(100%, 460px);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 14px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(139, 18, 48, 0.12);
+  border-radius: 9999px;
+  background: #fefcf8;
+  color: #8b1230;
+}
+
+.vehicle-search:focus-within,
+.slot-search:focus-within {
+  background: #ffffff;
+  border-color: rgba(139, 18, 48, 0.42);
+  box-shadow: 0 0 0 3px rgba(139, 18, 48, 0.1);
+}
+
+.vehicle-search input,
+.slot-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text-main, #280f15);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.vehicle-table-card,
+.completed-table-card,
+.retrieval-card,
+.slot-card,
+.profile-card {
+  border: 1px solid rgba(139, 18, 48, 0.12);
+  border-radius: 16px;
+  background: var(--bg-card, #ffffff);
+  box-shadow: 0 10px 30px -5px rgba(139, 18, 48, 0.08);
+}
+
+.vehicle-table-card,
+.completed-table-card {
+  overflow-x: auto;
+}
+
+.vehicle-table,
+.completed-table {
+  min-width: 690px;
+}
+
+.vehicle-table-head,
+.completed-table-head,
+.vehicle-table-row,
+.completed-table-row {
+  display: grid;
+  align-items: center;
+  gap: 18px;
+  padding: 15px 18px;
+}
+
+.vehicle-table-head,
+.completed-table-head {
+  color: #978489;
+  background: #fefdfb;
+  border-bottom: 1px solid #f2e9eb;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vehicle-table-head,
+.vehicle-table-row {
+  grid-template-columns: 1.3fr 1.2fr 0.7fr 1fr 0.9fr 1fr;
+}
+
+.completed-table-head,
+.completed-table-row {
+  grid-template-columns: 1.3fr 1.2fr 0.9fr 0.7fr 1.2fr;
+}
+
+.vehicle-table-row,
+.completed-table-row {
+  min-height: 62px;
+  color: var(--text-muted, #78676b);
+  font-size: 12px;
+  border-bottom: 1px solid #f3eeef;
+}
+
+.vehicle-table-row:last-child,
+.completed-table-row:last-child {
+  border-bottom: 0;
+}
+
+.vehicle-table-row strong,
+.completed-table-row strong {
+  display: block;
+  color: var(--text-main, #280f15);
+  font-size: 12px;
+}
+
+.vehicle-table-row small,
+.completed-table-row small {
+  display: block;
+  margin-top: 4px;
+  color: #978489;
+  font-size: 11px;
+}
+
+.status-badge,
+.slot-status,
+.request-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 25px;
+  padding: 0 9px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.status-badge.status-checked_in,
+.slot-available .slot-status {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.status-badge.status-parked,
+.slot-occupied .slot-status {
+  background: #fce7eb;
+  color: #d92854;
+}
+
+.status-badge.status-retrieval_requested,
+.request-badge {
+  background: #fff4e5;
+  color: #a16207;
+}
+
+.status-badge.status-retrieving {
+  background: #fdf8f1;
+  color: #d09125;
+}
+
+.status-badge.status-ready_for_pickup {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.retrieval-grid,
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.retrieval-card,
+.slot-card {
+  min-width: 0;
+  padding: 20px;
+}
+
+.retrieval-card-top,
+.retrieval-details,
+.profile-hero,
+.profile-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.retrieval-card-top {
+  justify-content: space-between;
+  margin-bottom: 16px;
+  color: #978489;
+  font-size: 11px;
+}
+
+.retrieval-card h3 {
+  margin: 0;
+  color: var(--text-main, #280f15);
+  font-size: 16px;
+}
+
+.retrieval-card > p {
+  margin: 5px 0 18px;
+  color: var(--text-muted, #78676b);
+  font-size: 12px;
+}
+
+.retrieval-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.retrieval-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.retrieval-details span,
+.profile-details small {
+  color: #978489;
+  font-size: 10px;
+}
+
+.retrieval-details strong,
+.profile-details strong {
+  overflow: hidden;
+  color: var(--text-main, #280f15);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.start-retrieval-btn {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid #8b1230;
+  background: #8b1230;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.slot-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.slot-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #fce7eb;
+  color: #8b1230;
+}
+
+.slot-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slot-info strong {
+  color: var(--text-main, #280f15);
+  font-size: 14px;
+}
+
+.slot-info span {
+  color: var(--text-muted, #78676b);
+  font-size: 11px;
+}
+
+.profile-card {
+  max-width: 760px;
+  padding: 24px;
+}
+
+.profile-hero {
+  padding-bottom: 22px;
+  border-bottom: 1px solid #f2e9eb;
+}
+
+.profile-hero h2 {
+  margin: 0;
+  color: var(--text-main, #280f15);
+  font-size: 20px;
+}
+
+.profile-hero span {
+  display: block;
+  margin-top: 5px;
+  color: #978489;
+  font-size: 11px;
+}
+
+.profile-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 22px;
+}
+
+.profile-details > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.profile-details svg {
+  flex: 0 0 auto;
+  color: #8b1230;
+}
+
+.profile-details section {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+
+@media (max-width: 900px) {
+  .my-vehicles-page,
+  .retrieval-page,
+  .parking-slots-page,
+  .completed-page,
+  .valet-profile-page {
+    padding: 25px 20px 40px;
+  }
+
+  .retrieval-grid,
+  .slots-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .my-vehicles-page,
+  .retrieval-page,
+  .parking-slots-page,
+  .completed-page,
+  .valet-profile-page {
+    padding: 20px 14px 30px;
+  }
+
+  .profile-details,
+  .retrieval-details {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-card,
+  .retrieval-card,
+  .slot-card {
+    padding: 16px;
+  }
+}
+/* ---------- WhatsApp draft button (manual send, no API) ---------- */
+.whatsapp-draft-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid #1fa855 !important;
+  border-radius: 10px;
+  background: #ffffff !important;
+  color: #11863f !important;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.whatsapp-draft-btn:hover:not(:disabled) { background: #e9f8ef !important; }
+.whatsapp-draft-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- Handover photos (optional) ---------- */
+.handover-photos { display: grid; gap: 14px; margin: 14px 0; }
+.handover-photos-block { display: grid; gap: 8px; }
+.handover-photos-block small { font-weight: 500; color: #8a7a7e; }
+.handover-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.handover-photo-grid img,
+.handover-photo-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid rgba(139, 18, 48, 0.15); display: block; }
+.handover-photo-item { position: relative; }
+.handover-photo-item button { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: rgba(0, 0, 0, 0.65); color: #fff; padding: 0; }
+.handover-add-photo { display: inline-flex; align-items: center; gap: 6px; justify-self: start; }
+
+/* ---------- Request from WhatsApp ---------- */
+.whatsapp-retrieval-card { display: grid; gap: 12px; margin-bottom: 18px; padding: 16px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(139, 18, 48, 0.12); border-left: 4px solid #dfb76c; box-shadow: 0 10px 30px -8px rgba(139, 18, 48, 0.1); }
+.whatsapp-retrieval-title { display: flex; gap: 10px; align-items: center; color: #11863f; }
+.whatsapp-retrieval-title div { display: grid; }
+.whatsapp-retrieval-title strong { color: #2a0f16; }
+.whatsapp-retrieval-title span { font-size: 13px; color: #8a7a7e; }
+.whatsapp-retrieval-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.whatsapp-retrieval-form input { flex: 1; min-width: 160px; padding: 10px 12px; border: 1px solid rgba(139, 18, 48, 0.2); border-radius: 10px; text-transform: uppercase; }
+.whatsapp-retrieval-form button { display: inline-flex; align-items: center; gap: 6px; }
+.whatsapp-retrieval-result { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: #fdf2f4; flex-wrap: wrap; }
+.whatsapp-retrieval-result div { display: grid; flex: 1; min-width: 140px; }
+.whatsapp-retrieval-result span { font-size: 13px; color: #6f6064; }
+.page-success { padding: 10px 12px; border-radius: 10px; background: #e9f8ef; color: #11863f; font-weight: 600; }
