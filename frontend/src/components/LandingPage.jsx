@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Car,
@@ -118,13 +118,16 @@ const LandingPage = () => {
       ======================================================== */}
       <nav className="landing-navbar">
         <div className="landing-nav-inner">
-          <div className="landing-brand" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-            <div className="brand-logo-wrapper">
-              <img src="/valet-logo.svg" alt="Valet Parking Logo" className="brand-logo" />
-            </div>
-            <div className="brand-text">
-              <h2>VALET</h2>
-              <span>PARKING</span>
+          <div className="landing-brand" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <img
+                src="/conrad-logo-gold.png"
+                alt="CONRAD PUNE"
+                style={{ height: "26px", objectFit: "contain" }}
+              />
+              <span style={{ fontSize: "8.5px", letterSpacing: "2.2px", color: "#bc9b6a", fontWeight: "700", marginTop: "2px" }}>
+                SMART VALET
+              </span>
             </div>
           </div>
 
@@ -142,6 +145,23 @@ const LandingPage = () => {
             <Link to="/login" className="landing-btn-primary">
               <span>Staff Login</span>
               <ArrowRight size={16} />
+            </Link>
+            <Link
+              to="/login?mode=register"
+              className="landing-btn-signup-ghost"
+              style={{
+                background: "transparent",
+                border: "1.5px solid #bc9b6a",
+                color: "#bc9b6a",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontWeight: "700",
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center"
+              }}
+            >
+              <span style={{ color: "#bc9b6a" }}>Staff Sign Up</span>
             </Link>
           </div>
         </div>
@@ -186,7 +206,7 @@ const LandingPage = () => {
               <div className="trust-text">
                 <div className="stars-row">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={14} fill="#caa060" color="#caa060" />
+                    <Star key={i} size={14} fill="#bc9b6a" color="#bc9b6a" />
                   ))}
                 </div>
                 <span>Trusted by luxury hotels, malls & corporate parks</span>
@@ -637,6 +657,13 @@ const LandingPage = () => {
               <button onClick={() => navigate("/login")} className="btn-banner-staff">
                 Staff Login
               </button>
+              <button
+                onClick={() => navigate("/login?mode=register")}
+                className="btn-banner-staff"
+                style={{ background: "#42235e", color: "#ffffff", border: "1.5px solid #bc9b6a" }}
+              >
+                Staff Sign Up
+              </button>
               <button onClick={() => navigate("/customer-login")} className="btn-banner-customer">
                 Customer Portal
               </button>
@@ -651,11 +678,15 @@ const LandingPage = () => {
       <footer className="landing-footer">
         <div className="footer-top">
           <div className="footer-brand">
-            <div className="brand-logo-wrapper">
-              <img src="/valet-logo.svg" alt="Valet Parking Logo" className="brand-logo" />
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+              <img
+                src="/conrad-logo-gold.png"
+                alt="CONRAD PUNE"
+                style={{ height: "30px", objectFit: "contain" }}
+              />
             </div>
-            <h3>VALET PARKING</h3>
-            <p>Next-Generation Smart Valet Parking Platform.</p>
+            <h3>CONRAD PUNE</h3>
+            <p>Luxury Valet Parking & Fleet Experience Platform.</p>
           </div>
 
           <div className="footer-links-group">
@@ -669,6 +700,7 @@ const LandingPage = () => {
           <div className="footer-links-group">
             <h4>Portals</h4>
             <Link to="/login">Staff Login (Admin & Valet)</Link>
+            <Link to="/login?mode=register">Staff Sign Up (Join Staff)</Link>
             <Link to="/customer-login">Customer Portal</Link>
             <Link to="/customer-register">Customer Sign Up</Link>
           </div>

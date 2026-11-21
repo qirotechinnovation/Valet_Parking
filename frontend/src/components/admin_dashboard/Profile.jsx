@@ -1,40 +1,36 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useRef, useState } from "react";
 import "./Profile.css";
 import "../layout/css/profile-theme.css";
 
+const PHOTO_KEY = "profile_photo_super_admin";
+
 function Profile() {
-  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
 
   const [user] = useState(() => {
     try {
       const stored = localStorage.getItem("user");
       if (stored) return JSON.parse(stored);
-    } catch (e) {
-      // fallback
-    }
-    return {
-      name: "Super Admin",
-      email: "admin@valetparking.com",
-      role: "super_admin",
-      id: "ADM-001",
-    };
+    } catch (e) {}
+    return { name: "Super Admin", email: "admin@valetparking.com", role: "super_admin", id: "ADM-001" };
   });
 
+  const [photo, setPhoto] = useState(() => localStorage.getItem(PHOTO_KEY) || null);
+
   const initials = user.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
+    ? user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
     : "SA";
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
-    navigate("/", { replace: true });
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      setPhoto(dataUrl);
+      localStorage.setItem(PHOTO_KEY, dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -44,19 +40,27 @@ function Profile() {
         <div>
           <p className="profile-eyebrow">ACCOUNT</p>
           <h2>My Profile</h2>
-          <p>Manage your administrative profile, credentials and access settings.</p>
         </div>
       </section>
 
       {/* Profile overview */}
       <section className="profile-overview">
         <div className="profile-main">
-          <div className="profile-large-avatar">{initials}</div>
+          {/* Avatar with photo upload */}
+          <div style={{ position: "relative", display: "inline-block", cursor: "pointer" }} onClick={() => fileInputRef.current?.click()} title="Change photo">
+            {photo
+              ? <img src={photo} alt="Profile" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "3px solid #8b1230" }} />
+              : <div className="profile-large-avatar">{initials}</div>
+            }
+            <div style={{ position: "absolute", bottom: 0, right: 0, background: "#8b1230", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhotoChange} />
 
           <div className="profile-main-info">
             <h3>{user.name || "Super Admin"}</h3>
             <p>{user.email || "admin@valetparking.com"}</p>
-
             <div className="profile-status">
               <span></span>
               Active account
@@ -132,49 +136,10 @@ function Profile() {
               <strong>Full System Access & Staff Control</strong>
             </div>
 
-            <div className="profile-field">
-              <span>SECURITY STATUS</span>
-              <strong style={{ color: "#10b981" }}>Active JWT Session</strong>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* Security & Actions */}
-      <section className="profile-security">
-        <div className="profile-panel-header">
-          <div>
-            <h3>Security & Session</h3>
-            <p>Session management and authentication state.</p>
-          </div>
-        </div>
-
-        <div className="security-options">
-          <div className="security-option">
-            <div className="security-icon">✓</div>
-            <div>
-              <strong>Account Protection</strong>
-              <span>Protected via Supabase Auth & Role Guards</span>
-            </div>
-            <span className="security-active">Protected</span>
-          </div>
-
-          <div className="security-option">
-            <div className="security-icon" style={{ background: "#fef2f2", color: "#b91c1c" }}>!</div>
-            <div>
-              <strong>Sign Out of Session</strong>
-              <span>End your administrative session on this device</span>
-            </div>
-            <button
-              type="button"
-              className="profile-sign-out"
-              onClick={handleLogout}
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

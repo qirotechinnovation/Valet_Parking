@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Car,
@@ -13,6 +13,10 @@ import {
   Users,
   TicketCheck,
   Bell,
+  X,
+  User,
+  Phone,
+  Mail,
 } from "lucide-react";
 
 import DashboardLayout from "../layout/DashboardLayout";
@@ -27,6 +31,8 @@ import {
   getReceptionSessions,
   requestReceptionRetrieval,
   getCustomers,
+  createCustomer,
+  createVehicle,
   deleteCustomer,
   getVehicles,
   getReceptionNotifications,
@@ -34,6 +40,354 @@ import {
 
 import { useRealtimeSync } from "../../hooks/useRealtimeSync";
 import "./css/ReceptionDashboard.css";
+import "./css/ReceptionCustomerModal.css";
+import "./css/ReceptionVehicleModal.css";
+
+// ============================================================
+// COMBINED REGISTER MODAL (Customer + Vehicle in one flow)
+// ============================================================
+
+const CombinedRegisterModal = ({ onClose, onSuccess }) => {
+  const [step, setStep] = useState(1); // 1=customer, 2=vehicle
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [customerData, setCustomerData] = useState({ name: "", phone: "", email: "" });
+  const [vehicleData, setVehicleData] = useState({ license_plate: "", make: "", model: "", color: "" });
+  const [createdCustomer, setCreatedCustomer] = useState(null);
+
+  const handleCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!customerData.name.trim() || !customerData.phone.trim()) {
+      setError("Customer name and phone number are required.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+      const res = await createCustomer({
+        name: customerData.name.trim(),
+        phone: customerData.phone.trim(),
+        email: customerData.email.trim() || undefined,
+      });
+
+      if (res?.customer) {
+        setCreatedCustomer(res.customer);
+        setStep(2);
+      } else if (res?.success && res?.data) {
+        setCreatedCustomer(res.data);
+        setStep(2);
+      } else {
+        // Check if customer already exists by phone
+        const searchRes = await getCustomers(customerData.phone.trim());
+        const existing = (searchRes?.customers || []).find(
+          (c) => c.phone?.trim() === customerData.phone.trim()
+        );
+        if (existing) {
+          setCreatedCustomer(existing);
+          setStep(2);
+        } else {
+          setError(res?.message || "Failed to create customer.");
+        }
+      }
+    } catch (err) {
+      // If customer exists, seamlessly continue with them
+      try {
+        const searchRes = await getCustomers(customerData.phone.trim());
+        const existing = (searchRes?.customers || []).find(
+          (c) => c.phone?.trim() === customerData.phone.trim()
+        );
+        if (existing) {
+          setCreatedCustomer(existing);
+          setStep(2);
+          return;
+        }
+      } catch {}
+      setError(err?.message || "Failed to create customer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVehicleSubmit = async (e) => {
+    e.preventDefault();
+    if (!vehicleData.license_plate.trim()) {
+      setError("License plate is required.");
+      return;
+    }
+    if (!vehicleData.make.trim()) {
+      setError("Vehicle make & brand is required.");
+      return;
+    }
+    if (!vehicleData.model.trim()) {
+      setError("Vehicle model is required.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+      await createVehicle({
+        license_plate: vehicleData.license_plate.trim().toUpperCase(),
+        make: vehicleData.make.trim(),
+        model: vehicleData.model.trim(),
+        color: vehicleData.color.trim() || undefined,
+        customer_id: createdCustomer?.id,
+      });
+      onSuccess?.(`Customer ${createdCustomer?.name || ""} & Vehicle ${vehicleData.license_plate} registered successfully.`);
+      onClose();
+    } catch (err) {
+      setError(err?.message || "Failed to register vehicle.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="reception-modal-overlay" onClick={onClose}>
+      <div className="reception-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="reception-modal-header">
+          <div>
+            <p className="modal-eyebrow">
+              {step === 1 ? "STEP 1 OF 2 • CUSTOMER" : "STEP 2 OF 2 • VEHICLE"}
+            </p>
+            <h3>{step === 1 ? "Register Customer" : "Register Vehicle"}</h3>
+            <span>
+              {step === 1
+                ? "Add customer contact information"
+                : `Link a vehicle to ${createdCustomer?.name || "customer"}`}
+            </span>
+          </div>
+          <button className="modal-close-btn" type="button" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Step Indicator Bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "10px 24px",
+            background: "#fbf9fa",
+            borderBottom: "1px solid #f2e9eb",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              height: "4px",
+              borderRadius: "2px",
+              background: "#42235e",
+              transition: "background 0.2s",
+            }}
+          />
+          <div
+            style={{
+              flex: 1,
+              height: "4px",
+              borderRadius: "2px",
+              background: step === 2 ? "#42235e" : "#e5e7eb",
+              transition: "background 0.2s",
+            }}
+          />
+        </div>
+
+        {error && (
+          <div style={{ margin: "16px 24px 0" }} className="modal-error">
+            {error}
+          </div>
+        )}
+
+        {step === 1 ? (
+          <form onSubmit={handleCustomerSubmit} className="modal-form-body">
+            <div className="modal-field">
+              <label>
+                Full Name <span className="required">*</span>
+              </label>
+              <div className="modal-input-wrap">
+                <User size={15} />
+                <input
+                  required
+                  placeholder="e.g. Rahul Sharma"
+                  value={customerData.name}
+                  onChange={(e) => {
+                    setCustomerData({ ...customerData, name: e.target.value });
+                    setError("");
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="modal-field">
+              <label>
+                Phone Number <span className="required">*</span>
+              </label>
+              <div className="modal-input-wrap">
+                <Phone size={15} />
+                <input
+                  required
+                  type="tel"
+                  placeholder="e.g. +91 98765 43210"
+                  value={customerData.phone}
+                  onChange={(e) => {
+                    setCustomerData({ ...customerData, phone: e.target.value });
+                    setError("");
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-field">
+              <label>
+                Email Address <span className="optional">(optional)</span>
+              </label>
+              <div className="modal-input-wrap">
+                <Mail size={15} />
+                <input
+                  type="email"
+                  placeholder="e.g. rahul@example.com"
+                  value={customerData.email}
+                  onChange={(e) => {
+                    setCustomerData({ ...customerData, email: e.target.value });
+                    setError("");
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-btn-secondary"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="modal-btn-primary"
+                disabled={loading}
+                style={{
+                  background: "#42235e",
+                  color: "#ffffff",
+                  borderColor: "#42235e",
+                }}
+              >
+                {loading ? "Saving..." : "Next: Vehicle Details →"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleVehicleSubmit} className="modal-form-body">
+            <div className="modal-field">
+              <label>
+                License Plate <span className="required">*</span>
+              </label>
+              <div className="modal-input-wrap">
+                <Car size={15} />
+                <input
+                  required
+                  placeholder="e.g. MH12AB1234"
+                  value={vehicleData.license_plate}
+                  onChange={(e) => {
+                    setVehicleData({
+                      ...vehicleData,
+                      license_plate: e.target.value.toUpperCase(),
+                    });
+                    setError("");
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="modal-field">
+              <label>
+                Make & Brand <span className="required">*</span>
+              </label>
+              <div className="modal-input-wrap">
+                <CarFront size={15} />
+                <input
+                  required
+                  placeholder="e.g. Toyota / Mercedes / Hyundai"
+                  value={vehicleData.make}
+                  onChange={(e) => {
+                    setVehicleData({ ...vehicleData, make: e.target.value });
+                    setError("");
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="modal-field">
+                <label>
+                  Model <span className="required">*</span>
+                </label>
+                <div className="modal-input-wrap">
+                  <input
+                    required
+                    placeholder="e.g. Innova / Fortuner"
+                    value={vehicleData.model}
+                    onChange={(e) => {
+                      setVehicleData({ ...vehicleData, model: e.target.value });
+                      setError("");
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-field">
+                <label>
+                  Color <span className="optional">(optional)</span>
+                </label>
+                <div className="modal-input-wrap">
+                  <input
+                    placeholder="e.g. White / Black"
+                    value={vehicleData.color}
+                    onChange={(e) => {
+                      setVehicleData({ ...vehicleData, color: e.target.value });
+                      setError("");
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-btn-secondary"
+                onClick={() => {
+                  setStep(1);
+                  setError("");
+                }}
+                disabled={loading}
+              >
+                ← Back
+              </button>
+              <button
+                type="submit"
+                className="modal-btn-primary"
+                disabled={loading}
+                style={{
+                  background: "#42235e",
+                  color: "#ffffff",
+                  borderColor: "#42235e",
+                }}
+              >
+                {loading ? "Registering..." : "Complete Registration ✓"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // ============================================================
 // STATUS CONFIG
@@ -107,7 +461,6 @@ const CustomersView = ({ onOpenRegisterModal }) => {
         <div>
           <span className="reception-eyebrow">DIRECTORY</span>
           <h2>Customers</h2>
-          <p>All registered customers in the system.</p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <button className="reception-action-btn primary" onClick={onOpenRegisterModal}>
@@ -195,7 +548,6 @@ const VehiclesView = () => {
         <div>
           <span className="reception-eyebrow">DIRECTORY</span>
           <h2>Vehicles</h2>
-          <p>All registered vehicles in the system.</p>
         </div>
         <button className="reception-action-btn primary" onClick={load} disabled={loading}>
           <RefreshCw size={14} className={loading ? "refresh-spinning" : ""} />
@@ -261,7 +613,6 @@ const ProfileView = ({ onLogout }) => {
         <div>
           <span className="reception-eyebrow">ACCOUNT</span>
           <h2>My Profile</h2>
-          <p>Your reception desk account details and session management.</p>
         </div>
       </div>
       <div className="reception-profile-card">
@@ -314,7 +665,6 @@ const SessionsView = ({ sessions, loading, onRefresh, onRequestRetrieval, onView
         <div>
           <span className="reception-eyebrow">OPERATIONS</span>
           <h2>Active Sessions</h2>
-          <p>All vehicles currently in the parking facility.</p>
         </div>
         <button className="reception-action-btn primary" onClick={onRefresh} disabled={loading}>
           <RefreshCw size={14} className={loading ? "refresh-spinning" : ""} />
@@ -602,7 +952,6 @@ const ReceptionDashboard = ({
         <div>
           <span className="reception-eyebrow">RECEPTION DESK</span>
           <h2>Operations Center</h2>
-          <p>Manage customer check-ins, vehicle registrations, and retrieval requests.</p>
         </div>
         <button
           className="reception-action-btn primary"
@@ -616,23 +965,13 @@ const ReceptionDashboard = ({
 
       {/* Quick Actions */}
       <div className="reception-quick-actions">
-        <button className="quick-action-card" onClick={() => openModal("customer")}>
-          <div className="quick-action-icon" style={{ background: "#f8eef0", color: "#7a2e41" }}>
+        <button className="quick-action-card" onClick={() => openModal("register-customer-vehicle")}>
+          <div className="quick-action-icon" style={{ background: "linear-gradient(135deg, #f8eef0, #fdf8f1)", color: "#7a2e41" }}>
             <UserPlus size={20} />
           </div>
           <div>
-            <strong>Register Customer</strong>
-            <span>Add a new customer to the system</span>
-          </div>
-        </button>
-
-        <button className="quick-action-card" onClick={() => openModal("vehicle")}>
-          <div className="quick-action-icon" style={{ background: "#fdf8f1", color: "#d09125" }}>
-            <Car size={20} />
-          </div>
-          <div>
-            <strong>Register Vehicle</strong>
-            <span>Link a vehicle to a customer</span>
+            <strong>Register Customer & Vehicle</strong>
+            <span>Add customer and link vehicle in one step</span>
           </div>
         </button>
 
@@ -657,7 +996,7 @@ const ReceptionDashboard = ({
         </button>
 
         <button className="quick-action-card" onClick={() => setTicketModalOpen(true)}>
-          <div className="quick-action-icon" style={{ background: "#fce7eb", color: "#8b1230" }}><TicketCheck size={20} /></div>
+          <div className="quick-action-icon" style={{ background: "#f3e8f9", color: "#42235e" }}><TicketCheck size={20} /></div>
           <div><strong>Verify Ticket / QR</strong><span>Verify a vehicle for handover</span></div>
         </button>
       </div>
@@ -800,6 +1139,15 @@ const ReceptionDashboard = ({
       )}
 
       {/* MODALS */}
+      {modal === "register-customer-vehicle" && (
+        <CombinedRegisterModal
+          onClose={closeModal}
+          onSuccess={(msg) => {
+            setSuccessMsg(msg || "Customer and vehicle registered successfully.");
+            fetchSessions();
+          }}
+        />
+      )}
       {modal === "customer" && (
         <RegisterCustomerModal
           onClose={closeModal}

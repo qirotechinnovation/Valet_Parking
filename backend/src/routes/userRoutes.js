@@ -16,14 +16,14 @@ const router = express.Router();
 router.post(
   "/",
   authenticate,
-  authorizeRoles("super_admin"),
+  authorizeRoles("super_admin", "manager"),
   createStaff
 );
 
 router.get(
   "/",
   authenticate,
-  authorizeRoles("super_admin"),
+  authorizeRoles("super_admin", "manager", "parking_admin"),
   getAllStaff
 );
 
@@ -43,7 +43,7 @@ router.put(
 router.patch(
   "/:id/status",
   authenticate,
-  authorizeRoles("super_admin"),
+  authorizeRoles("super_admin", "manager"),
   updateStaffStatus
 );
 

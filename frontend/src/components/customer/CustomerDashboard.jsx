@@ -152,9 +152,17 @@ function CustomerDashboard({ onNavigate, onCustomerLoaded }) {
     labels[session?.status] || session?.status || "Status unavailable";
 
   return (
-    <main className="customer-page">
+    <main className="customer-page customer-dashboard-page">
       {/* PAGE HEADER */}
-      <header className="customer-page-header">
+      <header className="customer-page-header customer-dashboard-hero">
+        <div
+          className="customer-dashboard-hero-visual"
+          aria-hidden="true"
+        >
+          <img src="/welcome-hero-banner.jpg" alt="" />
+          <div className="customer-dashboard-hero-fade dashboard-hero-feather" />
+        </div>
+
         <div className="customer-page-heading">
           <span className="customer-eyebrow">CUSTOMER PORTAL</span>
 
@@ -162,9 +170,6 @@ function CustomerDashboard({ onNavigate, onCustomerLoaded }) {
             Welcome, <span>{customer?.name || "Customer"}</span>
           </h1>
 
-          <p>
-            Keep track of your vehicles and parking sessions.
-          </p>
         </div>
 
         <button

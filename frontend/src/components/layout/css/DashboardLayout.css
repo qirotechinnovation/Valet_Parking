@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    SHARED DASHBOARD LAYOUT  (single source of truth)
    Used by: super admin, parking admin, reception, valet, customer.
    Edit this file to restyle the sidebar / topbar / shell everywhere.
@@ -25,7 +25,8 @@
   display: flex;
   flex-direction: column;
 
-  padding: 0 24px 24px;
+  padding: 0;
+  margin: 0;
 
   box-sizing: border-box;
 }
@@ -36,6 +37,121 @@
   flex: 1;
 
   min-width: 0;
+}
+
+.dashboard-hero-feather {
+  background:
+    linear-gradient(
+      90deg,
+      #f8f9fa 0%,
+      rgba(248, 249, 250, 0.96) 14%,
+      rgba(248, 249, 250, 0.72) 34%,
+      rgba(248, 249, 250, 0.25) 62%,
+      transparent 90%
+    ),
+    linear-gradient(
+      180deg,
+      #f8f9fa 0%,
+      rgba(248, 249, 250, 0.72) 14%,
+      transparent 36%,
+      transparent 68%,
+      rgba(248, 249, 250, 0.86) 88%,
+      #f8f9fa 100%
+    );
+}
+
+.dash-main--dashboard {
+  position: relative;
+}
+
+.dash-main--dashboard > .dash-topbar.lux-topbar {
+  margin-bottom: -52px !important;
+}
+
+.dash-main--dashboard .dash-notification-btn {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.dash-main--dashboard > .dash-page-content {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: #f8f9fa;
+}
+
+.dash-main--valet.dash-main--dashboard > .dash-page-content {
+  max-width: none;
+  padding: 0;
+}
+
+.dash-main--dashboard .customer-dashboard-page {
+  max-width: none;
+  margin: 0;
+  padding: 0 34px 52px;
+  background: #f8f9fa;
+}
+
+.dash-main--dashboard .customer-dashboard-hero {
+  width: calc(100% + 68px);
+  min-height: 250px;
+  margin: 0 -34px 32px;
+  padding: 76px 34px 74px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #f8f9fa;
+}
+
+.dash-main--valet.dash-main--dashboard .valet-page {
+  padding: 0 34px 32px !important;
+  background: #f8f9fa;
+}
+
+.dash-main--valet.dash-main--dashboard .vd-hero-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: calc(100% + 68px);
+  margin: 0 -34px;
+  background: #f8f9fa;
+}
+
+@media (max-width: 1100px) {
+  .dash-main--valet.dash-main--dashboard .valet-page {
+    padding-right: 26px !important;
+    padding-left: 26px !important;
+  }
+
+  .dash-main--valet.dash-main--dashboard .vd-hero-shell {
+    width: calc(100% + 52px);
+    margin: 0 -26px;
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-main--dashboard .customer-dashboard-page {
+    padding: 0 16px 38px;
+  }
+
+  .dash-main--dashboard .customer-dashboard-hero {
+    width: calc(100% + 32px);
+    min-height: 235px;
+    margin: 0 -16px 28px;
+    padding: 76px 16px 62px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dash-main--valet.dash-main--dashboard .valet-page {
+    padding: 0 16px 30px !important;
+  }
+
+  .dash-main--valet.dash-main--dashboard .vd-hero-shell {
+    width: calc(100% + 32px);
+    margin: 0 -16px;
+  }
 }
 
 
@@ -58,14 +174,14 @@
 
 .dash-sidebar {
   position: sticky;
-  top: 14px;
+  top: 0;
 
-  width: 260px;
-  height: calc(100vh - 28px);
+  width: 270px;
+  height: 100vh;
   min-height: 0;
 
-  margin: 0 0 14px 14px;
-  padding: 20px 14px;
+  margin: 0;
+  padding: 24px 16px 18px;
 
   box-sizing: border-box;
 
@@ -126,7 +242,7 @@
 
   border-radius: 12px;
 
-  background: #fce7eb;
+  background: #f3e8f9;
 
   overflow: hidden;
 }
@@ -339,7 +455,7 @@
 
 .dash-menu-item:hover .dash-item-icon,
 .dash-collapse-btn:hover .dash-item-icon {
-  color: #8b1230;
+  color: #42235e;
 }
 
 
@@ -348,7 +464,7 @@
 ============================================================ */
 
 .dash-menu-item.active {
-  background: #8b1230;
+  background: #42235e;
 
   color: #ffffff;
 
@@ -593,34 +709,35 @@
 
 @media (max-width: 600px) {
   .dash-sidebar {
-    position: fixed;
+    position: fixed !important;
 
-    top: 10px;
-    left: 10px;
+    top: 0 !important;
+    left: 0 !important;
 
-    bottom: 10px;
+    bottom: 0 !important;
 
-    height: calc(100vh - 20px);
+    height: 100vh !important;
+    height: 100dvh !important;
 
-    margin: 0;
+    margin: 0 !important;
 
     z-index: 1200;
   }
 }
 .dash-topbar {
   position: sticky;
-    top: 0;
-    z-index: 90;
-    height: 76px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 34px;
-    background: rgba(255, 255, 255, 0.74);
-    border-bottom: 1px solid rgba(139, 18, 48, 0.1);
-    box-shadow: 0 8px 24px rgba(139, 18, 48, 0.04);
-    backdrop-filter: blur(14px);
-    border-radius: 0 0 14px 14px;
+  top: 0;
+  z-index: 90;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(139, 18, 48, 0.1);
+  box-shadow: 0 4px 16px rgba(139, 18, 48, 0.03);
+  backdrop-filter: blur(14px);
+  border-radius: 0 0 10px 10px;
 }
 
 
@@ -704,7 +821,7 @@
 .dash-notification-btn:hover {
   background: #fefcf8;
 
-  color: #8b1230;
+  color: #42235e;
 }
 
 
@@ -719,7 +836,7 @@
 
   border-radius: 50%;
 
-  background: #8b1230;
+  background: #42235e;
 }
 
 
@@ -754,9 +871,9 @@
 
   border-radius: 9px;
 
-  background: #fce7eb;
+  background: #f3e8f9;
 
-  color: #8b1230;
+  color: #42235e;
 
   font-size: 11px;
 
@@ -826,31 +943,52 @@
    ================================================================ */
 
 .dash-layout {
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  width: 100% !important;
   background: #fbf9f6 !important;
   color: #1c1917 !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+  display: flex !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* FLUSH LUXURY VELVET SIDEBAR (MATCHING IMAGE 1) */
 .dash-sidebar {
   position: sticky !important;
   top: 0 !important;
+  left: 0 !important;
   height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
   margin: 0 !important;
   border-radius: 0 !important;
-  width: 250px !important;
-  padding: 24px 14px 18px !important;
+  width: 270px !important;
+  min-width: 270px !important;
+  max-width: 270px !important;
+  padding: 24px 16px 18px !important;
   box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 
-  /* Deep crimson silk velvet waves texture from Image 1 */
+  /* Purple silk velvet waves texture for all modules */
   background:
     url('/sidebar-velvet-full.png') center top / cover no-repeat,
-    linear-gradient(180deg, #30020b 0%, #1a0106 100%) !important;
+    linear-gradient(180deg, #42235e 0%, #200d31 100%) !important;
 
   box-shadow:
-    4px 0 24px rgba(35, 1, 7, 0.45),
-    inset -1px 0 0 rgba(203, 163, 88, 0.25) !important;
+    4px 0 24px rgba(25, 5, 40, 0.45),
+    inset -1px 0 0 rgba(188, 155, 106, 0.25) !important;
   border: none !important;
-  border-right: 1px solid rgba(203, 163, 88, 0.28) !important;
+  border-right: 1px solid rgba(188, 155, 106, 0.28) !important;
   z-index: 100;
 }
 
@@ -901,25 +1039,16 @@
   font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.18em !important;
-  color: #dfb76c !important;
+  color: #bc9b6a !important;
   margin: 0 !important;
   line-height: 1.1 !important;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
 }
 
-.dash-brand-subtitle-gold {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 8px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.26em !important;
-  color: #cba358 !important;
-  text-transform: uppercase !important;
-}
-
 .dash-brand-gold-line {
   width: 52px;
   height: 1.5px;
-  background: linear-gradient(90deg, transparent, #dfb76c, transparent);
+  background: linear-gradient(90deg, transparent, #bc9b6a, transparent);
   margin-top: 14px;
 }
 
@@ -934,7 +1063,7 @@
   border: 1px solid rgba(223, 183, 108, 0.3);
 }
 
-/* MENU ITEMS WITH GOLD ICONS & BURGUNDY ACTIVE PILL */
+/* MENU ITEMS WITH GOLD ICONS & PURPLE ACTIVE PILL */
 .dash-menu-item {
   color: #f7ede6 !important;
   border-radius: 12px !important;
@@ -947,7 +1076,7 @@
 }
 
 .dash-menu-item .dash-item-icon {
-  color: #dfb76c !important;
+  color: #bc9b6a !important;
 }
 
 .dash-menu-item:hover:not(.active) {
@@ -957,17 +1086,18 @@
 }
 
 .dash-menu-item.active {
-  background: linear-gradient(135deg, rgba(98, 12, 32, 0.9) 0%, rgba(65, 8, 20, 0.95) 100%) !important;
-  border: 1px solid rgba(223, 183, 108, 0.45) !important;
+  background: linear-gradient(135deg, #d0ad66 0%, #a77b35 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-radius: 999px !important;
   box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    inset 0 0 12px rgba(223, 183, 108, 0.15) !important;
+    0 6px 16px rgba(188, 155, 106, 0.28),
+    inset 0 1px 3px rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
   font-weight: 700 !important;
 }
 
 .dash-menu-item.active .dash-item-icon {
-  color: #f5d48d !important;
+  color: #ffffff !important;
 }
 
 /* EXCLUSIVE PARKING FOOTER BADGE (IMAGE 1) */
@@ -992,7 +1122,7 @@
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: #dfb76c;
+  color: #bc9b6a;
 }
 
 .dash-badge-text-line2 {
@@ -1000,7 +1130,7 @@
   font-size: 7.5px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: #cba358;
+  color: #bc9b6a;
 }
 
 .dash-sidebar-footer {
@@ -1015,7 +1145,7 @@
 
 .dash-collapse-btn .dash-item-icon,
 .dash-logout-btn .dash-item-icon {
-  color: #dfb76c !important;
+  color: #bc9b6a !important;
 }
 
 .dash-collapse-btn:hover,
@@ -1032,11 +1162,11 @@
   position: sticky !important;
   top: 0 !important;
   z-index: 80 !important;
-  height: 72px !important;
+  height: 52px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 0 32px !important;
+  padding: 0 16px !important;
   background: #ffffff !important;
   border-bottom: 1px solid rgba(139, 18, 48, 0.08) !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
@@ -1082,7 +1212,7 @@
 }
 
 .lux-hotel-pin {
-  color: #8b1230;
+  color: #42235e;
 }
 
 .lux-hotel-text {
@@ -1094,7 +1224,7 @@
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 15.5px;
   font-weight: 700;
-  color: #6b0e24;
+  color: #42235e;
   margin: 0;
   line-height: 1.15;
 }
@@ -1156,14 +1286,62 @@
 }
 
 .dash-main {
-  padding: 0 28px 28px !important;
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .dash-page-content {
-  padding-top: 20px;
+  flex: 1 0 auto;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.dash-main--valet > .dash-page-content {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 18px 34px 32px;
+}
+
+@media (max-width: 1100px) {
+  .dash-main--valet > .dash-page-content {
+    padding-right: 26px;
+    padding-left: 26px;
+  }
+}
+
+.dash-main--valet > .dash-page-content > :is(
+  .my-vehicles-page,
+  .retrieval-page,
+  .parking-slots-page,
+  .completed-page,
+  .valet-profile-page,
+  .incident-page
+) {
+  padding: 0 !important;
+}
+
+.dash-main--valet .reception-view-wrapper {
+  padding: 0;
 }
 
 @media (max-width: 600px) {
+  .dash-main--valet > .dash-page-content {
+    padding: 20px 16px 30px;
+  }
+
   .dash-sidebar {
     position: fixed !important;
     top: 0 !important;

@@ -1,15 +1,17 @@
-/* ================================================================
+﻿/* ================================================================
    LUXURY DASHBOARD VIEW (MATCHING IMAGE 2 EXACTLY)
    ================================================================ */
 
 .lux-dashboard {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 14px;
   width: 100%;
-  max-width: 1260px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 24px;
   box-sizing: border-box;
+  --lux-content-gutter: 24px;
 }
 
 /* ================================================================
@@ -19,54 +21,53 @@
 .lux-welcome-banner {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  min-height: 220px;
-  background: linear-gradient(90deg, #fdfbf8 0%, #f7f2ed 45%, rgba(247, 242, 237, 0.35) 100%);
-  border-radius: 20px;
-  border: 1px solid rgba(139, 18, 48, 0.08);
-  box-shadow: 0 4px 20px rgba(139, 18, 48, 0.04);
+  width: calc(100% + (var(--lux-content-gutter) * 2));
+  margin-left: calc(var(--lux-content-gutter) * -1);
+  margin-right: calc(var(--lux-content-gutter) * -1);
+  min-height: 246px;
+  box-sizing: border-box;
+  background: #f8f9fa;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
-  padding: 30px 34px 85px; /* bottom padding accommodates the merged cards */
+  z-index: 1;
+  padding: 76px var(--lux-content-gutter) 72px;
 }
 
 .lux-welcome-text {
   position: relative;
-  z-index: 2;
-  max-width: 480px;
+  z-index: 31;
+  width: 62%;
+  max-width: 700px;
 }
 
 .lux-welcome-greeting {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 15px;
-  font-weight: 500;
-  color: #856a71;
+  font-size: 22px;
+  font-weight: 700;
+  color: #c59b27 !important;
   display: block;
   margin-bottom: 2px;
+  letter-spacing: 0.6px;
 }
 
 .lux-welcome-title {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: clamp(2rem, 2.7vw, 2.85rem);
-  font-weight: 700;
-  color: #4a0817;
-  margin: 0 0 6px 0;
+  font-size: clamp(1.8rem, 2.4vw, 2.3rem);
+  font-weight: 800;
+  color: #42235e !important;
+  margin: 0 0 2px 0;
   line-height: 1.1;
   letter-spacing: -0.01em;
-}
-
-.lux-welcome-sub {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13.5px;
-  color: #78716c;
-  margin: 0 0 10px 0;
-  font-weight: 450;
 }
 
 .lux-gold-line {
   width: 52px;
   height: 2.5px;
-  background: linear-gradient(90deg, #cba358, #dfb76c);
+  background: linear-gradient(90deg, #bc9b6a, #bc9b6a);
   border-radius: 2px;
 }
 
@@ -75,9 +76,10 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: 52%;
+  width: 58%;
   overflow: hidden;
   pointer-events: none;
+  z-index: 0;
 }
 
 .lux-welcome-img {
@@ -90,52 +92,55 @@
 .lux-welcome-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #fdfbf8 0%, rgba(253, 251, 248, 0.75) 20%, transparent 60%);
 }
 
 /* ================================================================
-   2. TOP 4 KPI STAT CARDS (MERGED INTO BANNER & LEFT SIDE ACCENT)
+   2. RESPONSIVE KPI STAT CARDS
    ================================================================ */
 
 .lux-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: -68px; /* Perfectly merges cards into above welcome banner */
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: -74px;
   position: relative;
-  z-index: 4;
-  padding: 0 16px;
+  z-index: 5;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .lux-kpi-card {
   background: #fffdfb;
-  border-radius: 16px;
+  border-radius: 14px;
   border: 1px solid #eadfd7;
-  border-left: 4.5px solid #caa060; /* Left side golden-bronze design matching image */
-  box-shadow: 0 8px 24px rgba(45, 10, 18, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02);
-  padding: 18px 20px 16px;
+  border-left: 4px solid #bc9b6a; /* Left side golden-bronze design */
+  box-shadow: 0 4px 16px rgba(45, 10, 18, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
+  min-height: 90px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
+  min-width: 0;
 }
 
 .lux-kpi-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(139, 18, 48, 0.1);
-  border-color: #dfb76c;
-  border-left-color: #caa060;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(66, 35, 94, 0.12);
+  border-color: #bc9b6a;
+  border-left-color: #bc9b6a;
 }
 
 .lux-kpi-icon-wrap.rose {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: #5b0a1e;
-  border: 1.5px solid #cba358;
-  box-shadow: 0 2px 8px rgba(91, 10, 30, 0.25);
+  background: #2d1442;
+  border: 1.5px solid #bc9b6a;
+  box-shadow: 0 2px 6px rgba(45, 20, 66, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -146,35 +151,41 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .lux-kpi-left-col {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .lux-kpi-value {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   color: #1c1917;
   line-height: 1.1;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lux-kpi-denom {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
   color: #8c827a;
 }
 
 .lux-kpi-title {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 11.5px;
+  font-size: 11px;
   color: #57534e;
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lux-kpi-right-col {
@@ -183,6 +194,7 @@
   align-items: flex-end;
   justify-content: flex-end;
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .lux-kpi-badge {
@@ -190,7 +202,7 @@
   align-items: center;
   gap: 2px;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 
@@ -198,17 +210,16 @@
   color: #16a34a;
 }
 
+.lux-kpi-compare {
+  font-size: 9.5px;
+  color: #a8a29e;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
 .lux-trend-arrow {
   font-size: 13px;
   line-height: 1;
-}
-
-.lux-kpi-compare {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 10.5px;
-  color: #8c827a;
-  white-space: nowrap;
-  margin-top: 1px;
 }
 
 /* ================================================================
@@ -238,7 +249,7 @@
 }
 
 .lux-card-header-icon {
-  color: #8b1230;
+  color: #42235e;
 }
 
 .lux-card-title-group h3 {
@@ -268,7 +279,7 @@
 
 .lux-dropdown-pill:hover {
   background: #f5ebe6;
-  border-color: #cba358;
+  border-color: #bc9b6a;
 }
 
 /* ================================================================
@@ -277,26 +288,30 @@
 
 .lux-analytics-row {
   display: grid;
-  grid-template-columns: 1.8fr 1.15fr;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 18px;
 }
 
 /* Left: Vehicle Trend Line/Area Chart */
 .lux-chart-card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .lux-svg-chart-container {
   position: relative;
   width: 100%;
   flex: 1;
-  min-height: 180px;
+  min-height: 220px;
 }
 
 .lux-area-chart-svg {
+  display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  min-height: 220px;
   overflow: visible;
 }
 
@@ -315,7 +330,7 @@
 
 .lux-chart-dot {
   fill: #ffffff;
-  stroke: #8b1230;
+  stroke: #bc9b6a;
   stroke-width: 2.5;
   cursor: pointer;
   transition: r 0.15s ease, fill 0.15s ease;
@@ -323,7 +338,7 @@
 
 .lux-chart-dot:hover {
   r: 6;
-  fill: #8b1230;
+  fill: #bc9b6a;
 }
 
 .lux-chart-tooltip {
@@ -345,32 +360,38 @@
 }
 
 .lux-chart-tooltip strong {
-  color: #dfb76c;
+  color: #bc9b6a;
 }
 
 /* Right: Vehicle Type Donut Chart */
 .lux-donut-card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .lux-donut-content-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   align-items: center;
-  justify-content: space-around;
+  width: 100%;
   flex: 1;
-  gap: 20px;
-  padding: 10px 0;
+  gap: 24px;
+  padding: 12px 0;
 }
 
 .lux-donut-svg-wrap {
   position: relative;
-  width: 150px;
-  height: 150px;
+  width: 100%;
+  max-width: 240px;
+  aspect-ratio: 1;
+  height: auto;
   flex-shrink: 0;
+  justify-self: center;
 }
 
 .lux-donut-svg {
+  display: block;
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
@@ -383,7 +404,7 @@
 
 .lux-donut-segment:hover,
 .lux-donut-segment.active {
-  stroke-width: 28;
+  stroke-width: 30;
   opacity: 0.92;
 }
 
@@ -399,7 +420,7 @@
 
 .lux-donut-count {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 24px;
+  font-size: 27px;
   font-weight: 800;
   color: #1c1917;
   line-height: 1;
@@ -407,7 +428,7 @@
 
 .lux-donut-total {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   color: #a8a29e;
   font-weight: 600;
   text-transform: uppercase;
@@ -417,19 +438,20 @@
 .lux-donut-legend {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  max-width: 150px;
+  width: 100%;
+  min-width: 0;
+  gap: 14px;
 }
 
 .lux-legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  min-width: 0;
+  gap: 10px;
   cursor: pointer;
   transition: opacity 0.15s ease;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12.5px;
+  font-size: 14px;
 }
 
 .lux-legend-item:hover,
@@ -439,8 +461,8 @@
 }
 
 .lux-legend-dot {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -448,6 +470,7 @@
 .lux-legend-name {
   color: #57534e;
   flex: 1;
+  min-width: 0;
 }
 
 .lux-legend-percent {
@@ -462,7 +485,7 @@
 .lux-bottom-row {
   display: grid;
   grid-template-columns: 1.8fr 1.15fr;
-  gap: 20px;
+  gap: 14px;
 }
 
 /* Left: Recent Activity Table */
@@ -472,8 +495,10 @@
 }
 
 .lux-table-wrapper {
-  overflow-x: auto;
   width: 100%;
+  max-height: 360px;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .lux-activity-table {
@@ -483,10 +508,14 @@
 }
 
 .lux-activity-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   text-align: left;
   font-size: 11.5px;
   font-weight: 600;
   color: #8c827a;
+  background: #f3e8d9;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 8px 12px 14px 4px;
@@ -509,7 +538,7 @@
 }
 
 .lux-car-mini-icon {
-  color: #8b1230;
+  color: #42235e;
 }
 
 .lux-td-plate strong {
@@ -587,7 +616,7 @@
 
 @media (max-width: 1100px) {
   .lux-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .lux-analytics-row,
@@ -597,19 +626,287 @@
 }
 
 @media (max-width: 680px) {
+  .lux-dashboard {
+    --lux-content-gutter: 16px;
+  }
+
   .lux-stats-grid {
     grid-template-columns: 1fr;
   }
 
   .lux-welcome-banner {
     flex-direction: column;
-    padding: 20px;
+    align-items: flex-start;
+    min-height: 235px;
+    padding: 76px var(--lux-content-gutter) 72px;
+  }
+
+  .lux-welcome-text {
+    width: 100%;
+    max-width: 100%;
   }
 
   .lux-welcome-visual {
-    position: static;
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: 120px;
-    margin-top: 14px;
+    height: 100%;
+    opacity: 0.48;
+  }
+
+  .lux-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: -74px;
+    padding: 0;
   }
 }
+
+/* ===== Staff & Incident Analytics Row ===== */
+.lux-staff-incident-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.lux-staff-incident-row--manager {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.lux-analytics-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 246px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.98), rgba(251,248,253,0.96));
+  box-shadow: 0 10px 28px rgba(66,35,94,0.055);
+}
+
+.lux-chart-meta {
+  color: #42235e;
+  background: #f5eff9;
+  border: 1px solid #eadff1;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lux-chart-shell {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  flex: 1;
+  width: 100%;
+  min-height: 240px;
+  padding: 8px 14px 12px 10px;
+  box-sizing: border-box;
+}
+
+.lux-chart-y-axis {
+  display: flex;
+  height: 185px;
+  margin-top: 18px;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-right: 7px;
+  color: #aaa0a5;
+  font-size: 9px;
+  font-weight: 700;
+}
+.lux-weekly-incident-chart,
+.lux-hotel-comparison-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  width: 100%;
+  gap: 14px;
+  height: 220px;
+  padding: 8px 4px 4px;
+  box-sizing: border-box;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 54px,
+      rgba(66,35,94,0.055) 55px,
+      transparent 56px
+    );
+  border-bottom: 1px solid rgba(66,35,94,0.09);
+}
+
+.lux-weekly-incident-column {
+  display: flex;
+  flex: 1;
+  max-width: 170px;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  transition: transform 0.2s ease;
+}
+
+.lux-weekly-incident-column:hover,
+.lux-hotel-chart-column:hover {
+  transform: translateY(-3px);
+}
+
+.lux-weekly-incident-count {
+  min-height: 17px;
+  color: #42235e;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.lux-weekly-incident-track {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: min(100%, 56px);
+  min-height: 150px;
+  height: auto;
+  border-radius: 8px 8px 4px 4px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #f7f2fa 0%, #eee6f4 100%);
+  box-shadow: inset 0 0 0 1px rgba(66,35,94,0.025);
+}
+
+.lux-weekly-incident-bar {
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(180deg, #a47ac1 0%, #70419a 55%, #42235e 100%);
+  box-shadow: 0 5px 14px rgba(66,35,94,0.18);
+  transition: height 0.3s ease;
+}
+
+.lux-weekly-incident-label {
+  color: #76665c;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lux-incident-empty {
+  display: flex;
+  flex: 1;
+  min-height: 240px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8a757b;
+  font-size: 14px;
+}
+.lux-incident-empty svg {
+  opacity: 0.3;
+}
+
+.lux-hotel-comparison-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 14px;
+  height: 220px;
+  max-height: none;
+  overflow: visible;
+  padding: 8px 4px 4px;
+}
+
+.lux-hotel-chart-column {
+  display: flex;
+  flex: 1;
+  max-width: 150px;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  transition: transform 0.2s ease;
+}
+
+.lux-hotel-chart-value {
+  color: #42235e;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.lux-hotel-chart-track {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: min(100%, 56px);
+  min-height: 150px;
+  height: auto;
+  overflow: hidden;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(180deg, #f7f2fa 0%, #eee6f4 100%);
+  box-shadow: inset 0 0 0 1px rgba(66,35,94,0.025);
+}
+
+.lux-hotel-chart-bar {
+  width: 100%;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(180deg, #b69ac9 0%, #70419a 58%, #42235e 100%);
+  box-shadow: 0 5px 14px rgba(66,35,94,0.18);
+  transition: height 0.4s ease;
+}
+
+.lux-hotel-chart-name {
+  width: 100%;
+  color: #76665c;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: -webkit-box;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+}
+
+@media (max-width: 680px) {
+  .lux-donut-content-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .lux-donut-svg-wrap {
+    width: min(220px, 70vw);
+  }
+
+  .lux-donut-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+  }
+
+  .lux-weekly-incident-chart {
+    gap: 8px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .lux-weekly-incident-track {
+    width: min(100%, 44px);
+  }
+
+  .lux-hotel-comparison-chart {
+    gap: 8px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .lux-hotel-chart-track {
+    width: min(100%, 44px);
+  }
+}
+@media (max-width: 900px) {
+  .lux-staff-incident-row { grid-template-columns: 1fr; }
+}
+

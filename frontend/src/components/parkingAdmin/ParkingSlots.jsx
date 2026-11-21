@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useId, useMemo, useState } from "react";
 import {
   ChevronDown,
   RefreshCw,
@@ -19,13 +19,18 @@ import {
   Check,
   ArrowDown,
   ArrowUp,
-  Maximize2
+  Maximize2,
+  Building2,
+  LayoutGrid,
+  Grid3X3
 } from "lucide-react";
 
 import { useRealtimeSync } from "../../hooks/useRealtimeSync";
 import "./css/ParkingSlots.css";
 import apiClient from "../../api/apiClient";
 import { getValetParkingSlots } from "../../api/parkingApi";
+import { getBuildings } from "../../api/areaApi";
+import BranchSelector from "../common/BranchSelector";
 
 /* ==========================================================================
    LIVE ELAPSED DURATION HOOK
@@ -352,6 +357,8 @@ const createBlockLayout = (slots) => {
 const ParkingSlots = ({ scope = "manager" }) => {
   const isValetScope = scope === "valet";
   const [slots, setSlots] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  const [selectedHotel, setSelectedHotel] = useState("all");
   const [areaMap, setAreaMap] = useState(null);
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -363,10 +370,20 @@ const ParkingSlots = ({ scope = "manager" }) => {
   const [activeZone, setActiveZone] = useState("all");
 
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [slotViewMode, setSlotViewMode] = useState("cinema"); // "map" or "cinema"
   const [selectedStatus, setSelectedStatus] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState("");
 
+  useEffect(() => {
+    if (!isValetScope) {
+      getBuildings()
+        .then((res) => {
+          if (res?.buildings) setHotels(res.buildings);
+        })
+        .catch((err) => console.error("Error loading buildings for slots:", err));
+    }
+  }, [isValetScope]);
 
   // Fetch slots data
   const fetchSlots = useCallback(async (silent = false) => {
@@ -374,9 +391,13 @@ const ParkingSlots = ({ scope = "manager" }) => {
       if (!silent) setLoading(true);
       setError("");
 
+      const hotelQuery = !isValetScope && selectedHotel && selectedHotel !== "all"
+        ? `?hotelId=${encodeURIComponent(selectedHotel)}`
+        : "";
+
       const response = isValetScope
         ? await getValetParkingSlots()
-        : await apiClient("/api/parking-slots");
+        : await apiClient(`/api/parking-slots${hotelQuery}`);
 
       if (!response || response.success !== true) {
         throw new Error(response?.message || "Failed to fetch parking slots.");
@@ -414,7 +435,7 @@ const ParkingSlots = ({ scope = "manager" }) => {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [isValetScope]);
+  }, [isValetScope, selectedHotel]);
 
   useEffect(() => {
     fetchSlots();
@@ -599,16 +620,9 @@ const ParkingSlots = ({ scope = "manager" }) => {
             <span>{isValetScope ? "MY ASSIGNED PARKING AREA" : "REAL-TIME FACILITY MAP"}</span>
           </div>
           <h1>Parking Space Overview</h1>
-          <p>
-            {isValetScope
-              ? assignment
-                ? `Live parking bays for ${assignment.post?.post_name || "your post"} on ${assignment.floor?.floor_name || "your assigned floor"}. Slot settings are managed by your manager.`
-                : "You do not have an active valet post. Ask your manager to assign you to an area."
-              : "Monitor live bay occupancy, assigned attendants in charge, and automated telemetry."}
-          </p>
         </div>
 
-        <div className="facility-header-actions">
+        <div className="facility-header-actions" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
             type="button"
             className="action-btn-secondary"
@@ -621,6 +635,20 @@ const ParkingSlots = ({ scope = "manager" }) => {
           </button>
         </div>
       </header>
+
+      {/* DEDICATED HOTEL BRANCH FILTER ROW */}
+      {!isValetScope && hotels.length > 0 && (
+        <div style={{ background: "#ffffff", padding: "14px 20px", borderRadius: "14px", border: "1px solid #f1e4e6", margin: "16px 0 20px" }}>
+          <BranchSelector
+            hotels={hotels}
+            selectedHotel={selectedHotel}
+            onSelectHotel={setSelectedHotel}
+            label="Hotel Branch:"
+            allLabel="All Branches"
+            size="sm"
+          />
+        </div>
+      )}
 
       {/* ===================================================================
           2. TOP KPI SUMMARY STATS CARDS
@@ -778,111 +806,238 @@ const ParkingSlots = ({ scope = "manager" }) => {
                 <span className="bays-counter-pill">
                   {mapFilteredSlots.length} Bays Active
                 </span>
+                
+                {/* View Mode Switcher */}
+                <div style={{ display: "inline-flex", background: "#f1ebe9", borderRadius: "8px", padding: "3px", marginLeft: "12px", border: "1px solid #e2d7d5" }}>
+                  <button
+                    type="button"
+                    onClick={() => setSlotViewMode("cinema")}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: "none",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      background: slotViewMode === "cinema" ? "#42235e" : "transparent",
+                      color: slotViewMode === "cinema" ? "#ffffff" : "#635256",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px"
+                    }}
+                  >
+                    <Grid3X3 size={13} />
+                    <span>Seat Matrix</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSlotViewMode("map")}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: "none",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      background: slotViewMode === "map" ? "#42235e" : "transparent",
+                      color: slotViewMode === "map" ? "#ffffff" : "#635256",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "5px"
+                    }}
+                  >
+                    <LayoutGrid size={13} />
+                    <span>Bay View</span>
+                  </button>
+                </div>
               </div>
 
               <div className="map-status-legend">
-                <span className="legend-chip">
-                  <span className="status-dot green" /> Available
-                </span>
-                <span className="legend-chip">
-                  <span className="status-dot purple" /> Occupied
-                </span>
-                <span className="legend-chip">
-                  <span className="status-dot yellow" /> Selected
-                </span>
-                <span className="legend-chip">
-                  <span className="status-dot grey" /> Maintenance
-                </span>
+                {slotViewMode === "cinema" ? (
+                  <>
+                    <span className="legend-chip">
+                      <span style={{ display: "inline-block", width: "14px", height: "14px", borderRadius: "3px", background: "#16a34a", marginRight: "5px" }} />
+                      Free (Green)
+                    </span>
+                    <span className="legend-chip">
+                      <span style={{ display: "inline-block", width: "14px", height: "14px", borderRadius: "3px", background: "#dc2626", marginRight: "5px" }} />
+                      Occupied (Red)
+                    </span>
+                    <span className="legend-chip">
+                      <span style={{ display: "inline-block", width: "14px", height: "14px", borderRadius: "3px", background: "#eab308", marginRight: "5px" }} />
+                      Selected
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="legend-chip">
+                      <span className="status-dot green" /> Available
+                    </span>
+                    <span className="legend-chip">
+                      <span className="status-dot purple" /> Occupied
+                    </span>
+                    <span className="legend-chip">
+                      <span className="status-dot yellow" /> Selected
+                    </span>
+                    <span className="legend-chip">
+                      <span className="status-dot grey" /> Maintenance
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Asphault Road & Parking Floor */}
             <div className="parking-asphalt-floor">
-              {/* Entrance Lane Road Marker */}
-              <div className="facility-road-lane entry">
-                <div className="lane-arrow-box">
-                  <ArrowDown size={15} />
-                    <span>{gatesForSide("front") || "No entry gate mapped"}</span>
-                </div>
-                <div className="lane-stripe-dashed" />
-              </div>
+              {slotViewMode === "cinema" ? (
+                /* CINEMA SEAT STYLE SMALL ICON MATRIX — 20 per row */
+                <div style={{ padding: "20px 16px", background: "#18181b", borderRadius: "14px", display: "inline-block", width: "100%", margin: "-22px -24px", width: "calc(100% + 48px)", boxSizing: "border-box" }}>
+                  <div style={{ textAlign: "center", marginBottom: "18px" }}>
+                    <div style={{ height: "4px", width: "65%", margin: "0 auto 8px", background: "linear-gradient(90deg, transparent, #eab308, transparent)", borderRadius: "2px" }} />
+                    <span style={{ fontSize: "11px", fontWeight: "800", color: "#eab308", letterSpacing: "0.2em", textTransform: "uppercase" }}>
+                      PARKING BAY FRONT / ENTRY SCREEN
+                    </span>
+                  </div>
 
-              {/* Rows of Bays */}
-              <div className="parking-bays-wrapper">
-                {parkingRows.map((rowBays, rowIndex) => (
-                  <React.Fragment key={`row-${rowIndex}`}>
-                    <div className="parking-bays-row">
-                      <div className="row-tag-badge">
-                        <span>R{rowIndex + 1}</span>
-                      </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", margin: "0 auto", overflowX: "auto", alignItems: "center" }}>
+                    {Array.from(
+                      { length: Math.ceil(mapFilteredSlots.length / 20) },
+                      (_, rowIndex) => mapFilteredSlots.slice(rowIndex * 20, rowIndex * 20 + 20)
+                    ).map((rowBays, rowIndex) => {
+                      const rowLetter = String.fromCharCode(65 + (rowIndex % 26));
+                      return (
+                        <div key={`cinema-row-${rowIndex}`} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ width: "18px", fontSize: "10px", fontWeight: "800", color: "#a1a1aa", textAlign: "right", flexShrink: 0 }}>
+                            {rowLetter}
+                          </span>
 
-                      <div
-                        className="row-bays-grid"
-                        style={{ gridTemplateColumns: `repeat(${activeMapZone?.map_cols || 6}, minmax(0, 1fr))` }}
-                      >
-                        {rowBays.map((slot, columnIndex) =>
-                          slot ? (
-                            <ParkingBayItem
-                              key={slot.id}
-                              slot={slot}
-                              selected={selectedSlot?.id === slot.id}
-                              onClick={handleSlotClick}
-                            />
-                          ) : (
-                            <div key={`filler-${rowIndex}-${columnIndex}`} className="bay-empty-filler" />
-                          )
-                        )}
-                      </div>
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "nowrap" }}>
+                            {rowBays.map((slot, sIdx) => {
+                              const isOccupied = slot.status === "occupied" || !!slot.assigned_vehicle;
+                              const isSelected = selectedSlot?.id === slot.id;
+                              const seatBg = isSelected ? "#eab308" : isOccupied ? "#dc2626" : "#16a34a";
+
+                              return (
+                                <button
+                                  key={slot.id}
+                                  type="button"
+                                  onClick={() => handleSlotClick(slot)}
+                                  title={`${slot.slot_number} - ${isOccupied ? "Occupied" : "Free"}${slot.assigned_vehicle ? ` (${slot.assigned_vehicle})` : ""}`}
+                                  style={{
+                                    width: "20px",
+                                    height: "18px",
+                                    borderRadius: "3px 3px 2px 2px",
+                                    border: isSelected ? "2px solid #ffffff" : "1px solid rgba(255,255,255,0.15)",
+                                    background: seatBg,
+                                    color: "#ffffff",
+                                    fontSize: "7px",
+                                    fontWeight: "800",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: isSelected ? "0 0 8px #eab308" : "0 1px 3px rgba(0,0,0,0.5)",
+                                    transition: "all 0.15s ease",
+                                    flexShrink: 0
+                                  }}
+                                >
+                                  {sIdx + 1}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <span style={{ width: "18px", fontSize: "10px", fontWeight: "800", color: "#a1a1aa", textAlign: "left", flexShrink: 0 }}>
+                            {rowLetter}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "center", gap: "28px", marginTop: "32px", paddingTop: "18px", borderTop: "1px solid #27272a" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#d4d4d8" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "3px", background: "#16a34a" }} />
+                      <span>Free ({slotCounts.available})</span>
                     </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#d4d4d8" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "3px", background: "#dc2626" }} />
+                      <span>Occupied ({slotCounts.occupied})</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "#d4d4d8" }}>
+                      <div style={{ width: "16px", height: "16px", borderRadius: "3px", background: "#eab308" }} />
+                      <span>Selected</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* REGULAR BAY VIEW */
+                <>
+                  {/* Entrance Lane Road Marker */}
+                  <div className="facility-road-lane entry">
+                    <div className="lane-arrow-box">
+                      <ArrowDown size={15} />
+                      <span>{gatesForSide("front") || "No entry gate mapped"}</span>
+                    </div>
+                    <div className="lane-stripe-dashed" />
+                  </div>
 
-                    {/* Central Driveway divider between rows */}
-                    {rowIndex < parkingRows.length - 1 && (
-                      <div className="internal-driveway-separator">
-                        <div className="driveway-dash-line" />
-                        <span className="driveway-text">INTERNAL PASSING LANE</span>
-                        <div className="driveway-dash-line" />
+                  {/* Rows of Bays */}
+                  <div className="parking-bays-wrapper">
+                    {parkingRows.map((rowBays, rowIndex) => (
+                      <React.Fragment key={`row-${rowIndex}`}>
+                        <div className="parking-bays-row">
+                          <div className="row-tag-badge">
+                            <span>R{rowIndex + 1}</span>
+                          </div>
+
+                          <div
+                            className="row-bays-grid"
+                            style={{ gridTemplateColumns: `repeat(${activeMapZone?.map_cols || 6}, minmax(0, 1fr))` }}
+                          >
+                            {rowBays.map((slot, columnIndex) =>
+                              slot ? (
+                                <ParkingBayItem
+                                  key={slot.id}
+                                  slot={slot}
+                                  selected={selectedSlot?.id === slot.id}
+                                  onClick={handleSlotClick}
+                                />
+                              ) : (
+                                <div key={`filler-${rowIndex}-${columnIndex}`} className="bay-empty-filler" />
+                              )
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Central Driveway divider between rows */}
+                        {rowIndex < parkingRows.length - 1 && (
+                          <div className="internal-driveway-separator">
+                            <div className="driveway-dash-line" />
+                            <span className="driveway-text">INTERNAL PASSING LANE</span>
+                            <div className="driveway-dash-line" />
+                          </div>
+                        )}
+                      </React.Fragment>
+                    ))}
+
+                    {mapFilteredSlots.length === 0 && !loading && (
+                      <div className="map-no-results">
+                        <CircleParking size={36} />
+                        <p>No parking bays match your current search or filters.</p>
                       </div>
-                    )}
-                  </React.Fragment>
-                ))}
-
-                {mapFilteredSlots.length === 0 && !loading && (
-                  <div className="map-no-results">
-                    <CircleParking size={36} />
-                    <p>
-                      {isValetScope
-                        ? assignment
-                          ? slots.length
-                            ? "No parking bays match your current search or filters."
-                            : "No parking bays have been added to your assigned floor yet. Please contact your manager."
-                          : "You do not have an active valet post. Please ask your manager to assign you to a parking area."
-                        : "No parking bays match your current search or filters."}
-                    </p>
-                    {slots.length > 0 && (
-                      <button
-                        type="button"
-                        className="reset-filter-btn"
-                        onClick={() => {
-                          setSearch("");
-                          setStatusFilter("all");
-                          setZoneFilter("all");
-                          setActiveZone("all");
-                        }}
-                      >
-                        Clear All Filters
-                      </button>
                     )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
+            </div>
 
-              {/* Exit Lane Road Marker */}
-              <div className="facility-road-lane exit">
-                <div className="lane-stripe-dashed" />
-                <div className="lane-arrow-box exit">
-                  <span>{gatesForSide("back") || "No exit gate mapped"}</span>
-                  <ArrowUp size={15} />
-                </div>
+            {/* Exit Lane Road Marker */}
+            <div className="facility-road-lane exit">
+              <div className="lane-stripe-dashed" />
+              <div className="lane-arrow-box exit">
+                <span>{gatesForSide("back") || "No exit gate mapped"}</span>
+                <ArrowUp size={15} />
               </div>
             </div>
           </div>
@@ -1020,7 +1175,7 @@ const ParkingSlots = ({ scope = "manager" }) => {
                         <span className="card-key">TICKET CODE</span>
                         <strong className="card-value highlight-ticket">
                           <Ticket size={13} />
-                          {selectedSlot.session_ticket || "Not available"}
+                          <span>{selectedSlot.session_ticket || "Not available"}</span>
                         </strong>
                       </div>
 

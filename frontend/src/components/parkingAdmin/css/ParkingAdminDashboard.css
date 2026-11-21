@@ -1,10 +1,10 @@
-
+﻿
 
 .parking-admin-body {
     width: 100%;
     flex: 1;
 
-    padding: 0;
+    padding: 18px 24px 32px 24px;
 
     background: #f8f2f3;
 
@@ -19,7 +19,7 @@
     --admin-text: #1d1517;
     --admin-muted: #746267;
     --admin-border: #eee7e8;
-    --admin-purple: #8b1230;
+    --admin-purple: #42235e;
     --admin-shadow: 0 12px 32px rgba(94, 35, 50, .07);
 }
 
@@ -35,9 +35,9 @@
 .profile-page,
 .parking-history-page,
 .reports-container {
-    max-width: 1480px;
-    margin: 0 auto;
-    padding: 38px 42px 56px;
+    max-width: 100%;
+    margin: 0;
+    padding: 12px 6px 24px;
     color: var(--admin-text);
 }
 
@@ -155,7 +155,7 @@
 
 
 .card-subtext {
-    background: #fce7eb;
+    background: #f3e8f9;
     color: var(--admin-purple);
 }
 
@@ -963,7 +963,7 @@
             #faf1f3,
             #f5e8eb);
 
-    color: #8b1230;
+    color: #42235e;
 }
 
 
@@ -1022,7 +1022,7 @@
 
     background: transparent;
 
-    color: #8b1230;
+    color: #42235e;
 
     font-family: inherit;
 
@@ -1101,7 +1101,7 @@
 .circle-fill {
     fill: none;
 
-    stroke: #8b1230;
+    stroke: #42235e;
 
     stroke-width: 3.6;
 
@@ -1696,7 +1696,7 @@
     border-color: var(--border-color, rgba(139, 18, 48, 0.12));
     border-radius: 9999px;
     background: var(--bg-card, #ffffff);
-    color: var(--accent-purple, #8b1230);
+    color: var(--accent-purple, #42235e);
 }
 
 
@@ -1797,5 +1797,22 @@
 
 .parking-admin-body {
   background: transparent;
-  padding: 0;
+  padding: 18px 24px 32px 24px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.parking-admin-body > .dashboard-wrapper,
+.parking-admin-body > .parking-page,
+.parking-admin-body > .parking-sessions-page,
+.parking-admin-body > .profile-page,
+.parking-admin-body > .parking-history-page,
+.parking-admin-body > .reports-container,
+.parking-admin-body > .feedback-page,
+.parking-admin-body > .feedback-mgmt-container,
+.parking-admin-body > .incident-page,
+.parking-admin-body > .incidents-wrapper {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
 }

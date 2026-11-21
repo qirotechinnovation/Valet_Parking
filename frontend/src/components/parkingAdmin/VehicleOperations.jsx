@@ -1,14 +1,20 @@
-
+﻿
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./css/VehicleOperations.css";
 import apiClient from "../../api/apiClient";
+import { getBuildings } from "../../api/areaApi";
+import BranchSelector from "../common/BranchSelector";
 
-import { Car,
+import {
+  Car,
   Check,
   Wrench,
-  MoveUpRight
-
- } from 'lucide-react';
+  MoveUpRight,
+  Building2,
+  Clock,
+  User,
+  Shield,
+} from 'lucide-react';
 
 // ============================================================
 // STATUS HELPERS
@@ -111,12 +117,14 @@ const formatTime = (dateString) => {
 // COMPONENT
 // ============================================================
 
-function VehiclesOperations() {
+function VehiclesOperations({ scope = "manager" }) {
   // ==========================================================
   // STATE
   // ==========================================================
 
   const [vehicles, setVehicles] = useState([]);
+  const [hotels, setHotels] = useState([]);
+  const [selectedHotel, setSelectedHotel] = useState("all");
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -140,6 +148,14 @@ function VehiclesOperations() {
 
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    getBuildings()
+      .then((res) => {
+        if (res?.buildings) setHotels(res.buildings);
+      })
+      .catch((err) => console.error("Error loading buildings for vehicles:", err));
+  }, []);
+
   // ==========================================================
   // FETCH PARKING SESSIONS
   // ==========================================================
@@ -149,8 +165,12 @@ function VehiclesOperations() {
       setLoading(true);
       setError("");
 
+      const hotelQuery = selectedHotel && selectedHotel !== "all"
+        ? `?hotelId=${encodeURIComponent(selectedHotel)}`
+        : "";
+
       const data = await apiClient(
-        "/api/parking-admin/sessions"
+        `/api/parking-admin/sessions${hotelQuery}`
       );
 
       setVehicles(data.sessions || []);
@@ -164,7 +184,7 @@ function VehiclesOperations() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedHotel]);
 
   // ==========================================================
   // FETCH VALETS
@@ -569,11 +589,6 @@ function VehiclesOperations() {
             Vehicles & Operations
           </h1>
 
-          <p>
-            Monitor vehicles currently inside the
-            parking facility.
-          </p>
-
         </div>
 
         <button
@@ -697,6 +712,22 @@ function VehiclesOperations() {
       </div>
 
       {/* ======================================================
+          DEDICATED HOTEL BRANCH FILTER ROW
+      ====================================================== */}
+      {hotels.length > 0 && (
+        <div style={{ background: "#ffffff", padding: "14px 20px", borderRadius: "14px", border: "1px solid #f1e4e6", margin: "16px 0" }}>
+          <BranchSelector
+            hotels={hotels}
+            selectedHotel={selectedHotel}
+            onSelectHotel={setSelectedHotel}
+            label="Hotel Branch:"
+            allLabel="All Branches"
+            size="sm"
+          />
+        </div>
+      )}
+
+      {/* ======================================================
           TABLE
       ====================================================== */}
 
@@ -802,6 +833,10 @@ function VehiclesOperations() {
                   </th>
 
                   <th>
+                    HOTEL BRANCH
+                  </th>
+
+                  <th>
                     CUSTOMER
                   </th>
 
@@ -810,7 +845,7 @@ function VehiclesOperations() {
                   </th>
 
                   <th>
-                    CHECK-IN
+                    CHECK-IN / OUT
                   </th>
 
                   <th>
@@ -836,7 +871,7 @@ function VehiclesOperations() {
                   <tr>
 
                     <td
-                      colSpan="7"
+                      colSpan="8"
                       className="parking-empty"
                     >
 
@@ -896,6 +931,24 @@ function VehiclesOperations() {
 
                       </td>
 
+                      {/* HOTEL BRANCH */}
+
+                      <td>
+
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+
+                          <strong style={{ color: "#42235e", fontSize: "13px" }}>
+                            {vehicle.hotel_name || "General"}
+                          </strong>
+
+                          <span style={{ fontSize: "11px", color: "#6b7280" }}>
+                            {vehicle.floor_name ? `Floor: ${vehicle.floor_name}` : ""}
+                          </span>
+
+                        </div>
+
+                      </td>
+
                       {/* CUSTOMER */}
 
                       <td>
@@ -938,15 +991,23 @@ function VehiclesOperations() {
 
                       </td>
 
-                      {/* CHECK-IN */}
+                      {/* CHECK-IN / CHECKOUT */}
 
                       <td>
 
-                        <span className="checkin-time">
-                          {formatTime(
-                            vehicle.checked_in_at
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+
+                          <span className="checkin-time">
+                            In: {formatTime(vehicle.checked_in_at)}
+                          </span>
+
+                          {vehicle.completed_at && (
+                            <span style={{ fontSize: "11px", color: "#15803d", fontWeight: "600" }}>
+                              Out: {formatTime(vehicle.completed_at)}
+                            </span>
                           )}
-                        </span>
+
+                        </div>
 
                       </td>
 
@@ -1025,21 +1086,15 @@ function VehiclesOperations() {
                             View
                           </button>
 
-                          <button
-                            className="parking-action edit"
-                            onClick={() =>
-                              handleOpenAssign(
-                                vehicle
-                              )
-                            }
-                            disabled={
-                              operationLoading
-                            }
-                          >
-                            {vehicle.valet
-                              ? "Change Valet"
-                              : "Assign Valet"}
-                          </button>
+                          {!vehicle.valet && (
+                            <button
+                              className="parking-action edit"
+                              onClick={() => handleOpenAssign(vehicle)}
+                              disabled={operationLoading}
+                            >
+                              Assign Valet
+                            </button>
+                          )}
 
                         </div>
 
@@ -1428,25 +1483,18 @@ function VehiclesOperations() {
                 Close
               </button>
 
-              <button
-                className="create-staff-btn"
-                onClick={() => {
-
-                  closeViewModal();
-
-                  handleOpenAssign(
-                    selectedVehicle
-                  );
-
-                }}
-                disabled={
-                  operationLoading
-                }
-              >
-                {selectedVehicle.valet
-                  ? "Change Valet"
-                  : "Assign Valet"}
-              </button>
+              {!selectedVehicle.valet && (
+                <button
+                  className="create-staff-btn"
+                  onClick={() => {
+                    closeViewModal();
+                    handleOpenAssign(selectedVehicle);
+                  }}
+                  disabled={operationLoading}
+                >
+                  Assign Valet
+                </button>
+              )}
 
             </div>
 
