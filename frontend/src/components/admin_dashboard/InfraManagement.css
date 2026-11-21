@@ -1,0 +1,806 @@
+﻿/* =========================================================
+   INFRA MANAGEMENT STYLES
+   Multi-hotel branch & staff infrastructure management
+   ========================================================= */
+
+.infra-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
+.infra-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: #ffffff;
+  padding: 22px 28px;
+  border-radius: 16px;
+  border: 1px solid #f1e4e6;
+  box-shadow: 0 4px 18px rgba(139, 18, 48, 0.04);
+}
+
+.infra-title-section h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.02em;
+}
+
+.infra-title-section p {
+  font-size: 13.5px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Tab Switcher */
+.infra-tabs {
+  display: flex;
+  background: #f7f2fb;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  border: 1px solid #ebdcf3;
+}
+
+.infra-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #42235e;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.infra-tab-btn:hover {
+  background: rgba(91, 42, 132, 0.1);
+  color: #42235e;
+}
+
+.infra-tab-btn.active {
+  background: #42235e;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(66, 35, 94, 0.25);
+}
+
+/* Alert Notices */
+.infra-alert {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.infra-alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.infra-alert.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Action Bar */
+.infra-actions-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.infra-actions-bar > div:last-child {
+  align-self: flex-end;
+}
+
+.infra-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.infra-search-box input {
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  width: 100%;
+}
+
+.infra-btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #42235e;
+  color: #ffffff;
+  border: none;
+  padding: 11px 20px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(66, 35, 94, 0.2);
+}
+
+.infra-btn-primary:hover {
+  background: #5b2a84;
+  transform: translateY(-1px);
+}
+
+.infra-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.infra-btn-secondary:hover {
+  background: #f3f4f6;
+}
+
+.infra-btn-deactivate-staff,
+.infra-btn-activate-staff {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.infra-btn-deactivate-staff {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b42318;
+}
+
+.infra-btn-deactivate-staff:hover:not(:disabled) {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+.infra-btn-activate-staff {
+  border: 1px solid #15803d;
+  background: #15803d;
+  color: #ffffff;
+}
+
+.infra-btn-activate-staff:hover:not(:disabled) {
+  background: #166534;
+  border-color: #166534;
+}
+
+.infra-btn-deactivate-staff:disabled,
+.infra-btn-activate-staff:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Hotel Pipeline / List Order (One by one) */
+.infra-hotels-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.infra-hotel-pipeline-row {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1.5px solid #ebdcf3;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  box-shadow: 0 2px 8px rgba(66, 35, 94, 0.04);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.infra-hotel-pipeline-row:hover {
+  transform: translateX(4px);
+  border-color: #bc9b6a;
+  box-shadow: 0 6px 18px rgba(66, 35, 94, 0.1);
+}
+
+.infra-hotel-pipe-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.infra-pipe-step-num {
+  font-size: 12px;
+  font-weight: 800;
+  color: #bc9b6a;
+  background: #fdfbf8;
+  border: 1px solid #ebdcd5;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.infra-hotel-pipe-info {
+  flex: 1;
+  min-width: 200px;
+}
+
+.infra-hotel-pipe-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.infra-pipe-dot {
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.infra-hotel-address-inline {
+  color: #6b7280;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.infra-hotel-pipe-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.infra-pipe-stat-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fdfbf9;
+  border: 1px solid #ebdcf3;
+  padding: 6px 14px;
+  border-radius: 10px;
+  min-width: 65px;
+}
+
+.infra-pipe-stat-badge .infra-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #42235e;
+}
+
+.infra-pipe-stat-badge .infra-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a7b96;
+  text-transform: uppercase;
+}
+
+.infra-hotel-pipe-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.infra-hotel-pipe-actions button {
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+@media (max-width: 900px) {
+  .infra-hotel-pipeline-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .infra-hotel-pipe-stats {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .infra-hotel-pipe-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Hotel Grid (Legacy fallback) */
+.infra-hotels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.infra-hotel-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #f1e4e6;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.infra-hotel-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #42235e, #c4385a);
+}
+
+.infra-hotel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(139, 18, 48, 0.08);
+  border-color: #f7ced6;
+}
+
+.infra-hotel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.infra-hotel-name-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.infra-hotel-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f7f2fb;
+  color: #42235e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.infra-hotel-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.infra-hotel-location {
+  font-size: 12.5px;
+  color: #42235e;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.infra-badge-status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.infra-badge-status.active {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.infra-badge-status.inactive {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.infra-hotel-address {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.45;
+  margin-bottom: 18px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.infra-hotel-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #fafafa;
+  padding: 12px 14px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  border: 1px solid #f0f0f0;
+}
+
+.infra-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.infra-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.infra-stat-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.infra-hotel-actions {
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 14px;
+}
+
+.infra-hotel-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.infra-btn-config {
+  background: #f7f2fb;
+  color: #42235e;
+  border: 1px solid #ebdcf3;
+}
+
+.infra-btn-config:hover {
+  background: #42235e;
+  color: #ffffff;
+}
+
+.infra-btn-edit {
+  background: #f9fafb;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.infra-btn-edit:hover {
+  background: #f3f4f6;
+}
+
+.infra-btn-del {
+  background: #ffffff;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+  max-width: 38px;
+  flex: none !important;
+}
+
+.infra-btn-del:hover {
+  background: #fef2f2;
+}
+
+/* Modal styles */
+.infra-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.infra-modal {
+  background: #ffffff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e5e7eb;
+  padding: 28px;
+}
+
+.infra-staff-status-modal {
+  max-width: 440px;
+}
+
+.infra-staff-status-modal .infra-modal-head {
+  align-items: flex-start;
+}
+
+.infra-status-eyebrow {
+  margin: 0 0 4px;
+  color: #42235e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.infra-staff-status-message {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.infra-btn-deactivate-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid #b42318;
+  border-radius: 10px;
+  background: #b42318;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.infra-btn-deactivate-confirm:hover:not(:disabled) {
+  background: #912018;
+  border-color: #912018;
+}
+
+.infra-btn-deactivate-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Wider modal for staff form */
+.infra-staff-modal {
+  max-width: 700px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.infra-modal-lg {
+  max-width: 780px;
+}
+
+.infra-hotel-modal {
+  padding: 32px;
+}
+
+.infra-hotel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infra-hotel-form .infra-form-group {
+  gap: 9px;
+}
+
+.infra-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Purple brand header for staff modal */
+.infra-modal-head--brand {
+  background: linear-gradient(135deg, #2d0d42 0%, #42235e 100%);
+  border-bottom: none;
+  margin-bottom: 0;
+  padding: 22px 26px 20px;
+  align-items: flex-start;
+  border-radius: 18px 18px 0 0;
+}
+
+.infra-modal-eyebrow {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #bc9b6a;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.infra-modal-head--brand h3 {
+  color: #ffffff !important;
+  font-size: 20px;
+  margin: 0;
+}
+
+.infra-modal-sub {
+  color: #c9b8d4;
+  font-size: 11px;
+  margin: 4px 0 0;
+}
+
+.infra-close-btn--light {
+  color: rgba(255,255,255,0.7) !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  background: rgba(255,255,255,0.1) !important;
+  border-radius: 8px;
+  padding: 6px;
+}
+.infra-close-btn--light:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,0.2) !important;
+}
+
+/* Staff form container */
+.infra-staff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 26px 26px;
+}
+
+/* Two-column row */
+.infra-form-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Required asterisk */
+.infra-req {
+  color: #9b2c4a;
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+/* Role info box */
+.infra-role-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #faf5ff;
+  border-radius: 10px;
+  border: 1px solid #e9d5ff;
+  font-size: 12px;
+  color: #6b21a8;
+}
+.infra-role-info p { margin: 0; line-height: 1.5; }
+
+@media (max-width: 600px) {
+  .infra-form-row2 { grid-template-columns: 1fr; }
+  .infra-staff-modal { max-width: 100%; }
+}
+
+.infra-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infra-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.infra-form-group input,
+.infra-form-group select,
+.infra-form-group textarea {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.infra-form-group input:focus,
+.infra-form-group select:focus,
+.infra-form-group textarea:focus {
+  border-color: #42235e;
+  box-shadow: 0 0 0 3px rgba(139, 18, 48, 0.1);
+}
+
+.infra-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Config Levels Table */
+.infra-levels-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.infra-levels-table th {
+  background: #f8fafc;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.infra-levels-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.infra-levels-table input,
+.infra-levels-table select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 13px;
+}

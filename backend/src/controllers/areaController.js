@@ -60,36 +60,544 @@ const loadScoped = async (req, res, table, id, select = "*") => {
    SUPER ADMIN — buildings, floors, manager assignment
    ======================================================================== */
 
+const parseAddressAndLocation = (addressStr) => {
+  if (!addressStr) return { address: "", location: "" };
+  if (addressStr.includes(" | ")) {
+    const parts = addressStr.split(" | ");
+    return { address: parts[0]?.trim() || "", location: parts[1]?.trim() || "" };
+  }
+  return { address: addressStr, location: addressStr };
+};
+
 const getBuildings = handle("fetch buildings", async (req, res) => {
-  const { data, error } = await supabase
+  const { data: buildings, error } = await supabase
     .from("parking_buildings")
     .select("*")
     .order("building_name", { ascending: true });
 
   if (error) throw error;
 
-  return res.json({ success: true, buildings: data || [] });
+  // Enrich each building with floor count, slot counts, and staff counts
+  const { data: allFloors } = await supabase
+    .from("parking_floors")
+    .select("id, building_id");
+
+  const { data: allSlots } = await supabase
+    .from("parking_slots")
+    .select("id, floor_id, status");
+
+  const { data: allManagerAssignments } = await supabase
+    .from("manager_assignments")
+    .select("floor_id, manager_id")
+    .eq("is_active", true);
+
+  const { data: allValetAssignments } = await supabase
+    .from("valet_assignments")
+    .select("floor_id, valet_id")
+    .eq("is_active", true);
+
+  // Fetch manager user details to show which manager is assigned to every branch
+  const managerIds = [
+    ...new Set(
+      (allManagerAssignments || [])
+        .map((ma) => ma.manager_id)
+        .filter(Boolean)
+    )
+  ];
+  let managerUsers = [];
+  if (managerIds.length > 0) {
+    const { data: mUsers } = await supabase
+      .from("users")
+      .select("id, name, email, role")
+      .in("id", managerIds);
+    managerUsers = mUsers || [];
+  }
+
+  const enriched = (buildings || []).map((b) => {
+    const bFloors = (allFloors || []).filter((f) => f.building_id === b.id);
+    const bFloorIds = new Set(bFloors.map((f) => f.id));
+
+    const bSlots = (allSlots || []).filter((s) => bFloorIds.has(s.floor_id));
+    const occupiedCount = bSlots.filter((s) => s.status === "occupied").length;
+    const availableCount = bSlots.filter((s) => s.status === "available").length;
+
+    const bManagers = new Set(
+      (allManagerAssignments || [])
+        .filter((ma) => bFloorIds.has(ma.floor_id))
+        .map((ma) => ma.manager_id)
+    );
+
+    const bValets = new Set(
+      (allValetAssignments || [])
+        .filter((va) => bFloorIds.has(va.floor_id))
+        .map((va) => va.valet_id)
+    );
+
+    const bManagerObjs = managerUsers.filter((u) => bManagers.has(u.id));
+    const primaryManager = bManagerObjs[0] || null;
+
+    const { address: cleanAddress, location: parsedLocation } = parseAddressAndLocation(b.address);
+
+    return {
+      ...b,
+      location: parsedLocation || cleanAddress,
+      display_address: cleanAddress,
+      floors_count: bFloors.length,
+      slots_count: bSlots.length,
+      occupied_slots: occupiedCount,
+      available_slots: availableCount,
+      managers_count: bManagers.size,
+      valets_count: bValets.size,
+      total_staff: bManagers.size + bValets.size,
+      staff_count: bManagers.size + bValets.size,
+      manager: primaryManager
+        ? {
+            id: primaryManager.id,
+            name: primaryManager.name,
+            email: primaryManager.email
+          }
+        : null,
+      managers: bManagerObjs.map((m) => ({
+        id: m.id,
+        name: m.name,
+        email: m.email
+      }))
+    };
+  });
+
+  // If caller is a manager or parking_admin, they should ONLY see their own branch!
+  if (req.user?.role === "manager" || req.user?.role === "parking_admin") {
+    const scope = await getAreaScope(req.user);
+    if (scope.buildingIds && scope.buildingIds.length > 0) {
+      const managerBuildings = enriched.filter((b) =>
+        scope.buildingIds.includes(b.id)
+      );
+      return res.json({ success: true, buildings: managerBuildings });
+    }
+    return res.json({ success: true, buildings: [] });
+  }
+
+  return res.json({ success: true, buildings: enriched });
 });
 
 const createBuilding = handle("create building", async (req, res) => {
-  const building_name = String(req.body.building_name || "").trim();
-  const address = String(req.body.address || "").trim() || null;
+  const building_name = String(req.body.building_name || req.body.hotel_name || "").trim();
+  const rawAddress = String(req.body.address || "").trim();
+  const rawLocation = String(req.body.location || "").trim();
 
-  if (!building_name) return fail(res, 400, "building_name is required.");
+  if (!building_name) return fail(res, 400, "Hotel / Building name is required.");
+
+  let address = rawAddress;
+  if (rawLocation && rawLocation !== rawAddress) {
+    address = rawAddress ? `${rawAddress} | ${rawLocation}` : rawLocation;
+  } else if (!address && rawLocation) {
+    address = rawLocation;
+  }
 
   const { data, error } = await supabase
     .from("parking_buildings")
-    .insert([{ building_name, address }])
+    .insert([{ building_name, address: address || null }])
     .select()
     .single();
 
   if (error) return fail(res, 400, error.message);
 
-  return res.status(201).json({ success: true, building: data });
+  const { address: cleanAddress, location: parsedLocation } = parseAddressAndLocation(data.address);
+
+  // Always create default Ground Floor and initial parking slots for new hotel branch
+  const manager_id = req.body.manager_id;
+  const initialSlots = Number(req.body.slot_count || req.body.total_slots || 30);
+  const hotelPrefix = building_name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase() || "BAY";
+
+  try {
+    const { data: defaultFloor } = await supabase
+      .from("parking_floors")
+      .insert([{ building_id: data.id, floor_name: "Ground Floor", floor_number: 0 }])
+      .select()
+      .single();
+
+    if (defaultFloor) {
+      // 1. Generate initial parking slots if initialSlots > 0
+      if (initialSlots > 0) {
+        const { data: area } = await supabase
+          .from("parking_areas")
+          .insert([{
+            floor_id: defaultFloor.id,
+            block_code: hotelPrefix,
+            start_number: 1,
+            end_number: initialSlots,
+            parking_type: "car",
+            created_by: req.user?.id || null
+          }])
+          .select()
+          .single();
+
+        const padLen = Math.max(2, String(initialSlots).length);
+        const slotRows = [];
+        for (let i = 1; i <= initialSlots; i++) {
+          const numStr = String(i).padStart(padLen, "0");
+          slotRows.push({
+            slot_number: `${hotelPrefix}-${numStr}`,
+            parking_type: "car",
+            status: "available",
+            floor_id: defaultFloor.id,
+            area_id: area?.id || null,
+            created_by: req.user?.id || null
+          });
+        }
+        await supabase.from("parking_slots").insert(slotRows);
+      }
+
+      // 2. Assign manager if selected
+      if (manager_id) {
+        await supabase.from("manager_assignments").insert([{
+          manager_id,
+          floor_id: defaultFloor.id,
+          assigned_by: req.user?.id || null,
+          is_active: true
+        }]);
+      }
+    }
+  } catch (initErr) {
+    console.warn("Auto infra initialization on createBuilding warning:", initErr.message);
+  }
+
+  return res.status(201).json({
+    success: true,
+    building: {
+      ...data,
+      location: parsedLocation || cleanAddress,
+      display_address: cleanAddress,
+    },
+    message: "Hotel branch created successfully."
+  });
+});
+
+const updateBuilding = handle("update building", async (req, res) => {
+  const { id } = req.params;
+  const building_name = req.body.building_name ? String(req.body.building_name).trim() : undefined;
+  const rawAddress = req.body.address !== undefined ? String(req.body.address).trim() : undefined;
+  const rawLocation = req.body.location !== undefined ? String(req.body.location).trim() : undefined;
+  const status = req.body.status;
+
+  const updateData = {};
+  if (building_name) updateData.building_name = building_name;
+  if (status) updateData.status = status;
+
+  if (rawAddress !== undefined || rawLocation !== undefined) {
+    const addr = rawAddress || "";
+    const loc = rawLocation || "";
+    if (loc && loc !== addr) {
+      updateData.address = addr ? `${addr} | ${loc}` : loc;
+    } else {
+      updateData.address = addr || loc || null;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("parking_buildings")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return fail(res, 400, error.message);
+
+  const { address: cleanAddress, location: parsedLocation } = parseAddressAndLocation(data.address);
+
+  // If manager_id is specified in update, update the branch manager assignment
+  const manager_id = req.body.manager_id;
+  if (manager_id !== undefined) {
+    try {
+      let { data: bFloors } = await supabase
+        .from("parking_floors")
+        .select("id")
+        .eq("building_id", id);
+
+      if (!bFloors || bFloors.length === 0) {
+        const { data: defaultFloor } = await supabase
+          .from("parking_floors")
+          .insert([{ building_id: id, floor_name: "Ground Floor", floor_number: 0 }])
+          .select()
+          .single();
+        if (defaultFloor) bFloors = [defaultFloor];
+      }
+
+      if (bFloors && bFloors.length > 0) {
+        const floorIds = bFloors.map((f) => f.id);
+        // Deactivate existing manager assignments for these floors
+        await supabase
+          .from("manager_assignments")
+          .update({ is_active: false })
+          .in("floor_id", floorIds);
+
+        // Assign new manager if one was selected
+        if (manager_id) {
+          const records = floorIds.map((fId) => ({
+            manager_id,
+            floor_id: fId,
+            assigned_by: req.user?.id || null,
+            is_active: true
+          }));
+          await supabase.from("manager_assignments").insert(records);
+        }
+      }
+    } catch (assignErr) {
+      console.warn("Manager re-assignment on updateBuilding warning:", assignErr.message);
+    }
+  }
+
+  return res.json({
+    success: true,
+    building: {
+      ...data,
+      location: parsedLocation || cleanAddress,
+      display_address: cleanAddress,
+    },
+    message: "Hotel updated successfully."
+  });
+});
+
+const deleteBuilding = handle("delete building", async (req, res) => {
+  const { id } = req.params;
+
+  // Check if any active sessions in this hotel's slots
+  const { data: floors } = await supabase
+    .from("parking_floors")
+    .select("id")
+    .eq("building_id", id);
+
+  const floorIds = (floors || []).map((f) => f.id);
+
+  if (floorIds.length > 0) {
+    const { data: slots } = await supabase
+      .from("parking_slots")
+      .select("slot_number, status")
+      .in("floor_id", floorIds);
+
+    const slotNumbers = (slots || []).map((s) => s.slot_number);
+    const hasOccupied = (slots || []).some((s) => s.status === "occupied");
+
+    if (hasOccupied) {
+      return fail(res, 400, "Cannot delete hotel branch with currently occupied parking slots.");
+    }
+
+    if (slotNumbers.length > 0) {
+      const { data: activeSessions } = await supabase
+        .from("parking_sessions")
+        .select("id")
+        .in("parking_slot", slotNumbers)
+        .in("status", ["checked_in", "parked", "retrieval_requested", "retrieving"]);
+
+      if (activeSessions && activeSessions.length > 0) {
+        return fail(res, 400, "Cannot delete hotel branch with active parking sessions.");
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("parking_buildings")
+    .delete()
+    .eq("id", id);
+
+  if (error) return fail(res, 400, error.message);
+
+  return res.json({ success: true, message: "Hotel branch deleted successfully." });
+});
+
+const configureHotel = handle("configure hotel infrastructure", async (req, res) => {
+  const { building_id, levels } = req.body;
+
+  if (!building_id || !Array.isArray(levels) || levels.length === 0) {
+    return fail(res, 400, "building_id and levels array are required.");
+  }
+
+  // Check building exists
+  const { data: building, error: bErr } = await supabase
+    .from("parking_buildings")
+    .select("id, building_name")
+    .eq("id", building_id)
+    .single();
+
+  if (bErr || !building) return fail(res, 404, "Hotel not found.");
+
+  const createdLevels = [];
+
+  for (const level of levels) {
+    const floor_name = String(level.floor_name || "").trim();
+    const floor_number = Number(level.floor_number ?? 0);
+    const slot_count = Number(level.slot_count || level.slots || 0);
+    const block_code = String(level.block_code || floor_name.slice(0, 2).toUpperCase() || "A").trim();
+
+    if (!floor_name) continue;
+
+    // 1. Create or get floor
+    let { data: floor } = await supabase
+      .from("parking_floors")
+      .select("id, floor_name, floor_number")
+      .eq("building_id", building_id)
+      .eq("floor_number", floor_number)
+      .maybeSingle();
+
+    if (!floor) {
+      const { data: newFloor, error: fErr } = await supabase
+        .from("parking_floors")
+        .insert([{ building_id, floor_name, floor_number }])
+        .select()
+        .single();
+      if (fErr) throw fErr;
+      floor = newFloor;
+    } else if (floor.floor_name !== floor_name) {
+      // Update floor name if changed by user
+      const { data: updatedFloor } = await supabase
+        .from("parking_floors")
+        .update({ floor_name })
+        .eq("id", floor.id)
+        .select()
+        .single();
+      if (updatedFloor) floor = updatedFloor;
+    }
+
+    // 2. Generate slots if slot_count > 0
+    let slotsAdded = 0;
+    if (slot_count > 0 && floor?.id) {
+      // Check existing slots on this floor
+      const { data: existingSlots } = await supabase
+        .from("parking_slots")
+        .select("id, slot_number")
+        .eq("floor_id", floor.id);
+
+      const currentSlots = existingSlots || [];
+      const currentCount = currentSlots.length;
+
+      // Find or create area
+      let { data: area } = await supabase
+        .from("parking_areas")
+        .select("id")
+        .eq("floor_id", floor.id)
+        .maybeSingle();
+
+      if (!area) {
+        const { data: newArea, error: aErr } = await supabase
+          .from("parking_areas")
+          .insert([{
+            floor_id: floor.id,
+            block_code,
+            start_number: 1,
+            end_number: slot_count,
+            parking_type: level.parking_type || "car",
+            created_by: req.user.id
+          }])
+          .select()
+          .single();
+        if (!aErr && newArea) area = newArea;
+      }
+
+      if (slot_count > currentCount) {
+        const slotsNeeded = slot_count - currentCount;
+        const padLen = Math.max(2, String(slot_count).length);
+        const hotelPrefix = building.building_name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase() || "BAY";
+        const slotRows = [];
+
+        // Check highest existing number
+        let maxNum = 0;
+        currentSlots.forEach((s) => {
+          const match = (s.slot_number || "").match(/(\d+)$/);
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (n > maxNum) maxNum = n;
+          }
+        });
+
+        for (let i = 1; i <= slotsNeeded; i++) {
+          const numStr = String(maxNum + i).padStart(padLen, "0");
+          const code = `${hotelPrefix}-${block_code}-${numStr}`;
+          slotRows.push({
+            slot_number: code,
+            parking_type: level.parking_type || "car",
+            status: "available",
+            floor_id: floor.id,
+            area_id: area?.id || null,
+            created_by: req.user.id
+          });
+        }
+
+        // Avoid unique constraint conflicts
+        const { data: clash } = await supabase
+          .from("parking_slots")
+          .select("slot_number")
+          .in("slot_number", slotRows.map((s) => s.slot_number));
+
+        const clashSet = new Set((clash || []).map((c) => c.slot_number));
+        const nonClashRows = slotRows.filter((s) => !clashSet.has(s.slot_number));
+
+        if (nonClashRows.length > 0) {
+          const { error: insErr } = await supabase
+            .from("parking_slots")
+            .insert(nonClashRows);
+          if (!insErr) slotsAdded = nonClashRows.length;
+        }
+      }
+    }
+
+    createdLevels.push({
+      floor,
+      slots_added: slotsAdded
+    });
+  }
+
+  // Ensure all managers associated with this hotel branch are actively assigned to ALL its floors
+  try {
+    const { data: bFloors } = await supabase
+      .from("parking_floors")
+      .select("id")
+      .eq("building_id", building_id);
+
+    const bFloorIds = (bFloors || []).map((f) => f.id);
+    if (bFloorIds.length > 0) {
+      const { data: existingMas } = await supabase
+        .from("manager_assignments")
+        .select("manager_id")
+        .in("floor_id", bFloorIds);
+
+      const managerIds = [...new Set((existingMas || []).map((m) => m.manager_id).filter(Boolean))];
+
+      for (const mId of managerIds) {
+        for (const fId of bFloorIds) {
+          const { data: existing } = await supabase
+            .from("manager_assignments")
+            .select("id")
+            .eq("manager_id", mId)
+            .eq("floor_id", fId)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase.from("manager_assignments").update({ is_active: true }).eq("id", existing.id);
+          } else {
+            await supabase.from("manager_assignments").insert([{
+              manager_id: mId,
+              floor_id: fId,
+              is_active: true,
+              assigned_by: req.user?.id || null
+            }]);
+          }
+        }
+      }
+    }
+  } catch (mErr) {
+    console.warn("Auto manager floor sync warning:", mErr.message);
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: `Configured ${createdLevels.length} parking level(s) for ${building.building_name}.`,
+    levels: createdLevels
+  });
 });
 
 const getFloors = handle("fetch floors", async (req, res) => {
   const scope = await getAreaScope(req.user);
+  const buildingId = req.query.building_id || req.query.hotelId || req.query.hotel_id;
 
   let query = supabase
     .from("parking_floors")
@@ -98,25 +606,47 @@ const getFloors = handle("fetch floors", async (req, res) => {
 
   query = applyFloorScope(query, scope, "id");
 
+  if (buildingId && buildingId !== "all") {
+    query = query.eq("building_id", buildingId);
+  }
+
   const { data: floors, error } = await query;
   if (error) throw error;
 
-  const { data: assignments, error: assignmentError } = await supabase
-    .from("manager_assignments")
-    .select("id, floor_id, manager:users!manager_assignments_manager_id_fkey ( id, name, email )")
-    .eq("is_active", true);
+  const floorIds = (floors || []).map((f) => f.id);
 
-  if (assignmentError) throw assignmentError;
+  const [assignRes, slotsRes] = await Promise.all([
+    supabase
+      .from("manager_assignments")
+      .select("id, floor_id, manager:users!manager_assignments_manager_id_fkey ( id, name, email )")
+      .eq("is_active", true),
+    floorIds.length > 0
+      ? supabase
+          .from("parking_slots")
+          .select("id, floor_id, status")
+          .in("floor_id", floorIds)
+      : { data: [] }
+  ]);
 
-  const byFloor = new Map((assignments || []).map((a) => [a.floor_id, a]));
+  if (assignRes.error) throw assignRes.error;
+
+  const byFloor = new Map((assignRes.data || []).map((a) => [a.floor_id, a]));
+  const slotsList = slotsRes.data || [];
 
   return res.json({
     success: true,
-    floors: (floors || []).map((floor) => ({
-      ...floor,
-      assignment_id: byFloor.get(floor.id)?.id || null,
-      manager: byFloor.get(floor.id)?.manager || null
-    }))
+    floors: (floors || []).map((floor) => {
+      const fSlots = slotsList.filter((s) => s.floor_id === floor.id);
+      return {
+        ...floor,
+        assignment_id: byFloor.get(floor.id)?.id || null,
+        manager: byFloor.get(floor.id)?.manager || null,
+        total_slots: fSlots.length,
+        occupied_slots: fSlots.filter((s) => s.status === "occupied").length,
+        available_slots: fSlots.filter((s) => s.status === "available").length,
+        hotel_name: floor.building?.building_name || "Unassigned"
+      };
+    })
   });
 });
 
@@ -869,6 +1399,9 @@ const getMyPost = handle("fetch my post", async (req, res) => {
 module.exports = {
   getBuildings,
   createBuilding,
+  updateBuilding,
+  deleteBuilding,
+  configureHotel,
   getFloors,
   createFloor,
   getManagers,

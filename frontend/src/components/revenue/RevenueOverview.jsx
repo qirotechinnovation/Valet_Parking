@@ -1,11 +1,37 @@
-import { useEffect, useState } from "react";
-import { IndianRupee, Loader2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IndianRupee, Loader2, RefreshCw, Building2 } from "lucide-react";
 
 import { getRevenue } from "../../api/adminApi";
+import { getBuildings } from "../../api/areaApi";
+import BranchSelector from "../common/BranchSelector";
 
 import "./css/RevenueOverview.css";
 
 const PERIODS = [7, 30, 90];
+const DAY_MS = 86400000;
+
+const formatDateInput = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getDateRangeForDays = (days) => {
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - days + 1);
+  return {
+    fromDate: formatDateInput(start),
+    toDate: formatDateInput(end),
+  };
+};
+
+const getRangeDays = (fromDate, toDate) => {
+  const start = Date.parse(`${fromDate}T00:00:00Z`);
+  const end = Date.parse(`${toDate}T00:00:00Z`);
+  return Math.floor((end - start) / DAY_MS) + 1;
+};
 
 const formatMoney = (value) =>
   new Intl.NumberFormat("en-IN", {
@@ -46,32 +72,73 @@ const formatAxisMoney = (value) =>
  */
 const RevenueOverview = () => {
   const [days, setDays] = useState(30);
+  const [initialDateRange] = useState(() => getDateRangeForDays(30));
+  const [fromDate, setFromDate] = useState(initialDateRange.fromDate);
+  const [toDate, setToDate] = useState(initialDateRange.toDate);
+  const [hotels, setHotels] = useState([]);
+  const [selectedHotel, setSelectedHotel] = useState("all");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const requestId = useRef(0);
 
-  const load = async (period) => {
+  useEffect(() => {
+    getBuildings()
+      .then((res) => {
+        if (res?.buildings) setHotels(res.buildings);
+      })
+      .catch((err) => console.error("Error loading buildings for revenue:", err));
+  }, []);
+
+  const load = useCallback(async (from, to, hotelId) => {
+    if (!from || !to || from > to) {
+      requestId.current += 1;
+      setData(null);
+      setLoading(false);
+      setError("Choose a valid date range.");
+      return;
+    }
+
+    const currentRequestId = ++requestId.current;
     try {
       setLoading(true);
       setError("");
+      setData(null);
 
-      const response = await getRevenue(period);
+      const response = await getRevenue(getRangeDays(from, to), hotelId, {
+        fromDate: from,
+        toDate: to,
+      });
 
       if (!response?.success) {
         throw new Error(response?.message || "Unable to load revenue.");
       }
 
-      setData(response);
+      if (requestId.current === currentRequestId) setData(response);
     } catch (err) {
-      setError(err?.message || "Unable to load revenue.");
+      if (requestId.current === currentRequestId) {
+        setError(err?.message || "Unable to load revenue.");
+      }
     } finally {
-      setLoading(false);
+      if (requestId.current === currentRequestId) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    load(days);
-  }, [days]);
+    load(fromDate, toDate, selectedHotel);
+  }, [fromDate, toDate, selectedHotel, load]);
+
+  const selectPeriod = (period) => {
+    const range = getDateRangeForDays(period);
+    setDays(period);
+    setFromDate(range.fromDate);
+    setToDate(range.toDate);
+  };
+
+  const handleDateChange = (setter) => (event) => {
+    setter(event.target.value);
+    setDays(null);
+  };
 
   const summary = data?.summary;
   const daily = data?.daily || [];
@@ -85,7 +152,6 @@ const RevenueOverview = () => {
         <div>
           <p className="revenue-eyebrow">Overview</p>
           <h1>Revenue</h1>
-          <p>Payments collected at check-in, by day and by payment method.</p>
         </div>
 
         <div className="revenue-header-actions">
@@ -97,7 +163,7 @@ const RevenueOverview = () => {
                 role="tab"
                 aria-selected={period === days}
                 className={period === days ? "active" : ""}
-                onClick={() => setDays(period)}
+                onClick={() => selectPeriod(period)}
               >
                 {period} days
               </button>
@@ -107,7 +173,7 @@ const RevenueOverview = () => {
           <button
             type="button"
             className="revenue-refresh"
-            onClick={() => load(days)}
+            onClick={() => load(fromDate, toDate, selectedHotel)}
             disabled={loading}
             aria-label="Refresh revenue"
           >
@@ -115,6 +181,42 @@ const RevenueOverview = () => {
           </button>
         </div>
       </div>
+
+      <div className="revenue-date-filters">
+        <label className="revenue-date-field">
+          <span>From Date</span>
+          <input
+            type="date"
+            value={fromDate}
+            max={toDate || undefined}
+            onChange={handleDateChange(setFromDate)}
+          />
+        </label>
+        <label className="revenue-date-field">
+          <span>To Date</span>
+          <input
+            type="date"
+            value={toDate}
+            min={fromDate || undefined}
+            max={formatDateInput(new Date())}
+            onChange={handleDateChange(setToDate)}
+          />
+        </label>
+      </div>
+
+      {/* Dedicated Hotel Branch Filter Row */}
+      {hotels.length > 0 && (
+        <div style={{ background: "#ffffff", padding: "14px 20px", borderRadius: "14px", border: "1px solid #f1e4e6", margin: "16px 0" }}>
+          <BranchSelector
+            hotels={hotels}
+            selectedHotel={selectedHotel}
+            onSelectHotel={setSelectedHotel}
+            label="Hotel Branch:"
+            allLabel="All Branches"
+            size="sm"
+          />
+        </div>
+      )}
 
       {error && <div className="revenue-error">{error}</div>}
 
@@ -128,16 +230,16 @@ const RevenueOverview = () => {
           <>
             <div className="revenue-cards">
               <div className="revenue-card">
-                <span>Today</span>
-                <strong>{formatMoney(summary.today)}</strong>
-              </div>
-              <div className="revenue-card">
-                <span>Last {data.days} days</span>
+                <span>Total revenue</span>
                 <strong>{formatMoney(summary.period)}</strong>
               </div>
               <div className="revenue-card">
                 <span>Payments</span>
                 <strong>{summary.count}</strong>
+              </div>
+              <div className="revenue-card">
+                <span>Average daily revenue</span>
+                <strong>{formatMoney(data.days ? summary.period / data.days : 0)}</strong>
               </div>
               <div className="revenue-card">
                 <span>Average payment</span>
@@ -218,7 +320,7 @@ const RevenueOverview = () => {
             )}
 
             <div className="revenue-panel">
-              <h3>Recent payments</h3>
+              <h3>Payments in selected range</h3>
 
               {transactions.length === 0 ? (
                 <div className="revenue-empty">
@@ -234,11 +336,12 @@ const RevenueOverview = () => {
                 >
                   <table className="revenue-table">
                     <caption className="revenue-table-caption">
-                      Recent payments for the selected period
+                      Up to 100 most recent payments within the selected date range
                     </caption>
                     <thead>
                       <tr>
                         <th scope="col">Paid</th>
+                        <th scope="col">Hotel Branch</th>
                         <th scope="col">Invoice</th>
                         <th scope="col">Ticket</th>
                         <th scope="col">Vehicle</th>
@@ -252,6 +355,7 @@ const RevenueOverview = () => {
                       {transactions.map((row) => (
                         <tr key={row.id}>
                           <td>{formatDateTime(row.paid_at)}</td>
+                          <td style={{ fontWeight: "600", color: "#42235e" }}>{row.hotel_name || "General"}</td>
                           <td>{row.invoice_number || "-"}</td>
                           <td>{row.ticket_code || "-"}</td>
                           <td>{row.vehicle_number || "-"}</td>

@@ -27,36 +27,86 @@ const getParkingAdminDashboard = async (req, res) => {
 
     if (maintenanceSlotsError) throw maintenanceSlotsError;
 
-    const { count: activeSessions, error: activeSessionsError } =
-      await supabase
-        .from("parking_sessions")
-        .select("*", { count: "exact", head: true })
-        .in("status", [
-          "checked_in",
-          "parked",
-          "retrieval_requested",
-          "retrieving"
-        ]);
+    let activeSessionsQuery = supabase
+      .from("parking_sessions")
+      .select("*", { count: "exact", head: true })
+      .in("status", [
+        "checked_in",
+        "parked",
+        "retrieval_requested",
+        "retrieving"
+      ]);
 
-    if (activeSessionsError) throw activeSessionsError;
-
-    const { count: pendingRetrievals, error: pendingRetrievalsError } =
-      await supabase
-        .from("parking_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "retrieval_requested");
-
-    if (pendingRetrievalsError) throw pendingRetrievalsError;
+    let pendingRetrievalsQuery = supabase
+      .from("parking_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "retrieval_requested");
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const { data: todayPayments, error: paymentError } = await supabase
+    let todayCheckInsQuery = supabase
+      .from("parking_sessions")
+      .select("*", { count: "exact", head: true })
+      .gte("checked_in_at", startOfDay.toISOString());
+
+    let todayCompletedReturnsQuery = supabase
+      .from("parking_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "returned_completed")
+      .gte("completed_at", startOfDay.toISOString());
+
+    if (!scope.unrestricted) {
+      if (scope.slotNumbers && scope.slotNumbers.length > 0) {
+        activeSessionsQuery = activeSessionsQuery.in("parking_slot", scope.slotNumbers);
+        pendingRetrievalsQuery = pendingRetrievalsQuery.in("parking_slot", scope.slotNumbers);
+        todayCheckInsQuery = todayCheckInsQuery.in("parking_slot", scope.slotNumbers);
+        todayCompletedReturnsQuery = todayCompletedReturnsQuery.in("parking_slot", scope.slotNumbers);
+      } else {
+        const nullId = "00000000-0000-0000-0000-000000000000";
+        activeSessionsQuery = activeSessionsQuery.eq("id", nullId);
+        pendingRetrievalsQuery = pendingRetrievalsQuery.eq("id", nullId);
+        todayCheckInsQuery = todayCheckInsQuery.eq("id", nullId);
+        todayCompletedReturnsQuery = todayCompletedReturnsQuery.eq("id", nullId);
+      }
+    }
+
+    const { count: activeSessions, error: activeSessionsError } = await activeSessionsQuery;
+    if (activeSessionsError) throw activeSessionsError;
+
+    const { count: pendingRetrievals, error: pendingRetrievalsError } = await pendingRetrievalsQuery;
+    if (pendingRetrievalsError) throw pendingRetrievalsError;
+
+    const { count: todayCheckIns, error: todayCheckInsError } = await todayCheckInsQuery;
+    if (todayCheckInsError) throw todayCheckInsError;
+
+    const { count: todayCompletedReturns, error: todayCompletedReturnsError } = await todayCompletedReturnsQuery;
+    if (todayCompletedReturnsError) throw todayCompletedReturnsError;
+
+    let paymentQuery = supabase
       .from("payments")
       .select("total_amount")
       .eq("payment_status", "paid")
       .gte("paid_at", startOfDay.toISOString());
 
+    if (!scope.unrestricted) {
+      if (scope.slotNumbers && scope.slotNumbers.length > 0) {
+        const { data: bSessions } = await supabase
+          .from("parking_sessions")
+          .select("id")
+          .in("parking_slot", scope.slotNumbers);
+        const sIds = (bSessions || []).map((s) => s.id);
+        if (sIds.length > 0) {
+          paymentQuery = paymentQuery.in("session_id", sIds);
+        } else {
+          paymentQuery = paymentQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+        }
+      } else {
+        paymentQuery = paymentQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    }
+
+    const { data: todayPayments, error: paymentError } = await paymentQuery;
     if (paymentError) throw paymentError;
 
     const todayRevenue = (todayPayments || []).reduce(
@@ -64,27 +114,27 @@ const getParkingAdminDashboard = async (req, res) => {
       0
     );
 
-    const { count: todayCheckIns, error: todayCheckInsError } =
-      await supabase
-        .from("parking_sessions")
-        .select("*", { count: "exact", head: true })
-        .gte("checked_in_at", startOfDay.toISOString());
-
-    if (todayCheckInsError) throw todayCheckInsError;
-
-    const {
-      count: todayCompletedReturns,
-      error: todayCompletedReturnsError
-    } = await supabase
-      .from("parking_sessions")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "returned_completed")
-      .gte("completed_at", startOfDay.toISOString());
-
-    if (todayCompletedReturnsError) throw todayCompletedReturnsError;
+    // Fetch manager's assigned building details
+    let assignedHotel = null;
+    if (scope.buildingId) {
+      const { data: bld } = await supabase
+        .from("parking_buildings")
+        .select("id, building_name, address")
+        .eq("id", scope.buildingId)
+        .maybeSingle();
+      if (bld) {
+        assignedHotel = {
+          ...bld,
+          name: bld.building_name,
+        };
+      }
+    }
 
     return res.status(200).json({
       success: true,
+      hotel: assignedHotel,
+      assigned_hotel_id: scope.buildingId,
+      assigned_hotel_name: assignedHotel?.building_name || null,
       stats: {
         totalSlots: totalSlots || 0,
         availableSlots: availableSlots || 0,
@@ -130,17 +180,12 @@ const getParkingStaff = async (req, res) => {
           return member;
         }
 
-        if (!member.is_active) {
-          return null;
-        }
-
         const { data: employee, error: employeeError } = await supabase
           .from("employees")
           .select("id, name, phone, role, email, is_active")
           .eq("email", member.email)
           .eq("role", "valet")
-          .eq("is_active", true)
-          .single();
+          .maybeSingle();
 
         if (employeeError || !employee) {
           console.error(
@@ -154,7 +199,8 @@ const getParkingStaff = async (req, res) => {
 
         return {
           ...member,
-          id: employee.id
+          id: employee.id,
+          user_id: member.id
         };
       })
     );
@@ -168,14 +214,18 @@ const getParkingStaff = async (req, res) => {
       const { data: posted } = await applyFloorScope(
         supabase
           .from("valet_assignments")
-          .select("valet_id, post:valet_posts ( post_name )")
-          .eq("is_active", true),
+          .select("valet_id, is_active, post:valet_posts ( post_name )"),
         scope
       );
 
-      const postByValet = new Map(
-        (posted || []).map((row) => [row.valet_id, row.post?.post_name || null])
-      );
+      const postByValet = new Map();
+      (posted || [])
+        .sort((a, b) => Number(b.is_active) - Number(a.is_active))
+        .forEach((row) => {
+          if (!postByValet.has(row.valet_id)) {
+            postByValet.set(row.valet_id, row.post?.post_name || null);
+          }
+        });
 
       filteredStaff = filteredStaff
         .filter((member) => member.role !== "valet" || postByValet.has(member.id))
@@ -303,9 +353,32 @@ const getParkingAdminProfile = async (req, res) => {
       });
     }
 
+    let assignedHotel = null;
+    const { data: ma } = await supabase
+      .from("manager_assignments")
+      .select(`
+        floor:parking_floors (
+          id,
+          building:parking_buildings ( id, building_name, address )
+        )
+      `)
+      .eq("manager_id", user.id)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (ma?.floor?.building) {
+      assignedHotel = ma.floor.building;
+    }
+
     return res.status(200).json({
       success: true,
-      user
+      user: {
+        ...user,
+        assigned_hotel_id: assignedHotel?.id || null,
+        assigned_hotel_name: assignedHotel?.building_name || null,
+        assigned_hotel: assignedHotel
+      }
     });
   } catch (error) {
     console.error("Get Parking Admin profile error:", error);

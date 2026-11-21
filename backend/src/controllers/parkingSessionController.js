@@ -89,8 +89,8 @@ const getParkingSessions = async (req, res) => {
 
     let result = sessions || [];
 
-    // Managers only see sessions parked inside the area assigned to them.
-    if (req.user?.role === "manager") {
+    // Managers only see sessions parked inside the hotel branch assigned to them.
+    if (req.user?.role === "manager" || req.user?.role === "parking_admin") {
       const scope = await getAreaScope(req.user);
 
       const { data: slotRows } = await supabase
@@ -101,12 +101,23 @@ const getParkingSessions = async (req, res) => {
         (slotRows || []).map((row) => [row.slot_number, row.floor_id])
       );
 
-      result = result.filter(
-        (session) =>
-          !session.parking_slot ||
-          !slotFloor.has(session.parking_slot) ||
-          floorInScope(scope, slotFloor.get(session.parking_slot))
-      );
+      // Also get valet IDs assigned to this manager's floors
+      const { data: valetAssigns } = await supabase
+        .from("valet_assignments")
+        .select("valet_id")
+        .in("floor_id", scope.floorIds)
+        .eq("is_active", true);
+      const branchValetIds = new Set((valetAssigns || []).map((va) => va.valet_id));
+
+      result = result.filter((session) => {
+        if (session.parking_slot && slotFloor.has(session.parking_slot)) {
+          return floorInScope(scope, slotFloor.get(session.parking_slot));
+        }
+        if (session.valet?.id && branchValetIds.has(session.valet.id)) {
+          return true;
+        }
+        return false;
+      });
     }
 
     if (search) {
@@ -140,6 +151,50 @@ const getParkingSessions = async (req, res) => {
           valet.includes(searchTerm)
         );
       });
+    }
+
+    // Enrich all sessions with Hotel branch and Floor information
+    const { data: slotData } = await supabase
+      .from("parking_slots")
+      .select(`
+        slot_number,
+        floor:parking_floors (
+          id,
+          floor_name,
+          floor_number,
+          building:parking_buildings ( id, building_name, address )
+        )
+      `);
+
+    const slotMap = new Map();
+    (slotData || []).forEach((s) => {
+      if (s.slot_number) {
+        slotMap.set(s.slot_number, {
+          floor_id: s.floor?.id || null,
+          floor_name: s.floor?.floor_name || "Unassigned",
+          floor_number: s.floor?.floor_number ?? null,
+          hotel_id: s.floor?.building?.id || null,
+          hotel_name: s.floor?.building?.building_name || "Unassigned",
+          hotel_address: s.floor?.building?.address || ""
+        });
+      }
+    });
+
+    result = result.map((session) => {
+      const slotInfo = session.parking_slot ? slotMap.get(session.parking_slot) : null;
+      return {
+        ...session,
+        hotel_id: slotInfo?.hotel_id || null,
+        hotel_name: slotInfo?.hotel_name || "Unassigned",
+        hotel_address: slotInfo?.hotel_address || "",
+        floor_name: slotInfo?.floor_name || "Unassigned",
+        floor_number: slotInfo?.floor_number ?? null
+      };
+    });
+
+    const hotelId = req.query.hotelId || req.query.building_id;
+    if (hotelId && hotelId !== "all") {
+      result = result.filter((session) => session.hotel_id === hotelId);
     }
 
     // Revenue figures are for the super admin and managers only. Everyone

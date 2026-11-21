@@ -35,16 +35,44 @@ const assertSlotAccess = async (req, res, slotId) => {
 const getParkingSlots = async (req, res) => {
   try {
     const { search, status, parking_type } = req.query;
+    const hotelId = req.query.hotelId || req.query.building_id;
+    const floorId = req.query.floorId || req.query.floor_id;
 
     const scope = await getAreaScope(req.user);
 
     let slotQuery = applyFloorScope(
       supabase
         .from("parking_slots")
-        .select("*")
+        .select(`
+          *,
+          floor:parking_floors (
+            id,
+            floor_name,
+            floor_number,
+            building_id,
+            building:parking_buildings ( id, building_name, address )
+          )
+        `)
         .order("slot_number", { ascending: true }),
       scope
     );
+
+    if (hotelId && hotelId !== "all") {
+      const { data: hFloors } = await supabase
+        .from("parking_floors")
+        .select("id")
+        .eq("building_id", hotelId);
+      const hFloorIds = (hFloors || []).map((f) => f.id);
+      if (hFloorIds.length > 0) {
+        slotQuery = slotQuery.in("floor_id", hFloorIds);
+      } else {
+        slotQuery = slotQuery.eq("floor_id", "00000000-0000-0000-0000-000000000000");
+      }
+    }
+
+    if (floorId && floorId !== "all") {
+      slotQuery = slotQuery.eq("floor_id", floorId);
+    }
 
     if (status) {
       slotQuery = slotQuery.eq("status", status);
@@ -112,13 +140,17 @@ const getParkingSlots = async (req, res) => {
       });
     }
 
-    let result = slots.map((slot) => {
-      const session = sessions.find(
+    let result = (slots || []).map((slot) => {
+      const session = (sessions || []).find(
         (item) => item.parking_slot === slot.slot_number
       );
 
       return {
         ...slot,
+        floor_name: slot.floor?.floor_name || "Unassigned",
+        floor_number: slot.floor?.floor_number ?? null,
+        hotel_id: slot.floor?.building_id || null,
+        hotel_name: slot.floor?.building?.building_name || "Unassigned",
         status: session ? "occupied" : slot.status,
         assigned_vehicle: session?.vehicle?.license_plate || null,
         vehicle_make: session?.vehicle?.make || null,
@@ -139,6 +171,10 @@ const getParkingSlots = async (req, res) => {
         valet: session?.valet?.name || null
       };
     });
+
+    if (hotelId && hotelId !== "all") {
+      result = result.filter((slot) => slot.hotel_id === hotelId);
+    }
 
     if (search) {
       const searchTerm = search.toLowerCase();
@@ -228,16 +264,40 @@ const getValetParkingSlots = async (req, res) => {
       });
     }
 
+    let floorIds = [floorId];
+    const buildingId = post.floor?.building_id || post.floor?.building?.id;
+
+    if (buildingId) {
+      const { data: floors, error } = await supabase
+        .from("parking_floors")
+        .select("id")
+        .eq("building_id", buildingId);
+
+      if (error) {
+        console.error("Get valet parking floors error:", error);
+
+        return res.status(500).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      floorIds = Array.from(new Set([
+        floorId,
+        ...(floors || []).map((floor) => floor.id)
+      ]));
+    }
+
     const [slotsResult, gatesResult] = await Promise.all([
       supabase
         .from("parking_slots")
         .select("*")
-        .eq("floor_id", floorId)
+        .in("floor_id", floorIds)
         .order("slot_number", { ascending: true }),
       supabase
         .from("parking_gates")
         .select("*")
-        .eq("floor_id", floorId)
+        .in("floor_id", floorIds)
         .order("gate_name")
     ]);
 

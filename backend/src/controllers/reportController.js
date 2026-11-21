@@ -661,6 +661,365 @@ const sendPdf = (res, report, fileBase) => {
   doc.end();
 };
 
+const getSystemReports = async (req, res) => {
+  try {
+    let hotelId = req.query.hotelId || req.query.building_id;
+    const period = req.query.period || "daily"; // daily, weekly, monthly
+    const now = new Date();
+    const periodStart = new Date(now);
+    periodStart.setUTCHours(0, 0, 0, 0);
+    if (period === "weekly") {
+      periodStart.setUTCDate(periodStart.getUTCDate() - 6);
+    } else if (period === "monthly") {
+      periodStart.setUTCDate(1);
+    }
+
+    // If caller is a manager, lock strictly to their assigned branch
+    const isManager = req.user?.role === "manager" || req.user?.role === "parking_admin";
+    let managerScope = null;
+    if (isManager) {
+      managerScope = await getAreaScope(req.user);
+      hotelId = managerScope.buildingId || "none";
+    }
+
+    // 1. Fetch buildings, floors, slots
+    const [bRes, fRes, sRes, sessRes, mgrRes, valRes, empRes, mgrUsersRes] = await Promise.all([
+      supabase.from("parking_buildings").select("*").order("building_name"),
+      supabase.from("parking_floors").select("*, building:parking_buildings(*)"),
+      supabase.from("parking_slots").select("id, slot_number, floor_id, status"),
+      supabase.from("parking_sessions").select(`
+        id, ticket_code, parking_slot, status, checked_in_at, completed_at,
+        vehicle:vehicles ( id, license_plate, make, model, color ),
+        valet:employees ( id, name, phone, role ),
+        payment:payments ( total_amount, payment_status )
+      `).order("checked_in_at", { ascending: false }),
+      supabase.from("manager_assignments").select(`
+        manager_id, floor_id,
+        manager:users!manager_assignments_manager_id_fkey ( id, name, email ),
+        floor:parking_floors ( id, floor_name, building:parking_buildings ( id, building_name ) )
+      `).eq("is_active", true),
+      supabase.from("valet_assignments").select(`
+        valet_id, floor_id,
+        valet:employees ( id, name, phone, email ),
+        floor:parking_floors ( id, floor_name, building:parking_buildings ( id, building_name ) )
+      `).eq("is_active", true),
+      supabase.from("employees").select("*").eq("role", "valet"),
+      supabase.from("users").select("id, name, email, role, is_active").in("role", ["manager", "parking_admin"])
+    ]);
+
+    const rawBuildings = bRes.data || [];
+    const buildings = (isManager && managerScope)
+      ? rawBuildings.filter((b) => managerScope.buildingIds.includes(b.id))
+      : rawBuildings;
+    const floors = fRes.data || [];
+    const slots = sRes.data || [];
+    const allSessions = sessRes.data || [];
+    const managerAssignments = mgrRes.data || [];
+    const valetAssignments = valRes.data || [];
+    const allValetEmployees = empRes.data || [];
+
+    // Slot to hotel mapping
+    const slotInfoMap = new Map();
+    slots.forEach((s) => {
+      const fl = floors.find((f) => f.id === s.floor_id);
+      slotInfoMap.set(s.slot_number, {
+        floor_id: s.floor_id,
+        floor_name: fl?.floor_name || "Unassigned",
+        hotel_id: fl?.building?.id || null,
+        hotel_name: fl?.building?.building_name || "Unassigned"
+      });
+    });
+
+    // Filter sessions if hotelId specified
+    let targetSessions = allSessions;
+    if (hotelId && hotelId !== "all") {
+      targetSessions = allSessions.filter((s) => {
+        const info = s.parking_slot ? slotInfoMap.get(s.parking_slot) : null;
+        return info && info.hotel_id === hotelId;
+      });
+    }
+    const periodSessions = targetSessions.filter((session) => (
+      session.checked_in_at &&
+      new Date(session.checked_in_at) >= periodStart &&
+      new Date(session.checked_in_at) <= now
+    ));
+
+    const periodSessionIds = periodSessions.map((session) => session.id);
+    const feedbackBySession = new Map();
+    if (periodSessionIds.length > 0) {
+      const { data: feedbackRows, error: feedbackError } = await supabase
+        .from("feedback")
+        .select("parking_session_id, rating")
+        .in("parking_session_id", periodSessionIds);
+      if (feedbackError) throw feedbackError;
+      (feedbackRows || []).forEach((row) => {
+        const ratings = feedbackBySession.get(row.parking_session_id) || [];
+        ratings.push(Number(row.rating || 0));
+        feedbackBySession.set(row.parking_session_id, ratings);
+      });
+    }
+
+    const staffByHotel = new Map();
+    const addHotelStaff = (buildingId, staffId) => {
+      if (!buildingId || !staffId) return;
+      const staffIds = staffByHotel.get(buildingId) || new Set();
+      staffIds.add(staffId);
+      staffByHotel.set(buildingId, staffIds);
+    };
+    managerAssignments.forEach((assignment) => {
+      addHotelStaff(assignment.floor?.building?.id, assignment.manager_id);
+    });
+    valetAssignments.forEach((assignment) => {
+      const floor = floors.find((item) => item.id === assignment.floor_id);
+      addHotelStaff(floor?.building_id, assignment.valet_id);
+    });
+
+    // 2. Hotel-wise Parking Reports (for table / cards)
+    const hotelReports = buildings.map((b) => {
+      const bFloors = floors.filter((f) => f.building_id === b.id);
+      const bFloorIds = new Set(bFloors.map((f) => f.id));
+      const bSlots = slots.filter((s) => bFloorIds.has(s.floor_id));
+      const bSlotNumbers = new Set(bSlots.map((s) => s.slot_number));
+
+      const bSessions = allSessions.filter((s) => s.parking_slot && bSlotNumbers.has(s.parking_slot));
+      const bCheckouts = bSessions.filter((s) => s.status === "returned_completed");
+      const bActive = bSessions.filter((s) => ["checked_in", "parked", "retrieval_requested", "retrieving"].includes(s.status));
+      const occupiedSlots = bSlots.filter((s) => s.status === "occupied").length;
+      const totalSlots = bSlots.length;
+      const occupancyRate = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
+
+      const revenue = bSessions.reduce((sum, s) => {
+        const p = Array.isArray(s.payment) ? s.payment[0] : s.payment;
+        if (p?.payment_status === "paid") {
+          return sum + Number(p.total_amount || 0);
+        }
+        return sum;
+      }, 0);
+
+      return {
+        hotel_id: b.id,
+        hotel_name: b.building_name,
+        address: b.address || "",
+        total_slots: totalSlots,
+        totalSlots,
+        occupied_slots: occupiedSlots,
+        occupiedSlots,
+        available_slots: Math.max(0, totalSlots - occupiedSlots),
+        occupancy_rate: occupancyRate,
+        occupancyRate,
+        total_parked: bSessions.length,
+        sessionsCount: bSessions.length,
+        total_checkouts: bCheckouts.length,
+        completedSessions: bCheckouts.length,
+        active_sessions: bActive.length,
+        total_revenue: revenue,
+        revenue,
+        staffCount: staffByHotel.get(b.id)?.size || 0
+      };
+    });
+
+    // 3. Manager-wise performance
+    const allManagerUsers = mgrUsersRes?.data || [];
+
+    const managerPerformance = allManagerUsers.map((mu) => {
+      const muAssignments = managerAssignments.filter((ma) => ma.manager_id === mu.id);
+      const assignedFloorIds = new Set(muAssignments.map((ma) => ma.floor_id));
+      const flSlots = slots.filter((s) => assignedFloorIds.has(s.floor_id));
+      const slotNumbers = new Set(flSlots.map((s) => s.slot_number));
+      const mSessions = periodSessions.filter((s) => s.parking_slot && slotNumbers.has(s.parking_slot));
+      const managerRevenue = mSessions.reduce((sum, session) => {
+        const payment = Array.isArray(session.payment) ? session.payment[0] : session.payment;
+        return payment?.payment_status === "paid"
+          ? sum + Number(payment.total_amount || 0)
+          : sum;
+      }, 0);
+
+      const firstFloor = muAssignments[0]?.floor;
+      const muHotelId = firstFloor?.building?.id || null;
+      const hotelName = firstFloor?.building?.building_name || "Unassigned";
+      const floorNames = muAssignments.map((ma) => ma.floor?.floor_name).filter(Boolean);
+      const floorDisplay = floorNames.length > 0 ? floorNames.join(", ") : "All Floors";
+
+      return {
+        manager_id: mu.id,
+        manager_name: mu.name || "Manager",
+        name: mu.name || "Manager",
+        email: mu.email || "",
+        hotel_id: muHotelId,
+        hotel_name: hotelName,
+        is_active: mu.is_active !== false,
+        floor_name: floorDisplay,
+        slots_managed: flSlots.length,
+        staff_count: staffByHotel.get(muHotelId)?.size || 0,
+        total_sessions: mSessions.length,
+        active_sessions: mSessions.filter((s) => ["checked_in", "parked", "retrieval_requested", "retrieving"].includes(s.status)).length,
+        total_revenue: managerRevenue
+      };
+    });
+
+    // 4. Valet-wise performance
+    const valetPerformance = allValetEmployees.map((v) => {
+      const va = valetAssignments.find((a) => a.valet_id === v.id);
+      const fl = va ? floors.find((f) => f.id === va.floor_id) : null;
+
+      const vSessions = periodSessions.filter((s) => s.valet?.id === v.id);
+      const vCheckins = vSessions.filter((s) => s.checked_in_at).length;
+      const vRetrievals = vSessions.filter((s) => s.status === "returned_completed").length;
+      const vActive = vSessions.filter((s) => ["checked_in", "parked", "retrieval_requested", "retrieving"].includes(s.status)).length;
+      const vRevenue = vSessions.reduce((sum, s) => {
+        const p = Array.isArray(s.payment) ? s.payment[0] : s.payment;
+        return p?.payment_status === "paid" ? sum + Number(p.total_amount || 0) : sum;
+      }, 0);
+      const valetRatings = vSessions.flatMap((session) => feedbackBySession.get(session.id) || []);
+      const averageRating = valetRatings.length
+        ? Math.round((valetRatings.reduce((sum, rating) => sum + rating, 0) / valetRatings.length) * 10) / 10
+        : null;
+
+      return {
+        valet_id: v.id,
+        valet_name: v.name,
+        name: v.name,
+        phone: v.phone || "",
+        is_active: v.is_active,
+        hotel_id: fl?.building?.id || null,
+        hotel_name: fl?.building?.building_name || "Unassigned",
+        floor_name: fl?.floor_name || "Unassigned",
+        total_sessions: vSessions.length,
+        sessionsHandled: vSessions.length,
+        check_ins: vCheckins,
+        retrievals_completed: vRetrievals,
+        returnsCompleted: vRetrievals,
+        active_tasks: vActive,
+        average_retrieval_minutes: null,
+        average_rating: averageRating,
+        rating_count: valetRatings.length,
+        revenueCollected: vRevenue
+      };
+    });
+
+    // 5. Vehicle category categorization
+    const categorizeVehicle = (make = "", model = "") => {
+      const text = `${make || ""} ${model || ""}`.toLowerCase().trim();
+      const HATCHBACK_KEYWORDS = ["i10", "i20", "swift", "baleno", "wagon", "tiago", "alto", "polo", "micra", "kwid", "glanza", "altroz", "ignis"];
+      const SUV_KEYWORDS = ["suv", "fortuner", "thar", "scorpio", "creta", "seltos", "brezza", "safari", "harrier", "nexon", "xuv", "innova", "ertiga", "compass", "defender", "duster", "punch", "venue", "sonet", "hector", "taigun", "kushaq"];
+      const LUXURY_KEYWORDS = ["bmw", "mercedes", "audi", "jaguar", "land rover", "range rover", "porsche", "lexus", "volvo", "bentley", "rolls"];
+      const SPORTS_KEYWORDS = ["ferrari", "lamborghini", "sports", "mustang", "gt", "maserati", "mclaren", "bugatti", "supra"];
+      const SEDAN_KEYWORDS = ["sedan", "city", "verna", "civic", "accord", "camry", "corolla", "octavia", "superb", "slavia", "virtus", "dzire", "amaze", "ciaz", "etios"];
+
+      if (HATCHBACK_KEYWORDS.some((kw) => text.includes(kw))) return "Hatchback";
+      if (SPORTS_KEYWORDS.some((kw) => text.includes(kw))) return "Sports";
+      if (LUXURY_KEYWORDS.some((kw) => text.includes(kw))) return "Luxury";
+      if (SUV_KEYWORDS.some((kw) => text.includes(kw))) return "SUV";
+      if (SEDAN_KEYWORDS.some((kw) => text.includes(kw))) return "Sedan";
+      return "Others";
+    };
+
+    const catCounts = { SUV: 0, Sedan: 0, Hatchback: 0, Luxury: 0, Sports: 0, Others: 0 };
+    const vehicleFrequencyMap = new Map();
+
+    targetSessions.forEach((s) => {
+      const veh = s.vehicle;
+      if (veh) {
+        const cat = categorizeVehicle(veh.make, veh.model);
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+
+        if (veh.license_plate) {
+          const entry = vehicleFrequencyMap.get(veh.license_plate) || {
+            license_plate: veh.license_plate,
+            make: veh.make || "",
+            model: veh.model || "",
+            category: cat,
+            visits: 0
+          };
+          entry.visits += 1;
+          vehicleFrequencyMap.set(veh.license_plate, entry);
+        }
+      }
+    });
+
+    const totalCategorized = targetSessions.length || 1;
+    const vehicleCategories = Object.entries(catCounts).map(([category, count]) => ({
+      category,
+      count,
+      percentage: Math.round((count / totalCategorized) * 100)
+    }));
+
+    const topFrequentVehicles = [...vehicleFrequencyMap.values()]
+      .sort((a, b) => b.visits - a.visits)
+      .slice(0, 10);
+
+    // 6. Time-series parking reports (daily, weekly, monthly)
+    const timeSeries = [];
+    const daysBack = period === "monthly" ? 90 : period === "weekly" ? 28 : 7;
+    for (let i = daysBack - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateKey = d.toISOString().slice(0, 10);
+      const dayLabel = d.toLocaleDateString("en-IN", {
+        weekday: daysBack <= 7 ? "short" : undefined,
+        day: "numeric",
+        month: "short"
+      });
+
+      const daySessions = targetSessions.filter((s) => {
+        if (!s.checked_in_at) return false;
+        return s.checked_in_at.slice(0, 10) === dateKey;
+      });
+
+      const dayRevenue = daySessions.reduce((sum, s) => {
+        const p = Array.isArray(s.payment) ? s.payment[0] : s.payment;
+        if (p?.payment_status === "paid") {
+          return sum + Number(p.total_amount || 0);
+        }
+        return sum;
+      }, 0);
+
+      timeSeries.push({
+        date: dateKey,
+        label: dayLabel,
+        sessions: daySessions.length,
+        checkouts: daySessions.filter((s) => s.status === "returned_completed").length,
+        revenue: dayRevenue
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      hotelId: hotelId || "all",
+      period,
+      summary: {
+        totalVehiclesParked: targetSessions.length,
+        activeSessions: targetSessions.filter((s) => ["checked_in", "parked", "retrieval_requested", "retrieving"].includes(s.status)).length,
+        totalCheckouts: targetSessions.filter((s) => s.status === "returned_completed").length,
+        totalRevenue: targetSessions.reduce((sum, s) => {
+          const p = Array.isArray(s.payment) ? s.payment[0] : s.payment;
+          return p?.payment_status === "paid" ? sum + Number(p.total_amount || 0) : sum;
+        }, 0)
+      },
+      hotelReports,
+      managerPerformance: (isManager && managerScope)
+        ? managerPerformance.filter((m) => managerScope.buildingIds.includes(m.hotel_id) || m.manager_id === req.user.id)
+        : (hotelId && hotelId !== "all")
+          ? managerPerformance.filter((m) => m.hotel_id === hotelId)
+          : managerPerformance,
+      valetPerformance: (isManager && managerScope)
+        ? valetPerformance.filter((v) => managerScope.buildingIds.includes(v.hotel_id))
+        : (hotelId && hotelId !== "all")
+          ? valetPerformance.filter((v) => v.hotel_id === hotelId)
+          : valetPerformance,
+      vehicleCategories,
+      topFrequentVehicles,
+      timeSeries
+    });
+  } catch (error) {
+    console.error("System reports error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate system reports."
+    });
+  }
+};
+
 const exportValetReport = async (req, res) => {
   try {
     const report = await buildReport(req);
@@ -687,5 +1046,6 @@ const exportValetReport = async (req, res) => {
 module.exports = {
   getReportValets,
   getValetReport,
-  exportValetReport
+  exportValetReport,
+  getSystemReports
 };

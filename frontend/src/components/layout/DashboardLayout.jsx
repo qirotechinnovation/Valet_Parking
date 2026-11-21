@@ -68,6 +68,7 @@ const DashboardLayout = ({
     });
 
   const profileId = config?.profileId || "profile";
+  const isDashboardHome = activeTab === "dashboard";
 
   return (
     <div className="dash-layout">
@@ -80,7 +81,9 @@ const DashboardLayout = ({
         mobileOpen={mobileSidebarOpen}
       />
 
-      <main className={`dash-main ${collapsed ? "sidebar-collapsed" : ""}`}>
+      <main
+        className={`dash-main ${config?.roleLabel === "Valet" ? "dash-main--valet" : ""} ${isDashboardHome ? "dash-main--dashboard" : ""} ${collapsed ? "sidebar-collapsed" : ""}`}
+      >
         <DashboardTopbar
           config={config}
           user={user}

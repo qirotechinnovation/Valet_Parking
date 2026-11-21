@@ -1,17 +1,18 @@
-/* ============================================================
+﻿/* ============================================================
    VALET SIDEBAR
 ============================================================ */
 
 .valet-sidebar {
   position: sticky;
-  top: 14px;
+  top: 0;
 
-  width: 260px;
-  height: calc(100vh - 28px);
+  width: 270px;
+  height: 100vh;
   min-height: 0;
 
-  margin: 0 0 14px 14px;
-  padding: 20px 14px;
+  margin: 0;
+  padding: 24px 16px;
+  border-radius: 0;
 
   box-sizing: border-box;
 
@@ -20,16 +21,20 @@
 
   flex-shrink: 0;
 
-  background: var(--bg-sidebar, #fdfbfb);
+  background:
+    url('/sidebar-velvet-full.png') center top / cover no-repeat,
+    linear-gradient(180deg, #42235e 0%, #200d31 100%);
 
   color: var(--text-main, #280f15);
 
-  border: 1px solid rgba(139, 18, 48, 0.08);
+  border: none;
+  border-right: 1px solid rgba(188, 155, 106, 0.28);
 
-  border-radius: 20px;
+  border-radius: 0;
 
   box-shadow:
-    0 10px 30px -5px rgba(139, 18, 48, 0.08);
+    4px 0 24px rgba(25, 5, 40, 0.45),
+    inset -1px 0 0 rgba(188, 155, 106, 0.25);
 
   overflow: hidden;
 
@@ -72,7 +77,7 @@
 
   border-radius: 12px;
 
-  background: #fce7eb;
+  background: #f3e8f9;
 
   overflow: hidden;
 }
@@ -260,7 +265,7 @@
 
 .valet-menu-item:hover .valet-item-icon,
 .valet-collapse-btn:hover .valet-item-icon {
-  color: #8b1230;
+  color: #42235e;
 }
 
 
@@ -269,7 +274,7 @@
 ============================================================ */
 
 .valet-menu-item.active {
-  background: #8b1230;
+  background: #42235e;
 
   color: #ffffff;
 
